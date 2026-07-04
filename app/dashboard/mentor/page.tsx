@@ -8,22 +8,52 @@ export default async function MentorDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role && profile.role !== 'mentor' && profile.role !== 'admin') {
-    redirect('/')
-  }
-
-  // Получаем coach_id
-  const { data: coachData } = await supabase
+  // Проверяем, есть ли запись в coaches с ролью mentor или admin
+  const { data: coach } = await supabase
     .from('coaches')
-    .select('id, display_name')
+    .select('id, display_name, role')
     .eq('user_id', user.id)
     .single()
+
+  // Если нет записи в coaches или роль не mentor/admin — показываем сообщение
+  if (!coach || (coach.role !== 'mentor' && coach.role !== 'admin')) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl shadow-sm border p-8 max-w-md text-center">
+          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Требуется активация
+          </h1>
+          <p className="text-gray-600 mb-6">
+            {!coach 
+              ? 'У вас ещё нет записи в системе наставников. Нажмите кнопку ниже, чтобы стать наставником.'
+              : 'Ваша учётная запись ещё не активирована как наставник.'}
+          </p>
+          <div className="flex gap-3 justify-center">
+            <a
+              href="/"
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors inline-block"
+            >
+              Стать наставником
+            </a>
+            <a
+              href="/catalog"
+              className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors inline-block"
+            >
+              Перейти в каталог
+            </a>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // coach уже содержит данные (id, display_name, role)
+  const coachData = coach
 
   // Мои уроки - последние 2
   const { data: myLessons } = await supabase
