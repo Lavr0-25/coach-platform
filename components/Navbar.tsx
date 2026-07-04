@@ -20,7 +20,6 @@ export default function Navbar() {
   const loadingRef = useRef(false)
 
   useEffect(() => {
-    // Если уже загружено или идёт загрузка — выходим
     if (isLoaded || loadingRef.current) return
 
     const loadUser = async () => {
@@ -50,7 +49,6 @@ export default function Navbar() {
 
     loadUser()
 
-    // Слушаем событие обновления профиля
     const handleProfileUpdate = (event: CustomEvent) => {
       setProfile((prev: Profile | null) => ({
         ...prev,
@@ -60,7 +58,6 @@ export default function Navbar() {
 
     window.addEventListener('profileUpdated', handleProfileUpdate as EventListener)
 
-    // Очистка
     return () => {
       window.removeEventListener('profileUpdated', handleProfileUpdate as EventListener)
     }
@@ -82,29 +79,44 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-white shadow-sm border-b">
+    <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Логотип */}
-          <Link href="/" className="text-2xl font-bold text-blue-600 hover:text-blue-700">
+          <Link href="/" className="text-2xl font-bold text-blue-600 hover:text-blue-700 transition-colors">
             CoachPlatform
           </Link>
 
-          {/* Навигация */}
+          {/* Центральная навигация */}
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/catalog" className="text-gray-700 hover:text-blue-600 transition-colors">
-              Каталог уроков
+            <Link href="/catalog" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+              📚 Каталог уроков
             </Link>
-            <Link href="/mentors" className="text-gray-700 hover:text-blue-600 transition-colors">
-              Наставники
+            <Link href="/mentors" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+              👨‍🏫 Наставники
             </Link>
+            
+            {/* Дополнительные пункты для авторизованных */}
+            {user && (
+              <>
+                <Link href="/favorites" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                  ⭐ Избранное
+                </Link>
+                <Link href="/purchases" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                  🎓 Мои курсы
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Правая часть */}
           <div className="flex items-center gap-4">
-            {user ? (
+            {!isLoaded ? (
+              // Загрузка
+              <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+            ) : user ? (
+              // ✅ ПОЛЬЗОВАТЕЛЬ АВТОРИЗОВАН — показываем меню профиля
               <div className="relative">
-                {/* Иконка профиля */}
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                   className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -112,7 +124,7 @@ export default function Navbar() {
                   <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
                     {getInitials(profile?.display_name)}
                   </div>
-                  <span className="hidden md:block text-gray-700 font-medium">
+                  <span className="hidden md:block text-gray-700 font-medium max-w-[150px] truncate">
                     {profile?.display_name || 'Пользователь'}
                   </span>
                   <svg
@@ -128,13 +140,11 @@ export default function Navbar() {
                 {/* Выпадающее меню */}
                 {showProfileMenu && (
                   <>
-                    {/* Затемнение фона */}
                     <div
                       className="fixed inset-0 z-10"
                       onClick={() => setShowProfileMenu(false)}
                     />
 
-                    {/* Меню */}
                     <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border z-20">
                       {/* Информация о пользователе */}
                       <div className="p-4 border-b">
@@ -178,6 +188,24 @@ export default function Navbar() {
                           Настройки профиля
                         </Link>
 
+                        <Link
+                          href="/favorites"
+                          className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setShowProfileMenu(false)}
+                        >
+                          <span className="text-xl">⭐</span>
+                          Избранное
+                        </Link>
+
+                        <Link
+                          href="/purchases"
+                          className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setShowProfileMenu(false)}
+                        >
+                          <span className="text-xl">🎓</span>
+                          Мои курсы
+                        </Link>
+
                         <hr className="my-2" />
 
                         <button
@@ -195,6 +223,7 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
+              // ❌ ПОЛЬЗОВАТЕЛЬ НЕ АВТОРИЗОВАН — показываем кнопки входа
               <div className="flex items-center gap-3">
                 <Link
                   href="/login"
