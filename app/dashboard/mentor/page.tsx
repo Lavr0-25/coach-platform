@@ -1,7 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import Navbar from '@/components/Navbar'
 import MentorDashboardClient from './MentorDashboardClient'
 
 export default async function MentorDashboard() {
@@ -106,31 +104,27 @@ export default async function MentorDashboard() {
     .limit(20)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Приветствие */}
-          <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Добро пожаловать{coachData?.display_name ? `, ${coachData.display_name}` : ''}! 👋
-            </h1>
-            <p className="text-gray-600 mb-4">
-              Управляйте своими уроками и учитесь у других наставников
-            </p>
-          </div>
-
-          {/* Клиентский компонент с 2 вкладками */}
-          <MentorDashboardClient
-            myLessons={myLessons || []}
-            favorites={favorites || []}
-            inProgress={inProgress || []}
-            completed={completed || []}
-            purchases={purchases || []}
-          />
+    <main className="container mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Приветствие */}
+        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Добро пожаловать{coachData?.display_name ? `, ${coachData.display_name}` : ''}! 👋
+          </h1>
+          <p className="text-gray-600 mb-4">
+            Управляйте своими уроками и учитесь у других наставников
+          </p>
         </div>
-      </main>
-    </div>
+
+        {/* Клиентский компонент с 2 вкладками */}
+        <MentorDashboardClient
+          myLessons={myLessons || []}
+          favorites={favorites || []}
+          inProgress={inProgress || []}
+          completed={completed || []}
+          purchases={purchases || []}
+        />
+      </div>
+    </main>
   )
 }

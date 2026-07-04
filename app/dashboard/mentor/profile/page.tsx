@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Navbar from '@/components/Navbar'
 
 export default function ProfileSettingsPage() {
   const supabase = createClient()
@@ -161,166 +160,159 @@ export default function ProfileSettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 64px)' }}>
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Загрузка профиля...</p>
-          </div>
+      <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 64px)' }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Загрузка профиля...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <main className="container mx-auto px-4 py-8 max-w-4xl">
+      {/* Хлебные крошки */}
+      <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
+        <Link href="/dashboard/mentor" className="hover:text-blue-600">
+          Кабинет наставника
+        </Link>
+        <span>/</span>
+        <span className="text-gray-900">Настройки профиля</span>
+      </div>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Хлебные крошки */}
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-          <Link href="/dashboard/mentor" className="hover:text-blue-600">
-            Кабинет наставника
-          </Link>
-          <span>/</span>
-          <span className="text-gray-900">Настройки профиля</span>
+      <h1 className="text-3xl font-bold text-gray-900 mb-8">
+        Настройки профиля
+      </h1>
+
+      {/* Уведомления */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
+          {success}
+        </div>
+      )}
+
+      {/* Основная информация */}
+      <form onSubmit={handleSaveProfile} className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Основная информация
+          </h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1">
+                Имя для отображения *
+              </label>
+              <input
+                id="displayName"
+                type="text"
+                required
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Иван Иванов"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Это имя будет видно другим пользователям
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-1">
+                Специализация
+              </label>
+              <input
+                id="specialization"
+                type="text"
+                value={specialization}
+                onChange={(e) => setSpecialization(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Психолог, бизнес-коуч, преподаватель английского"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">
+                О себе
+              </label>
+              <textarea
+                id="bio"
+                rows={4}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Расскажите о себе, своём опыте и подходе..."
+              />
+            </div>
+          </div>
         </div>
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">
-          Настройки профиля
-        </h1>
+        <div className="flex gap-4">
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+          >
+            {saving ? 'Сохранение...' : 'Сохранить изменения'}
+          </button>
+        </div>
+      </form>
 
-        {/* Уведомления */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
-            {success}
-          </div>
-        )}
+      {/* Смена пароля */}
+      <form onSubmit={handleChangePassword} className="mt-8">
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Смена пароля
+          </h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                Новый пароль *
+              </label>
+              <input
+                id="newPassword"
+                type="password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Минимум 8 символов"
+              />
+            </div>
 
-        {/* Основная информация */}
-        <form onSubmit={handleSaveProfile} className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Основная информация
-            </h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Имя для отображения *
-                </label>
-                <input
-                  id="displayName"
-                  type="text"
-                  required
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Иван Иванов"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Это имя будет видно другим пользователям
-                </p>
-              </div>
-
-              <div>
-                <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-1">
-                  Специализация
-                </label>
-                <input
-                  id="specialization"
-                  type="text"
-                  value={specialization}
-                  onChange={(e) => setSpecialization(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Психолог, бизнес-коуч, преподаватель английского"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">
-                  О себе
-                </label>
-                <textarea
-                  id="bio"
-                  rows={4}
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Расскажите о себе, своём опыте и подходе..."
-                />
-              </div>
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                Подтвердите пароль *
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Повторите пароль"
+              />
             </div>
           </div>
+        </div>
 
-          <div className="flex gap-4">
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-            >
-              {saving ? 'Сохранение...' : 'Сохранить изменения'}
-            </button>
-          </div>
-        </form>
-
-        {/* Смена пароля */}
-        <form onSubmit={handleChangePassword} className="mt-8">
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Смена пароля
-            </h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Новый пароль *
-                </label>
-                <input
-                  id="newPassword"
-                  type="password"
-                  required
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Минимум 8 символов"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Подтвердите пароль *
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Повторите пароль"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-4 mt-4">
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-gray-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-700 transition-colors disabled:bg-gray-400"
-            >
-              {saving ? 'Изменение...' : 'Изменить пароль'}
-            </button>
-          </div>
-        </form>
-      </main>
-    </div>
+        <div className="flex gap-4 mt-4">
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-gray-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-700 transition-colors disabled:bg-gray-400"
+          >
+            {saving ? 'Изменение...' : 'Изменить пароль'}
+          </button>
+        </div>
+      </form>
+    </main>
   )
 }
