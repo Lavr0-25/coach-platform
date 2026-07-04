@@ -21,13 +21,11 @@ export default function Navbar() {
   const pathname = usePathname()
   const loadingRef = useRef(false)
 
-  // Функция загрузки пользователя
   const loadUser = async () => {
     loadingRef.current = true
     setIsLoaded(false)
 
     try {
-      // Принудительно обновляем сессию
       await supabase.auth.refreshSession()
       
       const { data: { user } } = await supabase.auth.getUser()
@@ -59,7 +57,6 @@ export default function Navbar() {
   useEffect(() => {
     loadUser()
 
-    // Подписка на изменения авторизации
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       setIsLoaded(true)
@@ -70,16 +67,13 @@ export default function Navbar() {
     }
   }, [])
 
-  // Перезагрузка при смене маршрута
   useEffect(() => {
     loadUser()
   }, [pathname])
 
-  // Слушаем изменения в localStorage (выход/вход в другой вкладке)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'sb-' + process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token' || 
-          e.key?.includes('auth-token')) {
+      if (e.key?.includes('auth-token')) {
         loadUser()
       }
     }
@@ -92,13 +86,12 @@ export default function Navbar() {
     if (!user) return
     
     try {
-      // Создаём/обновляем запись в coaches
+      // Убрали email — его нет в таблице coaches
       const { error } = await supabase
         .from('coaches')
         .upsert({
           user_id: user.id,
-          display_name: user.user_metadata?.display_name || profile?.display_name || user.email?.split('@')[0] || 'Наставник',
-          email: user.email,
+          display_name: profile?.display_name || user.email?.split('@')[0] || 'Наставник',
           role: 'mentor',
         }, {
           onConflict: 'user_id'
@@ -107,7 +100,7 @@ export default function Navbar() {
       if (error) throw error
       
       setIsMentor(true)
-      alert('🎉 Теперь вы наставник! Теперь вы можете создавать уроки и управлять своим контентом.')
+      alert('🎉 Теперь вы наставник! Теперь вы можете создавать уроки.')
       router.refresh()
     } catch (error: any) {
       console.error('Error becoming mentor:', error)
@@ -174,7 +167,7 @@ export default function Navbar() {
                     onClick={handleBecomeMentor}
                     className="hidden md:inline-flex px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
                   >
-                    🎓 Стать наставником
+                     Стать наставником
                   </button>
                 )}
 
@@ -284,25 +277,18 @@ export default function Navbar() {
                   </div>
                 )}
 
-                {/* Кнопки для неавторизованных */}
+                {/* Кнопка "Войти" для авторизованных НЕ-наставников */}
                 {!isMentor && (
-                  <div className="flex items-center gap-3">
-                    <Link
-                      href="/login"
-                      className="px-4 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors"
-                    >
-                      Войти
-                    </Link>
-                    <Link
-                      href="/register"
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                    >
-                      Регистрация
-                    </Link>
-                  </div>
+                  <Link
+                    href="/dashboard/mentor"
+                    className="px-4 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                  >
+                    Кабинет
+                  </Link>
                 )}
               </>
             ) : (
+              // НЕ авторизован — показываем Войти и Регистрацию
               <div className="flex items-center gap-3">
                 <Link
                   href="/login"
