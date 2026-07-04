@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
 interface Profile {
   display_name?: string
@@ -17,56 +17,82 @@ export default function Navbar() {
   const [isLoaded, setIsLoaded] = useState(false)
   const supabase = createClient()
   const router = useRouter()
+  const pathname = usePathname() // ← ДОБАВЛЕНО
   const loadingRef = useRef(false)
 
+  // Функция загрузки пользователя
+  const loadUser = async () => {
+    loadingRef.current = true
+    setIsLoaded(false)
+
+    try {
+      // Принудительно обновляем сессию
+      await supabase.auth.refreshSession()
+      
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+
+      if (user) {
+        const { data } = await supabase
+          .from('coaches')
+          .select('display_name')
+          .eq('user_id', user.id)
+          .single()
+
+        setProfile(data)
+      } else {
+        setProfile(null)
+      }
+
+      setIsLoaded(true)
+    } catch (error) {
+      console.error('Navbar load error:', error)
+      setIsLoaded(true)
+    } finally {
+      loadingRef.current = false
+    }
+  }
+
   useEffect(() => {
-    if (isLoaded || loadingRef.current) return
+    loadUser()
 
-    const loadUser = async () => {
-      loadingRef.current = true
+    // Подписка на изменения авторизации
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      setIsLoaded(true)
+    })
 
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        setUser(user)
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
 
-        if (user) {
-          const { data } = await supabase
-            .from('coaches')
-            .select('display_name')
-            .eq('user_id', user.id)
-            .single()
+  // ← НОВОЕ: Перезагрузка при смене маршрута
+  useEffect(() => {
+    loadUser()
+  }, [pathname])
 
-          setProfile(data)
-        }
-
-        setIsLoaded(true)
-      } catch (error) {
-        console.error('Navbar load error:', error)
-      } finally {
-        loadingRef.current = false
+  // ← НОВОЕ: Слушаем изменения в localStorage (выход/вход в другой вкладке)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'sb-' + process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token' || 
+          e.key?.includes('auth-token')) {
+        loadUser()
       }
     }
 
-    loadUser()
-
-    const handleProfileUpdate = (event: CustomEvent) => {
-      setProfile((prev: Profile | null) => ({
-        ...prev,
-        display_name: event.detail.displayName
-      }))
-    }
-
-    window.addEventListener('profileUpdated', handleProfileUpdate as EventListener)
-
-    return () => {
-      window.removeEventListener('profileUpdated', handleProfileUpdate as EventListener)
-    }
-  }, [isLoaded])
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
 
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut()
-      window.location.href = '/'
+      setUser(null)
+      setProfile(null)
+      setIsLoaded(true)
+      router.push('/')
+      router.refresh() // ← Принудительное обновление
     } catch (error) {
       console.error('Ошибка при выходе:', error)
       alert('Не удалось выйти из системы')
@@ -82,21 +108,18 @@ export default function Navbar() {
     <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Логотип */}
           <Link href="/" className="text-2xl font-bold text-blue-600 hover:text-blue-700 transition-colors">
             CoachPlatform
           </Link>
 
-          {/* Центральная навигация */}
           <div className="hidden md:flex items-center gap-8">
             <Link href="/catalog" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-              📚 Каталог уроков
+               Каталог уроков
             </Link>
             <Link href="/mentors" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-              👨‍🏫 Наставники
+              👨‍ Наставники
             </Link>
             
-            {/* Дополнительные пункты для авторизованных */}
             {user && (
               <>
                 <Link href="/favorites" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
@@ -109,13 +132,10 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Правая часть */}
           <div className="flex items-center gap-4">
             {!isLoaded ? (
-              // Загрузка
               <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
             ) : user ? (
-              // ✅ ПОЛЬЗОВАТЕЛЬ АВТОРИЗОВАН — показываем меню профиля
               <div className="relative">
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -137,16 +157,13 @@ export default function Navbar() {
                   </svg>
                 </button>
 
-                {/* Выпадающее меню */}
                 {showProfileMenu && (
                   <>
                     <div
                       className="fixed inset-0 z-10"
                       onClick={() => setShowProfileMenu(false)}
                     />
-
                     <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border z-20">
-                      {/* Информация о пользователе */}
                       <div className="p-4 border-b">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
@@ -163,7 +180,6 @@ export default function Navbar() {
                         </div>
                       </div>
 
-                      {/* Пункты меню */}
                       <div className="py-2">
                         <Link
                           href="/dashboard/mentor"
@@ -223,7 +239,6 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              // ❌ ПОЛЬЗОВАТЕЛЬ НЕ АВТОРИЗОВАН — показываем кнопки входа
               <div className="flex items-center gap-3">
                 <Link
                   href="/login"
