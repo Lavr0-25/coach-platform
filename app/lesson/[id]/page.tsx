@@ -51,12 +51,9 @@ function FileDisplayCard({
           <h3 className="text-lg font-semibold text-gray-900 mb-1">
             {getFileLabel()}
           </h3>
-          <p className="text-sm text-gray-600 truncate mb-4" title={fileName}>
-            {fileName}
-          </p>
           
           {/* Кнопки */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 mt-4">
             <a
               href={fileUrl}
               target="_blank"
@@ -177,13 +174,17 @@ export default async function LessonPage({ params }: LessonPageProps) {
         </h1>
         
         {lesson.coaches && (
-          <Link 
-            href={`/mentor/${lesson.coaches.id}`}
-            className="text-gray-600 hover:text-blue-600 mb-4 inline-block transition-colors"
-          >
-            👨‍🏫 {lesson.coaches.display_name}
-            {lesson.coaches.specialization && ` — ${lesson.coaches.specialization}`}
-          </Link>
+          <div className="mb-4">
+            <Link 
+              href={`/mentors/${lesson.coaches.id}`}
+              className="text-gray-600 hover:text-blue-600 transition-colors inline-flex items-center gap-2"
+            >
+              👨‍🏫 <span className="font-medium">{lesson.coaches.display_name}</span>
+              {lesson.coaches.specialization && (
+                <span className="text-gray-500">— {lesson.coaches.specialization}</span>
+              )}
+            </Link>
+          </div>
         )}
 
         <div className="flex items-center gap-4">
@@ -211,10 +212,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
           
           <div className="space-y-4">
             {content.map((item) => {
-              // Определяем имя файла из URL
-              const fileName = decodeURIComponent(item.content_url.split('/').pop() || 'Файл')
-              const cleanFileName = fileName.split('?')[0]
-              
               // YouTube
               if (item.content_type === 'youtube') {
                 const embedUrl = getEmbedUrl(item.content_url, 'youtube')
@@ -249,7 +246,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 return (
                   <FileDisplayCard
                     key={item.id}
-                    fileName={cleanFileName}
+                    fileName=""
                     fileUrl={item.content_url}
                     fileType="vk_video"
                   />
@@ -261,7 +258,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 return (
                   <div key={item.id} className="space-y-4">
                     <FileDisplayCard
-                      fileName={cleanFileName}
+                      fileName=""
                       fileUrl={item.content_url}
                       fileType="pdf"
                     />
@@ -282,7 +279,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 return (
                   <div key={item.id} className="space-y-4">
                     <FileDisplayCard
-                      fileName={cleanFileName}
+                      fileName=""
                       fileUrl={item.content_url}
                       fileType="image"
                     />
@@ -290,7 +287,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                     <div className="border rounded-lg overflow-hidden bg-gray-50">
                       <img
                         src={item.content_url}
-                        alt={cleanFileName}
+                        alt="Контент урока"
                         className="w-full h-auto max-h-[600px] object-contain mx-auto"
                       />
                     </div>
@@ -303,7 +300,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 return (
                   <FileDisplayCard
                     key={item.id}
-                    fileName={cleanFileName}
+                    fileName=""
                     fileUrl={item.content_url}
                     fileType={item.content_type}
                   />
@@ -314,7 +311,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
               return (
                 <FileDisplayCard
                   key={item.id}
-                  fileName={cleanFileName}
+                  fileName=""
                   fileUrl={item.content_url}
                   fileType={item.content_type}
                 />
