@@ -31,7 +31,6 @@ export default function NotificationsBell() {
     if (userId) {
       loadNotifications()
       
-      // Подписка на новые уведомления
       const channel = supabase
         .channel('notifications')
         .on(
@@ -68,7 +67,7 @@ export default function NotificationsBell() {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(10)
+        .limit(50)
 
       if (error) throw error
 
@@ -134,7 +133,7 @@ export default function NotificationsBell() {
       case 'new_reply':
         return '↩️'
       case 'mentor_reply':
-        return '👨‍🏫'
+        return '‍🏫'
       default:
         return '🔔'
     }
@@ -167,7 +166,7 @@ export default function NotificationsBell() {
             className="fixed inset-0 z-10"
             onClick={() => setShowDropdown(false)}
           />
-          <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg border z-20 max-h-[80vh] overflow-hidden flex flex-col">
+          <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg border z-20 overflow-hidden flex flex-col" style={{ maxHeight: '80vh' }}>
             <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
               <h3 className="font-semibold text-gray-900">Уведомления</h3>
               {unreadCount > 0 && (
@@ -180,7 +179,7 @@ export default function NotificationsBell() {
               )}
             </div>
 
-            <div className="overflow-y-auto flex-1">
+            <div className="overflow-y-auto flex-1" style={{ maxHeight: '60vh' }}>
               {notifications.length > 0 ? (
                 notifications.map((notification) => (
                   <Link

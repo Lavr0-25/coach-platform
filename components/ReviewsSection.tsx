@@ -40,7 +40,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
     if (userId !== null) {
       loadReviews()
     }
-  }, [userId])
+  }, [userId, courseId, lessonId])
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -85,7 +85,6 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         setAverageRating(0)
       }
 
-      // Ищем отзыв текущего пользователя
       if (userId) {
         const found = data?.find((r: Review) => r.user_id === userId)
         if (found) {
@@ -124,7 +123,6 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         comment: newComment.trim() || null,
       }
 
-      // Используем upsert вместо insert/update
       const { error } = await supabase
         .from('reviews')
         .upsert(reviewData, {
@@ -317,7 +315,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
       )}
 
       {reviews.length > 0 ? (
-        <div className="space-y-4">
+        <div className="max-h-96 overflow-y-auto space-y-4 pr-2">
           {reviews.map((review) => {
             const userName = getUserName(review)
             
@@ -359,7 +357,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         </div>
       ) : (
         <div className="text-center py-8">
-          <div className="text-4xl mb-2"></div>
+          <div className="text-4xl mb-2">💬</div>
           <p className="text-gray-600">
             Пока нет отзывов. Будьте первым!
           </p>
