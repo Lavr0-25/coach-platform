@@ -8,15 +8,91 @@ interface LessonPageProps {
   }>
 }
 
+// Компонент для красивого отображения файла
+function FileDisplayCard({ 
+  fileName, 
+  fileUrl, 
+  fileType 
+}: { 
+  fileName: string
+  fileUrl: string
+  fileType: string
+}) {
+  const getFileIcon = () => {
+    if (fileType === 'pdf') return '📄'
+    if (fileType === 'image') return '🖼️'
+    if (fileType === 'yandex_disk') return '💾'
+    if (fileType === 'presentation') return '📊'
+    if (fileType === 'vk_video') return '📹'
+    return '📎'
+  }
+
+  const getFileLabel = () => {
+    if (fileType === 'pdf') return 'PDF документ'
+    if (fileType === 'image') return 'Изображение'
+    if (fileType === 'yandex_disk') return 'Яндекс.Диск'
+    if (fileType === 'presentation') return 'Презентация'
+    if (fileType === 'vk_video') return 'VK Видео'
+    return 'Файл'
+  }
+
+  return (
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+      <div className="flex items-start gap-4">
+        {/* Иконка */}
+        <div className="flex-shrink-0">
+          <div className="w-16 h-16 bg-white rounded-xl shadow-sm flex items-center justify-center text-4xl">
+            {getFileIcon()}
+          </div>
+        </div>
+        
+        {/* Информация */}
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+            {getFileLabel()}
+          </h3>
+          <p className="text-sm text-gray-600 truncate mb-4" title={fileName}>
+            {fileName}
+          </p>
+          
+          {/* Кнопки */}
+          <div className="flex gap-3">
+            <a
+              href={fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Посмотреть
+            </a>
+            
+            <a
+              href={fileUrl}
+              download
+              className="inline-flex items-center gap-2 bg-white text-gray-700 border-2 border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 hover:border-gray-400 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Скачать
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Функция нормализации URL для embed
 function getEmbedUrl(url: string, contentType: string): string {
   if (!url) return ''
   
   // YouTube
   if (contentType === 'youtube') {
-    // Преобразуем обычный URL YouTube в embed
-    // https://www.youtube.com/watch?v=XXXXX → https://www.youtube.com/embed/XXXXX
-    // https://youtu.be/XXXXX → https://www.youtube.com/embed/XXXXX
     if (url.includes('youtube.com/embed/')) return url
     if (url.includes('watch?v=')) {
       const videoId = url.split('watch?v=')[1]?.split('&')[0]
@@ -31,12 +107,8 @@ function getEmbedUrl(url: string, contentType: string): string {
   
   // VK Video
   if (contentType === 'vk_video') {
-    // Если это уже embed URL — возвращаем как есть
     if (url.includes('video_ext.php')) return url
     
-    // Пытаемся извлечь oid и id из URL
-    // https://vk.com/video-22822305_456239650
-    // https://vk.ru/video-22822305_456239650
     const match = url.match(/video(-?\d+)_(\d+)/)
     if (match) {
       const oid = match[1]
@@ -44,7 +116,6 @@ function getEmbedUrl(url: string, contentType: string): string {
       return `https://vk.com/video_ext.php?oid=${oid}&id=${videoId}&hd=2`
     }
     
-    // Если не смогли распарсить — показываем как ссылку
     return url
   }
   
@@ -84,9 +155,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
   if (contentError) {
     console.error('Content error:', contentError)
   }
-
-  // Отладка — увидишь в консоли сервера
-  console.log('📺 Lesson content:', content)
 
   const isFree = lesson.price === 0 || lesson.is_free_preview
 
@@ -143,9 +211,13 @@ export default async function LessonPage({ params }: LessonPageProps) {
           
           <div className="space-y-4">
             {content.map((item) => {
-              const embedUrl = getEmbedUrl(item.content_url, item.content_type)
+              // Определяем имя файла из URL
+              const fileName = decodeURIComponent(item.content_url.split('/').pop() || 'Файл')
+              const cleanFileName = fileName.split('?')[0]
               
+              // YouTube
               if (item.content_type === 'youtube') {
+                const embedUrl = getEmbedUrl(item.content_url, 'youtube')
                 return (
                   <div key={item.id} className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
                     <iframe
@@ -158,8 +230,9 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 )
               }
               
+              // VK Video
               if (item.content_type === 'vk_video') {
-                // Если URL удалось преобразовать в embed — показываем iframe
+                const embedUrl = getEmbedUrl(item.content_url, 'vk_video')
                 if (embedUrl.includes('video_ext.php')) {
                   return (
                     <div key={item.id} className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
@@ -173,53 +246,78 @@ export default async function LessonPage({ params }: LessonPageProps) {
                   )
                 }
                 
-                // Если не удалось — показываем ссылку
                 return (
-                  <div key={item.id} className="p-6 bg-blue-50 rounded-lg text-center">
-                    <p className="text-gray-700 mb-4">
-                      📹 Видео ВКонтакте
-                    </p>
-                    <a 
-                      href={item.content_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors inline-block"
-                    >
-                      Открыть видео в новой вкладке
-                    </a>
+                  <FileDisplayCard
+                    key={item.id}
+                    fileName={cleanFileName}
+                    fileUrl={item.content_url}
+                    fileType="vk_video"
+                  />
+                )
+              }
+              
+              // PDF
+              if (item.content_type === 'pdf') {
+                return (
+                  <div key={item.id} className="space-y-4">
+                    <FileDisplayCard
+                      fileName={cleanFileName}
+                      fileUrl={item.content_url}
+                      fileType="pdf"
+                    />
+                    
+                    <div className="border rounded-lg overflow-hidden">
+                      <iframe
+                        src={item.content_url}
+                        className="w-full h-96"
+                        title="PDF Preview"
+                      />
+                    </div>
                   </div>
                 )
               }
               
-              if (item.content_type === 'yandex_disk') {
+              // Изображение
+              if (item.content_type === 'image') {
                 return (
-                  <div key={item.id} className="p-4 bg-blue-50 rounded-lg">
-                    <p className="text-gray-700 mb-2">📁 Файл на Яндекс.Диске:</p>
-                    <a 
-                      href={item.content_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-700 underline break-all"
-                    >
-                      {item.content_url}
-                    </a>
+                  <div key={item.id} className="space-y-4">
+                    <FileDisplayCard
+                      fileName={cleanFileName}
+                      fileUrl={item.content_url}
+                      fileType="image"
+                    />
+                    
+                    <div className="border rounded-lg overflow-hidden bg-gray-50">
+                      <img
+                        src={item.content_url}
+                        alt={cleanFileName}
+                        className="w-full h-auto max-h-[600px] object-contain mx-auto"
+                      />
+                    </div>
                   </div>
                 )
               }
               
-              // Неизвестный тип — показываем ссылку
+              // Яндекс.Диск и другие типы
+              if (item.content_type === 'yandex_disk' || item.content_type === 'presentation') {
+                return (
+                  <FileDisplayCard
+                    key={item.id}
+                    fileName={cleanFileName}
+                    fileUrl={item.content_url}
+                    fileType={item.content_type}
+                  />
+                )
+              }
+              
+              // Неизвестный тип
               return (
-                <div key={item.id} className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-gray-700 mb-2">📄 {item.content_type}:</p>
-                  <a 
-                    href={item.content_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-700 underline break-all"
-                  >
-                    {item.content_url}
-                  </a>
-                </div>
+                <FileDisplayCard
+                  key={item.id}
+                  fileName={cleanFileName}
+                  fileUrl={item.content_url}
+                  fileType={item.content_type}
+                />
               )
             })}
           </div>
