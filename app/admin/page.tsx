@@ -38,6 +38,19 @@ export default async function AdminPage() {
         {/* Сетка меню */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Стоп-лист */}
+ {/* Запрещённые слова */}
+          <Link
+            href="/admin/banned-words"
+            className="block p-6 bg-white rounded-xl shadow-sm border hover:shadow-lg transition-all hover:-translate-y-1"
+          >
+            <div className="text-4xl mb-3">🚫</div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Запрещённые слова
+            </h3>
+            <p className="text-gray-600 text-sm">
+              Управление списком запрещённых слов
+            </p>
+          </Link>
           <Link
             href="/admin/stop-list"
             className="block p-6 bg-white rounded-xl shadow-sm border hover:shadow-lg transition-all hover:-translate-y-1"
