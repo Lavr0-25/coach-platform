@@ -8,6 +8,7 @@ import { useRouter, usePathname } from 'next/navigation'
 interface Profile {
   display_name?: string
   email?: string
+  role?: string
 }
 
 export default function Navbar() {
@@ -28,18 +29,43 @@ export default function Navbar() {
     try {
       await supabase.auth.refreshSession()
       
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      
+      if (userError) {
+        console.error('Auth error:', userError)
+        setUser(null)
+        setProfile(null)
+        setIsMentor(false)
+        setIsLoaded(true)
+        return
+      }
+      
       setUser(user)
 
       if (user) {
-        const { data } = await supabase
-          .from('coaches')
-          .select('display_name, role')
-          .eq('user_id', user.id)
-          .single()
+        try {
+          const { data: coachData, error: coachError } = await supabase
+            .from('coaches')
+            .select('display_name, role')
+            .eq('user_id', user.id)
+            .single()
 
-        setProfile(data)
-        setIsMentor(data?.role === 'mentor' || data?.role === 'admin')
+          if (coachError && coachError.code !== 'PGRST116') {
+            console.error('Coach query error:', coachError)
+          }
+
+          if (coachData) {
+            setProfile(coachData)
+            setIsMentor(coachData.role === 'mentor' || coachData.role === 'admin')
+          } else {
+            setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
+            setIsMentor(false)
+          }
+        } catch (err) {
+          console.error('Coach load error:', err)
+          setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
+          setIsMentor(false)
+        }
       } else {
         setProfile(null)
         setIsMentor(false)
@@ -48,6 +74,9 @@ export default function Navbar() {
       setIsLoaded(true)
     } catch (error) {
       console.error('Navbar load error:', error)
+      setUser(null)
+      setProfile(null)
+      setIsMentor(false)
       setIsLoaded(true)
     } finally {
       loadingRef.current = false
@@ -86,7 +115,6 @@ export default function Navbar() {
     if (!user) return
     
     try {
-      // Убрали email — его нет в таблице coaches
       const { error } = await supabase
         .from('coaches')
         .upsert({
@@ -100,6 +128,7 @@ export default function Navbar() {
       if (error) throw error
       
       setIsMentor(true)
+      setProfile(prev => ({ ...prev, role: 'mentor' }))
       alert('🎉 Теперь вы наставник! Теперь вы можете создавать уроки.')
       router.refresh()
     } catch (error: any) {
@@ -125,7 +154,11 @@ export default function Navbar() {
 
   const getInitials = (name?: string | null) => {
     if (!name) return 'U'
-    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    const parts = name.split(' ')
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
   }
 
   return (
@@ -137,8 +170,11 @@ export default function Navbar() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
+            <Link href="/courses" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+              📚 Каталог курсов
+            </Link>
             <Link href="/catalog" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-              📚 Каталог уроков
+               Каталог уроков
             </Link>
             <Link href="/mentors" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
               👨‍🏫 Наставники
@@ -147,10 +183,10 @@ export default function Navbar() {
             {user && isMentor && (
               <>
                 <Link href="/favorites" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                  ⭐ Избранное
+                   Избранное
                 </Link>
                 <Link href="/purchases" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                  🎓 Мои курсы
+                   Мои курсы
                 </Link>
               </>
             )}
@@ -161,18 +197,16 @@ export default function Navbar() {
               <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
             ) : user ? (
               <>
-                {/* Кнопка "Стать наставником" (если ещё не наставник) */}
                 {!isMentor && (
                   <button
                     onClick={handleBecomeMentor}
                     className="hidden md:inline-flex px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
                   >
-                     Стать наставником
+                    🎓 Стать наставником
                   </button>
                 )}
 
-                {/* Меню профиля (только для наставников) */}
-                {isMentor && (
+                {isMentor ? (
                   <div className="relative">
                     <button
                       onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -242,6 +276,24 @@ export default function Navbar() {
                             </Link>
 
                             <Link
+                              href="/dashboard/mentor/courses"
+                              className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                              onClick={() => setShowProfileMenu(false)}
+                            >
+                              <span className="text-xl"></span>
+                              Мои курсы
+                            </Link>
+
+                            <Link
+                              href="/dashboard/mentor/lessons"
+                              className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                              onClick={() => setShowProfileMenu(false)}
+                            >
+                              <span className="text-xl">📖</span>
+                              Мои уроки
+                            </Link>
+
+                            <Link
                               href="/favorites"
                               className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
                               onClick={() => setShowProfileMenu(false)}
@@ -275,10 +327,7 @@ export default function Navbar() {
                       </>
                     )}
                   </div>
-                )}
-
-                {/* Кнопка "Войти" для авторизованных НЕ-наставников */}
-                {!isMentor && (
+                ) : (
                   <Link
                     href="/dashboard/mentor"
                     className="px-4 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors"
@@ -288,7 +337,6 @@ export default function Navbar() {
                 )}
               </>
             ) : (
-              // НЕ авторизован — показываем Войти и Регистрацию
               <div className="flex items-center gap-3">
                 <Link
                   href="/login"
