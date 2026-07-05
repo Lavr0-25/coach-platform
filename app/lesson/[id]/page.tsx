@@ -18,11 +18,11 @@ function FileDisplayCard({
 }) {
   const getFileIcon = () => {
     if (fileType === 'pdf') return '📄'
-    if (fileType === 'image') return '️'
+    if (fileType === 'image') return '🖼️'
     if (fileType === 'yandex_disk') return '💾'
     if (fileType === 'presentation') return '📊'
     if (fileType === 'vk_video') return '📹'
-    return ''
+    return '📎'
   }
 
   const getFileLabel = () => {
@@ -37,20 +37,17 @@ function FileDisplayCard({
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
       <div className="flex items-start gap-4">
-        {/* Иконка */}
         <div className="flex-shrink-0">
           <div className="w-16 h-16 bg-white rounded-xl shadow-sm flex items-center justify-center text-4xl">
             {getFileIcon()}
           </div>
         </div>
         
-        {/* Информация */}
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-semibold text-gray-900 mb-1">
             {getFileLabel()}
           </h3>
           
-          {/* Кнопки */}
           <div className="flex gap-3 mt-4">
             <a
               href={fileUrl}
@@ -86,7 +83,6 @@ function FileDisplayCard({
 function getEmbedUrl(url: string, contentType: string): string {
   if (!url) return ''
   
-  // YouTube
   if (contentType === 'youtube') {
     if (url.includes('youtube.com/embed/')) return url
     if (url.includes('watch?v=')) {
@@ -100,7 +96,6 @@ function getEmbedUrl(url: string, contentType: string): string {
     return url
   }
   
-  // VK Video
   if (contentType === 'vk_video') {
     if (url.includes('video_ext.php')) return url
     
@@ -122,7 +117,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
   
   const supabase = await createClient()
 
-  // Загружаем урок
   const { data: lesson, error: lessonError } = await supabase
     .from('lessons')
     .select(`
@@ -140,7 +134,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
     notFound()
   }
 
-  // Загружаем контент урока
   const { data: content, error: contentError } = await supabase
     .from('lesson_content')
     .select('*')
@@ -155,7 +148,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
   return (
     <main className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Кнопка назад */}
       <div className="mb-6">
         <Link href="/catalog" className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-2">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,7 +157,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
         </Link>
       </div>
 
-      {/* Карточка урока */}
       <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           {lesson.title}
@@ -177,7 +168,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
               href={`/mentor/${lesson.coaches.id}`}
               className="text-gray-600 hover:text-blue-600 transition-colors inline-flex items-center gap-2"
             >
-              👨‍🏫 <span className="font-medium">{lesson.coaches.display_name}</span>
+              👨‍ <span className="font-medium">{lesson.coaches.display_name}</span>
               {lesson.coaches.specialization && (
                 <span className="text-gray-500">— {lesson.coaches.specialization}</span>
               )}
@@ -201,7 +192,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
         </div>
       </div>
 
-      {/* Видео контент */}
       {content && content.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
@@ -220,6 +210,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                       className="w-full h-full"
                       allowFullScreen
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      title="YouTube video"
                     />
                   </div>
                 )
@@ -236,6 +227,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                         className="w-full h-full"
                         allowFullScreen
                         allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                        title="VK video"
                       />
                     </div>
                   )
@@ -270,7 +262,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 )
               }
               
-              // Изображение
+              // Image
               if (item.content_type === 'image') {
                 return (
                   <div key={item.id} className="space-y-4">
@@ -282,7 +274,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                     <div className="border rounded-lg overflow-hidden bg-gray-50">
                       <img
                         src={item.content_url}
-                        alt="Контент урока"
+                        alt="Lesson content"
                         className="w-full h-auto max-h-[600px] object-contain mx-auto"
                       />
                     </div>
@@ -290,7 +282,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 )
               }
               
-              // Яндекс.Диск и другие типы
+              // Yandex Disk & Presentation
               if (item.content_type === 'yandex_disk' || item.content_type === 'presentation') {
                 return (
                   <FileDisplayCard
@@ -301,7 +293,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 )
               }
               
-              // Неизвестный тип
+              // Unknown type
               return (
                 <FileDisplayCard
                   key={item.id}
@@ -314,7 +306,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
         </div>
       )}
 
-      {/* Сообщение если нет контента */}
       {(!content || content.length === 0) && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6">
           <div className="flex items-start gap-3">
@@ -331,7 +322,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
         </div>
       )}
 
-      {/* Описание */}
       {lesson.description && (
         <div className="bg-white rounded-xl shadow-sm border p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
