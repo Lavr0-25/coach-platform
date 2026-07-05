@@ -10,21 +10,19 @@ interface LessonPageProps {
 
 // Компонент для красивого отображения файла
 function FileDisplayCard({ 
-  fileName, 
   fileUrl, 
   fileType 
 }: { 
-  fileName: string
   fileUrl: string
   fileType: string
 }) {
   const getFileIcon = () => {
     if (fileType === 'pdf') return '📄'
-    if (fileType === 'image') return '🖼️'
+    if (fileType === 'image') return '️'
     if (fileType === 'yandex_disk') return '💾'
     if (fileType === 'presentation') return '📊'
     if (fileType === 'vk_video') return '📹'
-    return '📎'
+    return ''
   }
 
   const getFileLabel = () => {
@@ -176,7 +174,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
         {lesson.coaches && (
           <div className="mb-4">
             <Link 
-              href={`/mentors/${lesson.coaches.id}`}
+              href={`/mentor/${lesson.coaches.id}`}
               className="text-gray-600 hover:text-blue-600 transition-colors inline-flex items-center gap-2"
             >
               👨‍🏫 <span className="font-medium">{lesson.coaches.display_name}</span>
@@ -246,7 +244,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 return (
                   <FileDisplayCard
                     key={item.id}
-                    fileName=""
                     fileUrl={item.content_url}
                     fileType="vk_video"
                   />
@@ -258,7 +255,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 return (
                   <div key={item.id} className="space-y-4">
                     <FileDisplayCard
-                      fileName=""
                       fileUrl={item.content_url}
                       fileType="pdf"
                     />
@@ -279,7 +275,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 return (
                   <div key={item.id} className="space-y-4">
                     <FileDisplayCard
-                      fileName=""
                       fileUrl={item.content_url}
                       fileType="image"
                     />
@@ -300,7 +295,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 return (
                   <FileDisplayCard
                     key={item.id}
-                    fileName=""
                     fileUrl={item.content_url}
                     fileType={item.content_type}
                   />
@@ -311,7 +305,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
               return (
                 <FileDisplayCard
                   key={item.id}
-                  fileName=""
                   fileUrl={item.content_url}
                   fileType={item.content_type}
                 />
