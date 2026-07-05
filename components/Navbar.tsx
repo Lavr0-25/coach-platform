@@ -1,5 +1,5 @@
 'use client'
-
+import NotificationsBell from './NotificationsBell'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -202,6 +202,11 @@ export default function Navbar() {
                     onClick={handleBecomeMentor}
                     className="hidden md:inline-flex px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
                   >
+                    {!isMentor && (
+  <button
+    onClick={handleBecomeMentor}
+    className="hidden md:inline-flex px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
+  >
                     🎓 Стать наставником
                   </button>
                 )}

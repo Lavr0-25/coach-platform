@@ -4,6 +4,12 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
+interface UserInfo {
+  id: string
+  display_name: string
+  email?: string
+}
+
 interface Comment {
   id: string
   user_id: string
@@ -12,10 +18,6 @@ interface Comment {
   content: string
   is_private: boolean
   created_at: string
-  users?: {
-    email: string
-    display_name?: string
-  }
   replies?: Comment[]
 }
 
@@ -26,6 +28,7 @@ interface LessonCommentsProps {
 export default function LessonComments({ lessonId }: LessonCommentsProps) {
   const supabase = createClient()
   const [comments, setComments] = useState<Comment[]>([])
+  const [usersMap, setUsersMap] = useState<Record<string, UserInfo>>({})
   const [newComment, setNewComment] = useState('')
   const [isPrivate, setIsPrivate] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -49,17 +52,40 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     setUserId(user?.id || null)
   }
 
+  const loadUserInfo = async (userIds: string[]) => {
+    if (userIds.length === 0) return
+
+    const uniqueIds = [...new Set(userIds)]
+    const usersInfo: Record<string, UserInfo> = {}
+
+    for (const uid of uniqueIds) {
+      const { data: coach } = await supabase
+        .from('coaches')
+        .select('display_name, user_id')
+        .eq('user_id', uid)
+        .single()
+
+      if (coach) {
+        usersInfo[uid] = {
+          id: uid,
+          display_name: coach.display_name || 'Пользователь'
+        }
+      } else {
+        usersInfo[uid] = {
+          id: uid,
+          display_name: 'Пользователь'
+        }
+      }
+    }
+
+    setUsersMap(prev => ({ ...prev, ...usersInfo }))
+  }
+
   const loadComments = async () => {
     try {
       const { data, error } = await supabase
         .from('comments')
-        .select(`
-          *,
-          users:user_id (
-            email,
-            display_name
-          )
-        `)
+        .select('*')
         .eq('lesson_id', lessonId)
         .is('parent_id', null)
         .order('created_at', { ascending: false })
@@ -67,16 +93,10 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
       if (error) throw error
 
       const commentsWithReplies = await Promise.all(
-        (data || []).map(async (comment) => {
+        (data || []).map(async (comment: Comment) => {
           const { data: replies } = await supabase
             .from('comments')
-            .select(`
-              *,
-              users:user_id (
-                email,
-                display_name
-              )
-            `)
+            .select('*')
             .eq('parent_id', comment.id)
             .order('created_at', { ascending: true })
           
@@ -85,6 +105,12 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
       )
 
       setComments(commentsWithReplies)
+
+      const allUserIds: string[] = [
+        ...(data || []).map((c: Comment) => c.user_id),
+        ...(data || []).flatMap((c: Comment) => c.replies?.map((r: Comment) => r.user_id) || [])
+      ]
+      await loadUserInfo(allUserIds)
     } catch (error) {
       console.error('Error loading comments:', error)
     } finally {
@@ -152,6 +178,15 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  const getUserName = (userId: string) => {
+    return usersMap[userId]?.display_name || 'Пользователь'
+  }
+
+  const getUserInitial = (userId: string) => {
+    const name = getUserName(userId)
+    return name.charAt(0).toUpperCase()
   }
 
   if (loading) {
@@ -222,17 +257,17 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
       )}
 
       <div className="space-y-6">
-        {comments.map((comment) => (
+        {comments.map((comment: Comment) => (
           <div key={comment.id} className="border-b pb-6 last:border-0">
             <div className="flex items-start gap-3 mb-3">
               <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-                {(comment.users?.email || 'U').charAt(0).toUpperCase()}
+                {getUserInitial(comment.user_id)}
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
                     <p className="font-medium text-gray-900">
-                      {comment.users?.display_name || comment.users?.email?.split('@')[0] || 'Пользователь'}
+                      {getUserName(comment.user_id)}
                     </p>
                     <p className="text-sm text-gray-500">
                       {formatDate(comment.created_at)}
@@ -306,16 +341,16 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
             {comment.replies && comment.replies.length > 0 && (
               <div className="mt-4 space-y-4 ml-13 pl-4 border-l-2 border-gray-200">
-                {comment.replies.map((reply) => (
+                {comment.replies.map((reply: Comment) => (
                   <div key={reply.id} className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                      {(reply.users?.email || 'U').charAt(0).toUpperCase()}
+                      {getUserInitial(reply.user_id)}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <div>
                           <p className="font-medium text-gray-900 text-sm">
-                            {reply.users?.display_name || reply.users?.email?.split('@')[0] || 'Пользователь'}
+                            {getUserName(reply.user_id)}
                           </p>
                           <p className="text-xs text-gray-500">
                             {formatDate(reply.created_at)}

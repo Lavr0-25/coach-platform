@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import ReviewsSection from '@/components/ReviewsSection'
+import LessonComments from '@/components/LessonComments'
 
 interface LessonPageProps {
   params: Promise<{
@@ -329,6 +330,10 @@ export default async function LessonPage({ params }: LessonPageProps) {
       {/* Отзывы */}
       <div className="mb-6">
         <ReviewsSection lessonId={id} />
+      </div>
+            {/* Комментарии */}
+      <div className="mb-6">
+        <LessonComments lessonId={id} />
       </div>
     </main>
   )
