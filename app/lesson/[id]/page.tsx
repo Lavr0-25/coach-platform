@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import ReviewsSection from '@/components/ReviewsSection'
 
 interface LessonPageProps {
   params: Promise<{
@@ -8,7 +9,6 @@ interface LessonPageProps {
   }>
 }
 
-// Компонент для красивого отображения файла
 function FileDisplayCard({ 
   fileUrl, 
   fileType 
@@ -79,7 +79,6 @@ function FileDisplayCard({
   )
 }
 
-// Функция нормализации URL для embed
 function getEmbedUrl(url: string, contentType: string): string {
   if (!url) return ''
   
@@ -200,7 +199,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
           
           <div className="space-y-4">
             {content.map((item) => {
-              // YouTube
               if (item.content_type === 'youtube') {
                 const embedUrl = getEmbedUrl(item.content_url, 'youtube')
                 return (
@@ -216,7 +214,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 )
               }
               
-              // VK Video
               if (item.content_type === 'vk_video') {
                 const embedUrl = getEmbedUrl(item.content_url, 'vk_video')
                 if (embedUrl.includes('video_ext.php')) {
@@ -242,7 +239,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 )
               }
               
-              // PDF
               if (item.content_type === 'pdf') {
                 return (
                   <div key={item.id} className="space-y-4">
@@ -262,7 +258,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 )
               }
               
-              // Image
               if (item.content_type === 'image') {
                 return (
                   <div key={item.id} className="space-y-4">
@@ -282,7 +277,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 )
               }
               
-              // Yandex Disk & Presentation
               if (item.content_type === 'yandex_disk' || item.content_type === 'presentation') {
                 return (
                   <FileDisplayCard
@@ -293,7 +287,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 )
               }
               
-              // Unknown type
               return (
                 <FileDisplayCard
                   key={item.id}
@@ -323,7 +316,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
       )}
 
       {lesson.description && (
-        <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             📖 Описание
           </h2>
@@ -332,6 +325,11 @@ export default async function LessonPage({ params }: LessonPageProps) {
           </div>
         </div>
       )}
+
+      {/* Отзывы */}
+      <div className="mb-6">
+        <ReviewsSection lessonId={id} />
+      </div>
     </main>
   )
 }
