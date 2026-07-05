@@ -85,6 +85,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         setAverageRating(0)
       }
 
+      // Ищем отзыв текущего пользователя
       if (userId) {
         const found = data?.find((r: Review) => r.user_id === userId)
         if (found) {
@@ -123,20 +124,16 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         comment: newComment.trim() || null,
       }
 
-      if (userReview) {
-        const { error } = await supabase
-          .from('reviews')
-          .update(reviewData)
-          .eq('id', userReview.id)
+      // Используем upsert вместо insert/update
+      const { error } = await supabase
+        .from('reviews')
+        .upsert(reviewData, {
+          onConflict: courseId 
+            ? 'user_id,course_id' 
+            : 'user_id,lesson_id'
+        })
 
-        if (error) throw error
-      } else {
-        const { error } = await supabase
-          .from('reviews')
-          .insert(reviewData)
-
-        if (error) throw error
-      }
+      if (error) throw error
 
       await loadReviews()
       alert('✅ Отзыв сохранён!')
@@ -338,7 +335,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                     </div>
                     <div>
                       <Link
-                        href={`/mentor/${review.user_id}`}
+                        href={`/profile/${review.user_id}`}
                         className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
                       >
                         {userName}
@@ -362,7 +359,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         </div>
       ) : (
         <div className="text-center py-8">
-          <div className="text-4xl mb-2">💬</div>
+          <div className="text-4xl mb-2"></div>
           <p className="text-gray-600">
             Пока нет отзывов. Будьте первым!
           </p>
