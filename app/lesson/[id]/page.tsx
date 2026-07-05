@@ -134,6 +134,9 @@ export default async function LessonPage({ params }: LessonPageProps) {
     notFound()
   }
 
+  // Получаем первого наставника (coaches может быть массивом)
+  const coach = Array.isArray(lesson.coaches) ? lesson.coaches[0] : lesson.coaches
+
   const { data: content, error: contentError } = await supabase
     .from('lesson_content')
     .select('*')
@@ -162,15 +165,15 @@ export default async function LessonPage({ params }: LessonPageProps) {
           {lesson.title}
         </h1>
         
-        {lesson.coaches && (
+        {coach && (
           <div className="mb-4">
             <Link 
-              href={`/mentor/${lesson.coaches.id}`}
+              href={`/mentor/${coach.id}`}
               className="text-gray-600 hover:text-blue-600 transition-colors inline-flex items-center gap-2"
             >
-              👨‍ <span className="font-medium">{lesson.coaches.display_name}</span>
-              {lesson.coaches.specialization && (
-                <span className="text-gray-500">— {lesson.coaches.specialization}</span>
+              👨‍🏫 <span className="font-medium">{coach.display_name}</span>
+              {coach.specialization && (
+                <span className="text-gray-500">— {coach.specialization}</span>
               )}
             </Link>
           </div>
@@ -331,7 +334,8 @@ export default async function LessonPage({ params }: LessonPageProps) {
       <div className="mb-6">
         <ReviewsSection lessonId={id} />
       </div>
-            {/* Комментарии */}
+
+      {/* Комментарии */}
       <div className="mb-6">
         <LessonComments lessonId={id} />
       </div>
