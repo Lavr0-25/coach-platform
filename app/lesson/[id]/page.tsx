@@ -171,7 +171,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
               href={`/mentor/${coach.id}`}
               className="text-gray-600 hover:text-blue-600 transition-colors inline-flex items-center gap-2"
             >
-              👨‍🏫 <span className="font-medium">{coach.display_name}</span>
+              👨‍ <span className="font-medium">{coach.display_name}</span>
               {coach.specialization && (
                 <span className="text-gray-500">— {coach.specialization}</span>
               )}

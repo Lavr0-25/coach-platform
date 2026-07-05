@@ -6,6 +6,7 @@ import Link from 'next/link'
 
 interface Notification {
   id: string
+  user_id: string
   type: string
   title: string
   message: string
@@ -166,20 +167,20 @@ export default function NotificationsBell() {
             className="fixed inset-0 z-10"
             onClick={() => setShowDropdown(false)}
           />
-          <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg border z-20 max-h-[80vh] overflow-hidden">
-            <div className="p-4 border-b flex items-center justify-between">
+          <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg border z-20 max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
               <h3 className="font-semibold text-gray-900">Уведомления</h3>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
                   className="text-sm text-blue-600 hover:text-blue-700"
                 >
-                  Отметить все как прочитанные
+                  Все прочитаны
                 </button>
               )}
             </div>
 
-            <div className="overflow-y-auto max-h-[60vh]">
+            <div className="overflow-y-auto flex-1">
               {notifications.length > 0 ? (
                 notifications.map((notification) => (
                   <Link
@@ -209,7 +210,7 @@ export default function NotificationsBell() {
                         </p>
                       </div>
                       {!notification.is_read && (
-                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2"></div>
                       )}
                     </div>
                   </Link>

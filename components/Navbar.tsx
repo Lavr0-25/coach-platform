@@ -1,9 +1,10 @@
 'use client'
-import NotificationsBell from './NotificationsBell'
+
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
+import NotificationsBell from './NotificationsBell'
 
 interface Profile {
   display_name?: string
@@ -177,7 +178,7 @@ export default function Navbar() {
                Каталог уроков
             </Link>
             <Link href="/mentors" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-              👨‍🏫 Наставники
+              👨‍ Наставники
             </Link>
             
             {user && isMentor && (
@@ -197,16 +198,14 @@ export default function Navbar() {
               <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
             ) : user ? (
               <>
+                {/* Уведомления */}
+                <NotificationsBell />
+
                 {!isMentor && (
                   <button
                     onClick={handleBecomeMentor}
                     className="hidden md:inline-flex px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
                   >
-                    {!isMentor && (
-  <button
-    onClick={handleBecomeMentor}
-    className="hidden md:inline-flex px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
-  >
                     🎓 Стать наставником
                   </button>
                 )}
@@ -285,7 +284,7 @@ export default function Navbar() {
                               className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
                               onClick={() => setShowProfileMenu(false)}
                             >
-                              <span className="text-xl"></span>
+                              <span className="text-xl">📚</span>
                               Мои курсы
                             </Link>
 

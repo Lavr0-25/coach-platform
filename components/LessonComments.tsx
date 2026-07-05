@@ -266,9 +266,12 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
               <div className="flex-1">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
-                    <p className="font-medium text-gray-900">
+                    <Link
+                      href={`/mentor/${comment.user_id}`}
+                      className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                    >
                       {getUserName(comment.user_id)}
-                    </p>
+                    </Link>
                     <p className="text-sm text-gray-500">
                       {formatDate(comment.created_at)}
                     </p>
@@ -349,9 +352,12 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                     <div className="flex-1">
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <div>
-                          <p className="font-medium text-gray-900 text-sm">
+                          <Link
+                            href={`/mentor/${reply.user_id}`}
+                            className="font-medium text-blue-600 hover:text-blue-700 hover:underline text-sm"
+                          >
                             {getUserName(reply.user_id)}
-                          </p>
+                          </Link>
                           <p className="text-xs text-gray-500">
                             {formatDate(reply.created_at)}
                           </p>

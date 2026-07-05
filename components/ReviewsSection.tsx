@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
 
 interface Review {
   id: string
@@ -9,7 +10,9 @@ interface Review {
   rating: number
   comment: string
   created_at: string
-  user_email?: string
+  coaches?: {
+    display_name: string
+  }
 }
 
 interface ReviewsSectionProps {
@@ -55,7 +58,12 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
     try {
       let query = supabase
         .from('reviews')
-        .select('*')
+        .select(`
+          *,
+          coaches:user_id (
+            display_name
+          )
+        `)
         .order('created_at', { ascending: false })
 
       if (courseId) {
@@ -71,14 +79,14 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
       setReviews(data || [])
 
       if (data && data.length > 0) {
-        const avg = data.reduce((sum, r) => sum + r.rating, 0) / data.length
+        const avg = data.reduce((sum: number, r: Review) => sum + r.rating, 0) / data.length
         setAverageRating(Math.round(avg * 10) / 10)
       } else {
         setAverageRating(0)
       }
 
       if (userId) {
-        const found = data?.find(r => r.user_id === userId)
+        const found = data?.find((r: Review) => r.user_id === userId)
         if (found) {
           setUserReview(found)
           setNewRating(found.rating)
@@ -161,7 +169,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
     }
   }
 
-  const renderStars = (rating: number, interactive: boolean = false, size: 'sm' | 'md' | 'lg' = 'md') => {
+  const renderStars = (rating: number, size: 'sm' | 'md' | 'lg' = 'md') => {
     const sizeClasses = {
       sm: 'w-4 h-4',
       md: 'w-5 h-5',
@@ -192,6 +200,15 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
     return 'отзывов'
   }
 
+  const getUserName = (review: Review) => {
+    return review.coaches?.display_name || userEmail?.split('@')[0] || 'Пользователь'
+  }
+
+  const getUserInitial = (review: Review) => {
+    const name = getUserName(review)
+    return name.charAt(0).toUpperCase()
+  }
+
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border p-6">
@@ -215,7 +232,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
             <div className="text-3xl font-bold text-gray-900">
               {averageRating.toFixed(1)}
             </div>
-            {renderStars(Math.round(averageRating), false, 'lg')}
+            {renderStars(Math.round(averageRating), 'lg')}
             <span className="text-sm text-gray-500">
               ({reviews.length} {getReviewsWord(reviews.length)})
             </span>
@@ -304,37 +321,44 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
 
       {reviews.length > 0 ? (
         <div className="space-y-4">
-          {reviews.map((review) => (
-            <div
-              key={review.id}
-              className={`border rounded-lg p-4 ${
-                review.user_id === userId ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'
-              }`}
-            >
-              <div className="flex items-start justify-between mb-2 flex-wrap gap-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                    {(review.user_email || 'U').charAt(0).toUpperCase()}
+          {reviews.map((review) => {
+            const userName = getUserName(review)
+            
+            return (
+              <div
+                key={review.id}
+                className={`border rounded-lg p-4 ${
+                  review.user_id === userId ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2 flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                      {getUserInitial(review)}
+                    </div>
+                    <div>
+                      <Link
+                        href={`/mentor/${review.user_id}`}
+                        className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                      >
+                        {userName}
+                      </Link>
+                      <p className="text-sm text-gray-500">
+                        {new Date(review.created_at).toLocaleDateString('ru-RU')}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {review.user_email?.split('@')[0] || 'Пользователь'}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(review.created_at).toLocaleDateString('ru-RU')}
-                    </p>
-                  </div>
+                  {renderStars(review.rating, 'sm')}
                 </div>
-                {renderStars(review.rating, false, 'sm')}
+                
+                {review.comment && (
+                  <p className="text-gray-700 mt-2 whitespace-pre-wrap">
+                    {review.comment}
+                  </p>
+                )}
               </div>
-              
-              {review.comment && (
-                <p className="text-gray-700 mt-2 whitespace-pre-wrap">
-                  {review.comment}
-                </p>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
         <div className="text-center py-8">
