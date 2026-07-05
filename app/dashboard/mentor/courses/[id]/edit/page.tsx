@@ -226,19 +226,18 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
     setCourseLessons(updatedLessons)
 
-    // Сохраняем в БД
+    // Сохраняем в БД — обновляем каждый урок отдельно
     try {
-      const { error } = await supabase
-        .from('lessons')
-        .upsert(
-          updatedLessons.map(l => ({
-            id: l.id,
-            course_id: courseId,
-            order_index: l.order_index,
-          }))
-        )
+      for (const lesson of updatedLessons) {
+        const { error } = await supabase
+          .from('lessons')
+          .update({
+            order_index: lesson.order_index,
+          })
+          .eq('id', lesson.id)
 
-      if (error) throw error
+        if (error) throw error
+      }
     } catch (error: any) {
       console.error('Error reordering lessons:', error)
       alert('Ошибка при изменении порядка')
@@ -483,7 +482,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
               </div>
             ) : (
               <div className="text-center py-8 bg-gray-50 rounded-lg">
-                <div className="text-4xl mb-2"></div>
+                <div className="text-4xl mb-2">📭</div>
                 <p className="text-gray-600">
                   В курсе пока нет уроков
                 </p>
