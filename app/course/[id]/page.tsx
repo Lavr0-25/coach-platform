@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import CourseReviews from '@/components/CourseReviews'
 
 interface CoursePageProps {
   params: Promise<{
@@ -211,6 +212,10 @@ export default async function CoursePage({ params }: CoursePageProps) {
             </ul>
           </div>
         </div>
+      </div>
+            {/* Отзывы */}
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <CourseReviews courseId={id} />
       </div>
     </main>
   )
