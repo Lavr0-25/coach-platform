@@ -68,30 +68,38 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
   }
 
   const loadSettings = async () => {
-    const { data } = await supabase
-      .from('system_settings')
-      .select('key, value')
-      .in('key', ['auto_ban_threshold', 'auto_ban_duration_days'])
-    
-    if (data) {
-      const threshold = data.find(d => d.key === 'auto_ban_threshold')
-      const duration = data.find(d => d.key === 'auto_ban_duration_days')
-      if (threshold?.value) setBanThreshold(parseInt(threshold.value))
-      if (duration?.value) setBanDuration(parseInt(duration.value))
+    try {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('key, value')
+        .in('key', ['auto_ban_threshold', 'auto_ban_duration_days'])
+      
+      if (data) {
+        const threshold = data.find(d => d.key === 'auto_ban_threshold')
+        const duration = data.find(d => d.key === 'auto_ban_duration_days')
+        if (threshold?.value) setBanThreshold(parseInt(threshold.value))
+        if (duration?.value) setBanDuration(parseInt(duration.value))
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error)
     }
   }
 
   const checkBanStatus = async () => {
     if (!userId) return
     
-    const { data } = await supabase
-      .from('stop_list')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('banned_until', new Date().toISOString())
-      .single()
-    
-    setIsBanned(!!data)
+    try {
+      const { data } = await supabase
+        .from('stop_list')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('banned_until', new Date().toISOString())
+        .single()
+      
+      setIsBanned(!!data)
+    } catch (error) {
+      console.error('Error checking ban:', error)
+    }
   }
 
   const loadUserInfo = async (userIds: string[]) => {
@@ -101,34 +109,47 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     const usersInfo: Record<string, UserInfo> = {}
 
     for (const uid of uniqueIds) {
-      const { data: coach } = await supabase
-        .from('coaches')
-        .select('display_name, user_id')
-        .eq('user_id', uid)
-        .single()
+      try {
+        const { data: coach } = await supabase
+          .from('coaches')
+          .select('display_name, user_id')
+          .eq('user_id', uid)
+          .single()
 
-      usersInfo[uid] = {
-        id: uid,
-        display_name: coach?.display_name || 'Пользователь'
+        usersInfo[uid] = {
+          id: uid,
+          display_name: coach?.display_name || 'Пользователь'
+        }
+      } catch (error) {
+        usersInfo[uid] = { id: uid, display_name: 'Пользователь' }
       }
     }
 
     setUsersMap(prev => ({ ...prev, ...usersInfo }))
   }
 
-  // Функция для получения счётчика жалоб
+  // Надёжная функция подсчёта жалоб
   const getReportCount = async (commentId: string): Promise<number> => {
-    const { data, error } = await supabase
-      .from('reports')
-      .select('id')
-      .eq('comment_id', commentId)
-    
-    if (error) return 0
-    return data?.length || 0
+    try {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('id')
+        .eq('comment_id', commentId)
+      
+      if (error) {
+        console.error('Error counting reports:', error)
+        return 0
+      }
+      return data?.length || 0
+    } catch (error) {
+      return 0
+    }
   }
 
   const loadComments = async () => {
     try {
+      console.log('🔄 Загрузка комментариев для урока:', lessonId)
+      
       const { data, error } = await supabase
         .from('comments')
         .select('*')
@@ -136,7 +157,12 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
         .is('parent_id', null)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Ошибка загрузки комментариев:', error)
+        throw error
+      }
+
+      console.log('📥 Найдено комментариев:', data?.length || 0)
 
       const commentsWithReplies = await Promise.all(
         (data || []).map(async (comment: Comment) => {
@@ -146,10 +172,10 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
             .eq('parent_id', comment.id)
             .order('created_at', { ascending: true })
           
-          // Получаем счётчик жалоб для комментария
+          // Получаем счётчик жалоб
           const reportCount = await getReportCount(comment.id)
+          console.log(`  💬 Комментарий ${comment.id.substring(0, 8)}... — жалоб: ${reportCount}`)
           
-          // Получаем счётчики для ответов
           const repliesWithCounts = await Promise.all(
             (replies || []).map(async (reply) => {
               const replyReportCount = await getReportCount(reply.id)
@@ -165,6 +191,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
         })
       )
 
+      console.log('✅ Загружено комментариев:', commentsWithReplies.length)
       setComments(commentsWithReplies)
 
       const allUserIds: string[] = [
@@ -173,7 +200,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
       ]
       await loadUserInfo(allUserIds)
     } catch (error) {
-      console.error('Error loading comments:', error)
+      console.error('❌ Error loading comments:', error)
     } finally {
       setLoading(false)
     }
@@ -320,14 +347,16 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
       if (reportError) {
         if (reportError.code === '23505') {
-          alert('️ Вы уже жаловались на этот комментарий')
+          alert('⚠️ Вы уже жаловались на этот комментарий')
         } else {
           throw reportError
         }
         return
       }
 
-      // Получаем обновлённое количество жалоб
+      // Перезагружаем комментарии для обновления счётчика
+      await loadComments()
+
       const newCount = await getReportCount(commentId)
 
       if (newCount >= banThreshold) {
@@ -338,7 +367,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
       setReportingCommentId(null)
       setReportReason('')
-      await loadComments()
     } catch (error: any) {
       console.error('Error reporting:', error)
       alert('Ошибка: ' + (error.message || 'Не удалось отправить жалобу'))
@@ -424,7 +452,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                   className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                 />
                 <span className="text-sm text-gray-700">
-                  🔒 Личное сообщение (видит только ментор)
+                   Личное сообщение (видит только ментор)
                 </span>
               </label>
 
@@ -502,7 +530,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                             onClick={() => handleDelete(comment.id)}
                             className="text-red-600 hover:text-red-700 text-xs"
                           >
-                            🗑️ Удалить
+                            ️ Удалить
                           </button>
                         </>
                       )}
@@ -678,13 +706,13 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                       onClick={() => handleEditComment(reply)}
                                       className="text-blue-600 hover:text-blue-700 text-xs"
                                     >
-                                      ️
+                                      ✏️
                                     </button>
                                     <button
                                       onClick={() => handleDelete(reply.id)}
                                       className="text-red-600 hover:text-red-700 text-xs"
                                     >
-                                      ️
+                                      🗑️
                                     </button>
                                   </>
                                 )}
@@ -715,7 +743,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                     disabled={updating}
                                     className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-700 disabled:bg-gray-400"
                                   >
-                                    {updating ? '...' : ' Сохранить'}
+                                    {updating ? '...' : '💾 Сохранить'}
                                   </button>
                                   <button
                                     onClick={() => {
@@ -776,7 +804,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
         {comments.length === 0 && (
           <div className="text-center py-8 text-gray-500">
-             Пока нет комментариев. Будьте первым!
+            💬 Пока нет комментариев. Будьте первым!
           </div>
         )}
       </div>
