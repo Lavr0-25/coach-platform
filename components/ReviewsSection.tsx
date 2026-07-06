@@ -11,9 +11,7 @@ interface Review {
   rating: number
   comment: string
   created_at: string
-  coaches?: {
-    display_name: string
-  }
+  user_display_name?: string
 }
 
 interface ReviewsSectionProps {
@@ -31,7 +29,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [usersMap, setUsersMap] = useState<Record<string, string>>({})
 
   useEffect(() => {
     checkUser()
@@ -45,49 +43,79 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      setUserId(user.id)
-      setUserEmail(user.email || null)
-    } else {
-      setUserId(null)
-      setUserEmail(null)
-      setLoading(false)
+    setUserId(user?.id || null)
+  }
+
+  // Загружаем имена пользователей из таблицы coaches
+  const loadUserNames = async (userIds: string[]) => {
+    if (userIds.length === 0) return
+
+    const uniqueIds = [...new Set(userIds)]
+    const namesMap: Record<string, string> = {}
+
+    for (const uid of uniqueIds) {
+      const { data: coach } = await supabase
+        .from('coaches')
+        .select('display_name')
+        .eq('user_id', uid)
+        .single()
+
+      if (coach?.display_name) {
+        namesMap[uid] = coach.display_name
+      } else {
+        namesMap[uid] = 'Пользователь'
+      }
     }
+
+    setUsersMap(prev => ({ ...prev, ...namesMap }))
   }
 
   const loadReviews = async () => {
+    setLoading(true)
+    console.log('🔄 Loading reviews...', { courseId, lessonId })
+
     try {
       let query = supabase
         .from('reviews')
-        .select(`
-          *,
-          coaches:user_id (
-            display_name
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (courseId) {
         query = query.eq('course_id', courseId)
+        console.log('📚 Filtering by course_id:', courseId)
       } else if (lessonId) {
         query = query.eq('lesson_id', lessonId)
+        console.log('📖 Filtering by lesson_id:', lessonId)
       }
 
       const { data, error } = await query
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Reviews query error:', error)
+        setReviews([])
+        return
+      }
 
-      setReviews(data || [])
+      console.log('✅ Reviews loaded:', data?.length || 0, data)
 
-      if (data && data.length > 0) {
-        const avg = data.reduce((sum: number, r: Review) => sum + r.rating, 0) / data.length
+      const reviewsList = data || []
+      setReviews(reviewsList)
+
+      // Загружаем имена пользователей
+      const userIds = reviewsList.map(r => r.user_id)
+      await loadUserNames(userIds)
+
+      // Считаем средний рейтинг
+      if (reviewsList.length > 0) {
+        const avg = reviewsList.reduce((sum, r) => sum + r.rating, 0) / reviewsList.length
         setAverageRating(Math.round(avg * 10) / 10)
       } else {
         setAverageRating(0)
       }
 
+      // Ищем отзыв текущего пользователя
       if (userId) {
-        const found = data?.find((r: Review) => r.user_id === userId)
+        const found = reviewsList.find(r => r.user_id === userId)
         if (found) {
           setUserReview(found)
           setNewRating(found.rating)
@@ -99,7 +127,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         }
       }
     } catch (error) {
-      console.error('Error loading reviews:', error)
+      console.error('❌ Error loading reviews:', error)
     } finally {
       setLoading(false)
     }
@@ -133,6 +161,8 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         comment: newComment.trim() || null,
       }
 
+      console.log('💾 Saving review:', reviewData)
+
       const { error } = await supabase
         .from('reviews')
         .upsert(reviewData, {
@@ -141,12 +171,16 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
             : 'user_id,lesson_id'
         })
 
-      if (error) throw error
+      if (error) {
+        console.error(' Save error:', error)
+        throw error
+      }
 
+      console.log('✅ Review saved!')
       await loadReviews()
       alert('✅ Отзыв сохранён!')
     } catch (error: any) {
-      console.error('Error saving review:', error)
+      console.error('❌ Error saving review:', error)
       alert('Ошибка: ' + (error.message || 'Не удалось сохранить отзыв'))
     } finally {
       setSubmitting(false)
@@ -206,7 +240,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
   }
 
   const getUserName = (review: Review) => {
-    return review.coaches?.display_name || userEmail?.split('@')[0] || 'Пользователь'
+    return usersMap[review.user_id] || 'Пользователь'
   }
 
   const getUserInitial = (review: Review) => {
@@ -326,44 +360,40 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
 
       {reviews.length > 0 ? (
         <div className="max-h-96 overflow-y-auto space-y-4 pr-2">
-          {reviews.map((review) => {
-            const userName = getUserName(review)
-            
-            return (
-              <div
-                key={review.id}
-                className={`border rounded-lg p-4 ${
-                  review.user_id === userId ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2 flex-wrap gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                      {getUserInitial(review)}
-                    </div>
-                    <div>
-                      <Link
-                        href={`/profile/${review.user_id}`}
-                        className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
-                      >
-                        {userName}
-                      </Link>
-                      <p className="text-sm text-gray-500">
-                        {new Date(review.created_at).toLocaleDateString('ru-RU')}
-                      </p>
-                    </div>
+          {reviews.map((review) => (
+            <div
+              key={review.id}
+              className={`border rounded-lg p-4 ${
+                review.user_id === userId ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'
+              }`}
+            >
+              <div className="flex items-start justify-between mb-2 flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                    {getUserInitial(review)}
                   </div>
-                  {renderStars(review.rating, 'sm')}
+                  <div>
+                    <Link
+                      href={`/profile/${review.user_id}`}
+                      className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                    >
+                      {getUserName(review)}
+                    </Link>
+                    <p className="text-sm text-gray-500">
+                      {new Date(review.created_at).toLocaleDateString('ru-RU')}
+                    </p>
+                  </div>
                 </div>
-                
-                {review.comment && (
-                  <p className="text-gray-700 mt-2 whitespace-pre-wrap">
-                    {review.comment}
-                  </p>
-                )}
+                {renderStars(review.rating, 'sm')}
               </div>
-            )
-          })}
+              
+              {review.comment && (
+                <p className="text-gray-700 mt-2 whitespace-pre-wrap">
+                  {review.comment}
+                </p>
+              )}
+            </div>
+          ))}
         </div>
       ) : (
         <div className="text-center py-8">
