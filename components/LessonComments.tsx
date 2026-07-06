@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { checkBannedWords } from '@/lib/banned-words'
 
 interface UserInfo {
   id: string
@@ -64,7 +65,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
       .from('stop_list')
       .select('*')
       .eq('user_id', userId)
-      .gte('ban_until', new Date().toISOString())
+      .gte('banned_until', new Date().toISOString())
       .single()
     
     setIsBanned(!!data)
@@ -143,7 +144,14 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     if (!content.trim() || !userId) return
 
     if (isBanned) {
-      alert(' Вам запрещено оставлять комментарии. Попробуйте позже.')
+      alert('⛔ Вам запрещено оставлять комментарии. Попробуйте позже.')
+      return
+    }
+
+    // Проверяем на запрещённые слова
+    const { hasBanned, foundWord } = await checkBannedWords(content)
+    if (hasBanned) {
+      alert(` Комментарий содержит запрещённое слово: "${foundWord}". Пожалуйста, измените текст.`)
       return
     }
 
@@ -206,7 +214,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     setReporting(true)
 
     try {
-      // Получаем информацию о комментарии
       const { data: comment } = await supabase
         .from('comments')
         .select('*')
@@ -215,7 +222,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
       if (!comment) throw new Error('Комментарий не найден')
 
-      // Создаём жалобу
       const { error: reportError } = await supabase
         .from('reports')
         .insert({
@@ -228,7 +234,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
       if (reportError) throw reportError
 
-      // Проверяем количество жалоб
       const { data: reports } = await supabase
         .from('reports')
         .select('id')
@@ -236,15 +241,12 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
       const reportCount = reports?.length || 0
 
-      // Если 3 и более жалоб - удаляем комментарий и блокируем пользователя
       if (reportCount >= 3) {
-        // Удаляем комментарий
         await supabase
           .from('comments')
           .delete()
           .eq('id', commentId)
 
-        // Блокируем пользователя на 5 дней
         const banUntil = new Date()
         banUntil.setDate(banUntil.getDate() + 5)
 
@@ -316,7 +318,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
         isBanned ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
             <p className="text-red-800 font-medium">
-              ⛔ Вам запрещено оставлять комментарии. Попробуйте позже.
+               Вам запрещено оставлять комментарии. Попробуйте позже.
             </p>
           </div>
         ) : (
@@ -424,7 +426,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                   {comment.content}
                 </p>
 
-                {/* Форма жалобы */}
                 {reportingCommentId === comment.id && (
                   <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                     <p className="text-sm font-medium text-orange-900 mb-2">

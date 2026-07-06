@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { checkBannedWords } from '@/lib/banned-words'
 
 interface Review {
   id: string
@@ -110,6 +111,15 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
     if (!userId) {
       alert('Войдите, чтобы оставить отзыв')
       return
+    }
+
+    // Проверяем на запрещённые слова
+    if (newComment.trim()) {
+      const { hasBanned, foundWord } = await checkBannedWords(newComment)
+      if (hasBanned) {
+        alert(`⛔ Отзыв содержит запрещённое слово: "${foundWord}". Пожалуйста, измените текст.`)
+        return
+      }
     }
 
     setSubmitting(true)
