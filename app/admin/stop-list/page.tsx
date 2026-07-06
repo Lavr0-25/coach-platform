@@ -26,12 +26,11 @@ export default function StopListPage() {
   })
   const [searchEmail, setSearchEmail] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
-  const [filterActive, setFilterActive] = useState(false) // По умолчанию показываем все
+  const [filterActive, setFilterActive] = useState(false)
   const [, setNow] = useState(Date.now())
 
   useEffect(() => {
     loadStopList()
-    // Обновляем каждую минуту
     const interval = setInterval(() => setNow(Date.now()), 60000)
     return () => clearInterval(interval)
   }, [filterActive])
@@ -47,18 +46,28 @@ export default function StopListPage() {
 
       if (error) throw error
 
+      console.log('📥 Загружено записей стоп-листа:', data?.length || 0)
+
       const entriesWithUsers = await Promise.all(
         (data || []).map(async (entry) => {
-          const { data: coachData } = await supabase
+          console.log('  🔍 Поиск пользователя:', entry.user_id)
+          
+          const { data: coachData, error: coachError } = await supabase
             .from('coaches')
-            .select('display_name, email')
+            .select('display_name')
             .eq('user_id', entry.user_id)
             .single()
 
+          if (coachError) {
+            console.error('  ❌ Ошибка поиска:', coachError)
+          } else {
+            console.log('  ✅ Найдено имя:', coachData?.display_name)
+          }
+
           return {
             ...entry,
-            user_email: coachData?.email || 'Неизвестно',
-            display_name: coachData?.display_name || null,
+            user_email: entry.user_id,
+            display_name: coachData?.display_name || 'Неизвестно',
           }
         })
       )
@@ -80,8 +89,8 @@ export default function StopListPage() {
     try {
       const { data, error } = await supabase
         .from('coaches')
-        .select('user_id, display_name, email')
-        .ilike('email', `%${searchEmail}%`)
+        .select('user_id, display_name')
+        .ilike('display_name', `%${searchEmail}%`)
         .limit(5)
 
       if (error) throw error
@@ -206,7 +215,6 @@ export default function StopListPage() {
           </div>
         </div>
 
-        {/* Фильтры */}
         <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -247,7 +255,7 @@ export default function StopListPage() {
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">
-                          {entry.display_name || entry.user_email || 'Неизвестно'}
+                          {entry.display_name || 'Неизвестно'}
                         </p>
                         <p className="text-sm text-gray-500">{entry.user_email}</p>
                       </div>
@@ -303,7 +311,7 @@ export default function StopListPage() {
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email пользователя
+                  Имя пользователя
                 </label>
                 <input
                   type="text"
@@ -313,7 +321,7 @@ export default function StopListPage() {
                     searchUser()
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Введите email..."
+                  placeholder="Введите имя..."
                 />
 
                 {searchResults.length > 0 && (
@@ -325,9 +333,8 @@ export default function StopListPage() {
                         className="w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors"
                       >
                         <p className="font-medium text-gray-900">
-                          {user.display_name || user.email}
+                          {user.display_name || user.user_id}
                         </p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
                       </button>
                     ))}
                   </div>

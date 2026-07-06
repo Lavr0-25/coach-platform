@@ -30,13 +30,20 @@ export default function ReportsPage() {
 
   const loadReports = async () => {
     try {
+      console.log('🔄 Загрузка жалоб...')
+      
       // Загружаем жалобы на комментарии
       const { data: commentData, error: commentError } = await supabase
         .from('reports')
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (commentError) throw commentError
+      if (commentError) {
+        console.error('❌ Ошибка загрузки жалоб на комментарии:', commentError)
+        throw commentError
+      }
+
+      console.log('📥 Жалоб на комментарии:', commentData?.length || 0)
 
       // Загружаем жалобы на отзывы
       const { data: reviewData, error: reviewError } = await supabase
@@ -44,9 +51,14 @@ export default function ReportsPage() {
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (reviewError) throw reviewError
+      if (reviewError) {
+        console.error('❌ Ошибка загрузки жалоб на отзывы:', reviewError)
+        throw reviewError
+      }
 
-      // Загружаем имена пользователей
+      console.log(' Жалоб на отзывы:', reviewData?.length || 0)
+
+      // Собираем все user_id
       const userIds = new Set<string>()
       ;(commentData || []).forEach(r => {
         userIds.add(r.reporter_id)
@@ -57,15 +69,19 @@ export default function ReportsPage() {
         userIds.add(r.reported_user_id)
       })
 
+      console.log('🔍 Загружаем имена для', userIds.size, 'пользователей')
+
+      // Загружаем имена
       const namesMap: Record<string, string> = {}
       for (const uid of userIds) {
         const { data: coach } = await supabase
           .from('coaches')
-          .select('display_name, email')
+          .select('display_name')
           .eq('user_id', uid)
           .single()
         
         namesMap[uid] = coach?.display_name || uid.substring(0, 8)
+        console.log(`  ${uid.substring(0, 8)}... → ${namesMap[uid]}`)
       }
 
       const commentsWithNames = (commentData || []).map(r => ({
@@ -82,6 +98,8 @@ export default function ReportsPage() {
 
       setCommentReports(commentsWithNames)
       setReviewReports(reviewsWithNames)
+      
+      console.log('✅ Загрузка завершена')
     } catch (error) {
       console.error('Error loading reports:', error)
     } finally {
@@ -117,26 +135,12 @@ export default function ReportsPage() {
     })
   }
 
-  const getRemainingTime = (bannedUntil: string) => {
-    const now = new Date()
-    const end = new Date(bannedUntil)
-    const diff = end.getTime() - now.getTime()
-    
-    if (diff <= 0) return 'Истекла'
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-    
-    if (days > 0) return `${days} дн. ${hours} ч.`
-    return `${hours} ч.`
-  }
-
   return (
     <main className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">️ Жалобы</h1>
+            <h1 className="text-3xl font-bold text-gray-900">⚠️ Жалобы</h1>
             <p className="text-gray-600 mt-1">
               Просмотр всех жалоб на контент
             </p>
