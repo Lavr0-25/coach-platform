@@ -11,7 +11,7 @@ interface Review {
   rating: number
   comment: string
   created_at: string
-  user_display_name?: string
+  report_count?: number
 }
 
 interface ReviewsSectionProps {
@@ -30,6 +30,10 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
   const [submitting, setSubmitting] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [usersMap, setUsersMap] = useState<Record<string, string>>({})
+  const [reportingReviewId, setReportingReviewId] = useState<string | null>(null)
+  const [reportReason, setReportReason] = useState('')
+  const [reporting, setReporting] = useState(false)
+  const [banThreshold, setBanThreshold] = useState(3)
 
   useEffect(() => {
     checkUser()
@@ -38,6 +42,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
   useEffect(() => {
     if (userId !== null) {
       loadReviews()
+      loadSettings()
     }
   }, [userId, courseId, lessonId])
 
@@ -46,7 +51,18 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
     setUserId(user?.id || null)
   }
 
-  // Загружаем имена пользователей из таблицы coaches
+  const loadSettings = async () => {
+    const { data } = await supabase
+      .from('system_settings')
+      .select('key, value')
+      .eq('key', 'auto_ban_threshold')
+      .single()
+    
+    if (data?.value) {
+      setBanThreshold(parseInt(data.value))
+    }
+  }
+
   const loadUserNames = async (userIds: string[]) => {
     if (userIds.length === 0) return
 
@@ -60,11 +76,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         .eq('user_id', uid)
         .single()
 
-      if (coach?.display_name) {
-        namesMap[uid] = coach.display_name
-      } else {
-        namesMap[uid] = 'Пользователь'
-      }
+      namesMap[uid] = coach?.display_name || 'Пользователь'
     }
 
     setUsersMap(prev => ({ ...prev, ...namesMap }))
@@ -72,7 +84,6 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
 
   const loadReviews = async () => {
     setLoading(true)
-    console.log('🔄 Loading reviews...', { courseId, lessonId })
 
     try {
       let query = supabase
@@ -82,40 +93,42 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
 
       if (courseId) {
         query = query.eq('course_id', courseId)
-        console.log('📚 Filtering by course_id:', courseId)
       } else if (lessonId) {
         query = query.eq('lesson_id', lessonId)
-        console.log('📖 Filtering by lesson_id:', lessonId)
       }
 
       const { data, error } = await query
 
-      if (error) {
-        console.error('❌ Reviews query error:', error)
-        setReviews([])
-        return
-      }
-
-      console.log('✅ Reviews loaded:', data?.length || 0, data)
+      if (error) throw error
 
       const reviewsList = data || []
-      setReviews(reviewsList)
+      
+      // Загружаем количество жалоб для каждого отзыва
+      const reviewsWithReports = await Promise.all(
+        reviewsList.map(async (review) => {
+          const { count } = await supabase
+            .from('review_reports')
+            .select('*', { count: 'exact', head: true })
+            .eq('review_id', review.id)
+          
+          return { ...review, report_count: count || 0 }
+        })
+      )
 
-      // Загружаем имена пользователей
-      const userIds = reviewsList.map(r => r.user_id)
+      setReviews(reviewsWithReports)
+
+      const userIds = reviewsWithReports.map(r => r.user_id)
       await loadUserNames(userIds)
 
-      // Считаем средний рейтинг
-      if (reviewsList.length > 0) {
-        const avg = reviewsList.reduce((sum, r) => sum + r.rating, 0) / reviewsList.length
+      if (reviewsWithReports.length > 0) {
+        const avg = reviewsWithReports.reduce((sum, r) => sum + r.rating, 0) / reviewsWithReports.length
         setAverageRating(Math.round(avg * 10) / 10)
       } else {
         setAverageRating(0)
       }
 
-      // Ищем отзыв текущего пользователя
       if (userId) {
-        const found = reviewsList.find(r => r.user_id === userId)
+        const found = reviewsWithReports.find(r => r.user_id === userId)
         if (found) {
           setUserReview(found)
           setNewRating(found.rating)
@@ -127,7 +140,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         }
       }
     } catch (error) {
-      console.error('❌ Error loading reviews:', error)
+      console.error('Error loading reviews:', error)
     } finally {
       setLoading(false)
     }
@@ -141,7 +154,6 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
       return
     }
 
-    // Проверяем на запрещённые слова
     if (newComment.trim()) {
       const { hasBanned, foundWord } = await checkBannedWords(newComment)
       if (hasBanned) {
@@ -161,8 +173,6 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         comment: newComment.trim() || null,
       }
 
-      console.log('💾 Saving review:', reviewData)
-
       const { error } = await supabase
         .from('reviews')
         .upsert(reviewData, {
@@ -171,20 +181,23 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
             : 'user_id,lesson_id'
         })
 
-      if (error) {
-        console.error(' Save error:', error)
-        throw error
-      }
+      if (error) throw error
 
-      console.log('✅ Review saved!')
       await loadReviews()
       alert('✅ Отзыв сохранён!')
     } catch (error: any) {
-      console.error('❌ Error saving review:', error)
+      console.error('Error saving review:', error)
       alert('Ошибка: ' + (error.message || 'Не удалось сохранить отзыв'))
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleEdit = (review: Review) => {
+    setUserReview(review)
+    setNewRating(review.rating)
+    setNewComment(review.comment || '')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleDelete = async () => {
@@ -201,10 +214,67 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
       if (error) throw error
 
       await loadReviews()
+      setUserReview(null)
+      setNewComment('')
       alert('Отзыв удалён')
     } catch (error: any) {
       console.error('Error deleting review:', error)
       alert('Ошибка при удалении отзыва')
+    }
+  }
+
+  const handleReport = async (reviewId: string, reportedUserId: string) => {
+    if (!userId) {
+      alert('Войдите, чтобы пожаловаться')
+      return
+    }
+
+    if (!reportReason.trim()) {
+      alert('Укажите причину жалобы')
+      return
+    }
+
+    setReporting(true)
+
+    try {
+      const { error: reportError } = await supabase
+        .from('review_reports')
+        .insert({
+          reporter_id: userId,
+          reported_user_id: reportedUserId,
+          review_id: reviewId,
+          reason: reportReason.trim(),
+        })
+
+      if (reportError) {
+        if (reportError.code === '23505') {
+          alert('⚠️ Вы уже жаловались на этот отзыв')
+        } else {
+          throw reportError
+        }
+        return
+      }
+
+      // Получаем обновлённое количество жалоб
+      const { count } = await supabase
+        .from('review_reports')
+        .select('*', { count: 'exact', head: true })
+        .eq('review_id', reviewId)
+
+      if (count && count >= banThreshold) {
+        alert(`⚠️ Жалоба отправлена. Отзыв будет удалён автоматически (${count}/${banThreshold})`)
+      } else {
+        alert(`✅ Жалоба отправлена (${count || 1}/${banThreshold})`)
+      }
+
+      setReportingReviewId(null)
+      setReportReason('')
+      await loadReviews()
+    } catch (error: any) {
+      console.error('Error reporting:', error)
+      alert('Ошибка: ' + (error.message || 'Не удалось отправить жалобу'))
+    } finally {
+      setReporting(false)
     }
   }
 
@@ -282,7 +352,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
       {userId ? (
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
           <h3 className="font-semibold text-gray-900 mb-3">
-            {userReview ? 'Ваш отзыв' : 'Оставьте отзыв'}
+            {userReview ? 'Редактировать отзыв' : 'Оставьте отзыв'}
           </h3>
           
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -332,7 +402,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                 disabled={submitting}
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
               >
-                {submitting ? 'Сохранение...' : userReview ? 'Обновить отзыв' : 'Опубликовать отзыв'}
+                {submitting ? 'Сохранение...' : userReview ? '💾 Обновить отзыв' : '✅ Опубликовать отзыв'}
               </button>
               
               {userReview && (
@@ -341,7 +411,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                   onClick={handleDelete}
                   className="bg-red-100 text-red-600 px-6 py-2 rounded-lg font-medium hover:bg-red-200 transition-colors"
                 >
-                  Удалить отзыв
+                  🗑️ Удалить отзыв
                 </button>
               )}
             </div>
@@ -384,8 +454,73 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                     </p>
                   </div>
                 </div>
-                {renderStars(review.rating, 'sm')}
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  {renderStars(review.rating, 'sm')}
+                  
+                  {/* Счётчик жалоб */}
+                  {review.report_count && review.report_count > 0 && (
+                    <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                      ⚠️ {review.report_count}/{banThreshold}
+                    </span>
+                  )}
+                  
+                  {/* Кнопка жалобы */}
+                  {review.user_id !== userId && (
+                    <button
+                      onClick={() => setReportingReviewId(
+                        reportingReviewId === review.id ? null : review.id
+                      )}
+                      className="text-gray-400 hover:text-orange-600 text-xs flex items-center gap-1"
+                    >
+                      🚩 Пожаловаться
+                    </button>
+                  )}
+                  
+                  {/* Кнопка редактирования */}
+                  {review.user_id === userId && (
+                    <button
+                      onClick={() => handleEdit(review)}
+                      className="text-blue-600 hover:text-blue-700 text-xs"
+                    >
+                      ✏️ Редактировать
+                    </button>
+                  )}
+                </div>
               </div>
+              
+              {/* Форма жалобы */}
+              {reportingReviewId === review.id && (
+                <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <p className="text-sm font-medium text-orange-900 mb-2">
+                    Причина жалобы:
+                  </p>
+                  <textarea
+                    rows={2}
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="w-full px-3 py-2 border border-orange-300 rounded-md text-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="Опишите причину жалобы..."
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => handleReport(review.id, review.user_id)}
+                      disabled={reporting}
+                      className="bg-orange-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-orange-700 disabled:bg-gray-400"
+                    >
+                      {reporting ? 'Отправка...' : 'Отправить жалобу'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setReportingReviewId(null)
+                        setReportReason('')
+                      }}
+                      className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm font-medium hover:bg-gray-200"
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                </div>
+              )}
               
               {review.comment && (
                 <p className="text-gray-700 mt-2 whitespace-pre-wrap">

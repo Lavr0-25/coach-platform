@@ -120,17 +120,17 @@ export default async function AdminPage() {
             </p>
           </Link>
 
-          {/* Настройки */}
+           {/* Настройки */}
           <Link
             href="/admin/settings"
             className="block p-6 bg-white rounded-xl shadow-sm border hover:shadow-lg transition-all hover:-translate-y-1"
           >
-            <div className="text-4xl mb-3">️</div>
+            <div className="text-4xl mb-3">⚙️</div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Настройки
             </h3>
             <p className="text-gray-600 text-sm">
-              Общие настройки платформы
+              Параметры автоматической модерации
             </p>
           </Link>
         </div>

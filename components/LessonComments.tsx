@@ -8,7 +8,6 @@ import { checkBannedWords } from '@/lib/banned-words'
 interface UserInfo {
   id: string
   display_name: string
-  email?: string
 }
 
 interface Comment {
@@ -19,6 +18,7 @@ interface Comment {
   content: string
   is_private: boolean
   created_at: string
+  report_count?: number
   replies?: Comment[]
 }
 
@@ -41,6 +41,16 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
   const [reportReason, setReportReason] = useState('')
   const [reporting, setReporting] = useState(false)
   const [isBanned, setIsBanned] = useState(false)
+  const [banThreshold, setBanThreshold] = useState(3)
+  const [banDuration, setBanDuration] = useState(5)
+  
+  // Редактирование
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editContent, setEditContent] = useState('')
+  const [updating, setUpdating] = useState(false)
+  
+  // Сворачивание ответов
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     checkUser()
@@ -50,12 +60,27 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     if (userId !== null) {
       loadComments()
       checkBanStatus()
+      loadSettings()
     }
   }, [userId])
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     setUserId(user?.id || null)
+  }
+
+  const loadSettings = async () => {
+    const { data } = await supabase
+      .from('system_settings')
+      .select('key, value')
+      .in('key', ['auto_ban_threshold', 'auto_ban_duration_days'])
+    
+    if (data) {
+      const threshold = data.find(d => d.key === 'auto_ban_threshold')
+      const duration = data.find(d => d.key === 'auto_ban_duration_days')
+      if (threshold?.value) setBanThreshold(parseInt(threshold.value))
+      if (duration?.value) setBanDuration(parseInt(duration.value))
+    }
   }
 
   const checkBanStatus = async () => {
@@ -84,16 +109,9 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
         .eq('user_id', uid)
         .single()
 
-      if (coach) {
-        usersInfo[uid] = {
-          id: uid,
-          display_name: coach.display_name || 'Пользователь'
-        }
-      } else {
-        usersInfo[uid] = {
-          id: uid,
-          display_name: 'Пользователь'
-        }
+      usersInfo[uid] = {
+        id: uid,
+        display_name: coach?.display_name || 'Пользователь'
       }
     }
 
@@ -111,6 +129,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
       if (error) throw error
 
+      // Загружаем ответы и счётчики жалоб
       const commentsWithReplies = await Promise.all(
         (data || []).map(async (comment: Comment) => {
           const { data: replies } = await supabase
@@ -119,7 +138,28 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
             .eq('parent_id', comment.id)
             .order('created_at', { ascending: true })
           
-          return { ...comment, replies: replies || [] }
+          // Счётчик жалоб
+          const { count } = await supabase
+            .from('reports')
+            .select('*', { count: 'exact', head: true })
+            .eq('comment_id', comment.id)
+          
+          // Счётчики для ответов
+          const repliesWithCounts = await Promise.all(
+            (replies || []).map(async (reply) => {
+              const { count: replyCount } = await supabase
+                .from('reports')
+                .select('*', { count: 'exact', head: true })
+                .eq('comment_id', reply.id)
+              return { ...reply, report_count: replyCount || 0 }
+            })
+          )
+          
+          return { 
+            ...comment, 
+            report_count: count || 0,
+            replies: repliesWithCounts 
+          }
         })
       )
 
@@ -148,10 +188,9 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
       return
     }
 
-    // Проверяем на запрещённые слова
     const { hasBanned, foundWord } = await checkBannedWords(content)
     if (hasBanned) {
-      alert(` Комментарий содержит запрещённое слово: "${foundWord}". Пожалуйста, измените текст.`)
+      alert(`⛔ Комментарий содержит запрещённое слово: "${foundWord}". Пожалуйста, измените текст.`)
       return
     }
 
@@ -183,6 +222,45 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     }
   }
 
+  const handleEditComment = (comment: Comment) => {
+    setEditingCommentId(comment.id)
+    setEditContent(comment.content)
+  }
+
+  const handleUpdateComment = async (commentId: string) => {
+    if (!editContent.trim()) {
+      alert('Комментарий не может быть пустым')
+      return
+    }
+
+    const { hasBanned, foundWord } = await checkBannedWords(editContent)
+    if (hasBanned) {
+      alert(`⛔ Комментарий содержит запрещённое слово: "${foundWord}".`)
+      return
+    }
+
+    setUpdating(true)
+
+    try {
+      const { error } = await supabase
+        .from('comments')
+        .update({ content: editContent.trim() })
+        .eq('id', commentId)
+
+      if (error) throw error
+
+      setEditingCommentId(null)
+      setEditContent('')
+      await loadComments()
+      alert('✅ Комментарий обновлён')
+    } catch (error: any) {
+      console.error('Error updating comment:', error)
+      alert('Ошибка: ' + (error.message || 'Не удалось обновить комментарий'))
+    } finally {
+      setUpdating(false)
+    }
+  }
+
   const handleDelete = async (commentId: string) => {
     if (!confirm('Удалить комментарий?')) return
 
@@ -193,6 +271,12 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
         .eq('id', commentId)
 
       if (error) throw error
+      
+      if (editingCommentId === commentId) {
+        setEditingCommentId(null)
+        setEditContent('')
+      }
+      
       await loadComments()
     } catch (error: any) {
       console.error('Error deleting comment:', error)
@@ -200,7 +284,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     }
   }
 
-  const handleReport = async (commentId: string) => {
+  const handleReport = async (commentId: string, reportedUserId: string) => {
     if (!userId) {
       alert('Войдите, чтобы пожаловаться')
       return
@@ -226,44 +310,32 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
         .from('reports')
         .insert({
           reporter_id: userId,
-          reported_user_id: comment.user_id,
+          reported_user_id: reportedUserId,
           comment_id: commentId,
           reason: reportReason.trim(),
           lesson_id: lessonId,
         })
 
-      if (reportError) throw reportError
+      if (reportError) {
+        if (reportError.code === '23505') {
+          alert('⚠️ Вы уже жаловались на этот комментарий')
+        } else {
+          throw reportError
+        }
+        return
+      }
 
-      const { data: reports } = await supabase
+      const { count } = await supabase
         .from('reports')
-        .select('id')
+        .select('*', { count: 'exact', head: true })
         .eq('comment_id', commentId)
 
-      const reportCount = reports?.length || 0
+      const reportCount = count || 0
 
-      if (reportCount >= 3) {
-        await supabase
-          .from('comments')
-          .delete()
-          .eq('id', commentId)
-
-        const banUntil = new Date()
-        banUntil.setDate(banUntil.getDate() + 5)
-
-        await supabase
-          .from('stop_list')
-          .upsert({
-            user_id: comment.user_id,
-            reason: 'Автоматическая блокировка: 3+ жалобы на комментарий',
-            banned_until: banUntil.toISOString(),
-            created_at: new Date().toISOString(),
-          }, {
-            onConflict: 'user_id'
-          })
-
-        alert('⚠️ Комментарий удалён из-за множественных жалоб. Пользователь заблокирован на 5 дней.')
+      if (reportCount >= banThreshold) {
+        alert(`️ Жалоба отправлена. Комментарий будет удалён автоматически (${reportCount}/${banThreshold})`)
       } else {
-        alert(`✅ Жалоба отправлена. (${reportCount}/3)`)
+        alert(`✅ Жалоба отправлена (${reportCount}/${banThreshold})`)
       }
 
       setReportingCommentId(null)
@@ -275,6 +347,13 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     } finally {
       setReporting(false)
     }
+  }
+
+  const toggleExpand = (commentId: string) => {
+    setExpandedComments(prev => ({
+      ...prev,
+      [commentId]: !prev[commentId]
+    }))
   }
 
   const formatDate = (dateString: string) => {
@@ -318,7 +397,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
         isBanned ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
             <p className="text-red-800 font-medium">
-               Вам запрещено оставлять комментарии. Попробуйте позже.
+              ⛔ Вам запрещено оставлять комментарии. Попробуйте позже.
             </p>
           </div>
         ) : (
@@ -373,226 +452,336 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
       )}
 
       <div className="max-h-96 overflow-y-auto space-y-6 pr-2">
-        {comments.map((comment: Comment) => (
-          <div key={comment.id} className="border-b pb-6 last:border-0">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-                {getUserInitial(comment.user_id)}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <Link
-                      href={`/profile/${comment.user_id}`}
-                      className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
-                    >
-                      {getUserName(comment.user_id)}
-                    </Link>
-                    <p className="text-sm text-gray-500">
-                      {formatDate(comment.created_at)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {comment.is_private && (
-                      <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">
-                        🔒 Личное
-                      </span>
-                    )}
-                    {comment.user_id === userId && (
-                      <button
-                        onClick={() => handleDelete(comment.id)}
-                        className="text-red-600 hover:text-red-700 text-sm"
-                      >
-                        Удалить
-                      </button>
-                    )}
-                    {comment.user_id !== userId && (
-                      <button
-                        onClick={() => setReportingCommentId(
-                          reportingCommentId === comment.id ? null : comment.id
-                        )}
-                        className="text-gray-400 hover:text-orange-600 text-sm flex items-center gap-1"
-                        title="Пожаловаться"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-8a2 2 0 012-2h11l3-3v13a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                        </svg>
-                        <span className="text-xs">Жалоба</span>
-                      </button>
-                    )}
-                  </div>
+        {comments.map((comment: Comment) => {
+          const isExpanded = expandedComments[comment.id] !== false // По умолчанию развёрнуто
+          const hasReplies = comment.replies && comment.replies.length > 0
+          
+          return (
+            <div key={comment.id} className="border-b pb-6 last:border-0">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                  {getUserInitial(comment.user_id)}
                 </div>
-                <p className="text-gray-700 mt-2 whitespace-pre-wrap">
-                  {comment.content}
-                </p>
-
-                {reportingCommentId === comment.id && (
-                  <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                    <p className="text-sm font-medium text-orange-900 mb-2">
-                      Причина жалобы:
-                    </p>
-                    <textarea
-                      rows={2}
-                      value={reportReason}
-                      onChange={(e) => setReportReason(e.target.value)}
-                      className="w-full px-3 py-2 border border-orange-300 rounded-md text-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
-                      placeholder="Опишите причину жалобы..."
-                    />
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => handleReport(comment.id)}
-                        disabled={reporting}
-                        className="bg-orange-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-orange-700 disabled:bg-gray-400"
+                <div className="flex-1">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <Link
+                        href={`/profile/${comment.user_id}`}
+                        className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
                       >
-                        {reporting ? 'Отправка...' : 'Отправить жалобу'}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setReportingCommentId(null)
-                          setReportReason('')
-                        }}
-                        className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm font-medium hover:bg-gray-200"
-                      >
-                        Отмена
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {userId && !isBanned && (
-              <button
-                onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium ml-13"
-              >
-                {replyTo === comment.id ? 'Отмена' : 'Ответить'}
-              </button>
-            )}
-
-            {replyTo === comment.id && userId && (
-              <form
-                onSubmit={(e) => handleSubmit(e, comment.id)}
-                className="mt-4 ml-13 space-y-3"
-              >
-                <textarea
-                  rows={3}
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Ваш ответ..."
-                  required
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-                  >
-                    {submitting ? 'Отправка...' : 'Ответить'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setReplyTo(null)
-                      setReplyContent('')
-                    }}
-                    className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-                  >
-                    Отмена
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {comment.replies && comment.replies.length > 0 && (
-              <div className="mt-4 space-y-4 ml-13 pl-4 border-l-2 border-gray-200">
-                {comment.replies.map((reply: Comment) => (
-                  <div key={reply.id} className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                      {getUserInitial(reply.user_id)}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div>
-                          <Link
-                            href={`/profile/${reply.user_id}`}
-                            className="font-medium text-blue-600 hover:text-blue-700 hover:underline text-sm"
-                          >
-                            {getUserName(reply.user_id)}
-                          </Link>
-                          <p className="text-xs text-gray-500">
-                            {formatDate(reply.created_at)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {reply.user_id === userId && (
-                            <button
-                              onClick={() => handleDelete(reply.id)}
-                              className="text-red-600 hover:text-red-700 text-xs"
-                            >
-                              Удалить
-                            </button>
-                          )}
-                          {reply.user_id !== userId && (
-                            <button
-                              onClick={() => setReportingCommentId(
-                                reportingCommentId === reply.id ? null : reply.id
-                              )}
-                              className="text-gray-400 hover:text-orange-600 text-xs flex items-center gap-1"
-                              title="Пожаловаться"
-                            >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-8a2 2 0 012-2h11l3-3v13a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                              </svg>
-                              <span>Жалоба</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-gray-700 mt-1 text-sm whitespace-pre-wrap">
-                        {reply.content}
+                        {getUserName(comment.user_id)}
+                      </Link>
+                      <p className="text-sm text-gray-500">
+                        {formatDate(comment.created_at)}
                       </p>
-
-                      {reportingCommentId === reply.id && (
-                        <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                          <p className="text-sm font-medium text-orange-900 mb-2">
-                            Причина жалобы:
-                          </p>
-                          <textarea
-                            rows={2}
-                            value={reportReason}
-                            onChange={(e) => setReportReason(e.target.value)}
-                            className="w-full px-3 py-2 border border-orange-300 rounded-md text-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
-                            placeholder="Опишите причину жалобы..."
-                          />
-                          <div className="flex gap-2 mt-2">
-                            <button
-                              onClick={() => handleReport(reply.id)}
-                              disabled={reporting}
-                              className="bg-orange-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-orange-700 disabled:bg-gray-400"
-                            >
-                              {reporting ? 'Отправка...' : 'Отправить жалобу'}
-                            </button>
-                            <button
-                              onClick={() => {
-                                setReportingCommentId(null)
-                                setReportReason('')
-                              }}
-                              className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm font-medium hover:bg-gray-200"
-                            >
-                              Отмена
-                            </button>
-                          </div>
-                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {comment.is_private && (
+                        <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">
+                          🔒 Личное
+                        </span>
+                      )}
+                      
+                      {/* Счётчик жалоб */}
+                      {comment.report_count !== undefined && comment.report_count > 0 && (
+                        <span className={`text-xs px-2 py-1 rounded font-medium ${
+                          comment.report_count >= banThreshold 
+                            ? 'bg-red-100 text-red-800' 
+                            : 'bg-orange-100 text-orange-800'
+                        }`}>
+                          ⚠️ {comment.report_count}/{banThreshold}
+                        </span>
+                      )}
+                      
+                      {comment.user_id === userId && (
+                        <>
+                          <button
+                            onClick={() => handleEditComment(comment)}
+                            className="text-blue-600 hover:text-blue-700 text-xs"
+                          >
+                            ✏️ Редактировать
+                          </button>
+                          <button
+                            onClick={() => handleDelete(comment.id)}
+                            className="text-red-600 hover:text-red-700 text-xs"
+                          >
+                            🗑️ Удалить
+                          </button>
+                        </>
+                      )}
+                      {comment.user_id !== userId && (
+                        <button
+                          onClick={() => setReportingCommentId(
+                            reportingCommentId === comment.id ? null : comment.id
+                          )}
+                          className="text-gray-400 hover:text-orange-600 text-xs flex items-center gap-1"
+                        >
+                           Жалоба
+                        </button>
                       )}
                     </div>
                   </div>
-                ))}
+                  
+                  {/* Режим редактирования */}
+                  {editingCommentId === comment.id ? (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <textarea
+                        rows={3}
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => handleUpdateComment(comment.id)}
+                          disabled={updating}
+                          className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400"
+                        >
+                          {updating ? 'Сохранение...' : '💾 Сохранить'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingCommentId(null)
+                            setEditContent('')
+                          }}
+                          className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm font-medium hover:bg-gray-200"
+                        >
+                          Отмена
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-700 mt-2 whitespace-pre-wrap">
+                      {comment.content}
+                    </p>
+                  )}
+
+                  {/* Форма жалобы */}
+                  {reportingCommentId === comment.id && (
+                    <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                      <p className="text-sm font-medium text-orange-900 mb-2">
+                        Причина жалобы:
+                      </p>
+                      <textarea
+                        rows={2}
+                        value={reportReason}
+                        onChange={(e) => setReportReason(e.target.value)}
+                        className="w-full px-3 py-2 border border-orange-300 rounded-md text-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                        placeholder="Опишите причину жалобы..."
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => handleReport(comment.id, comment.user_id)}
+                          disabled={reporting}
+                          className="bg-orange-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-orange-700 disabled:bg-gray-400"
+                        >
+                          {reporting ? 'Отправка...' : 'Отправить жалобу'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setReportingCommentId(null)
+                            setReportReason('')
+                          }}
+                          className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm font-medium hover:bg-gray-200"
+                        >
+                          Отмена
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        ))}
+
+              {userId && !isBanned && (
+                <button
+                  onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium ml-13"
+                >
+                  {replyTo === comment.id ? 'Отмена' : '↩️ Ответить'}
+                </button>
+              )}
+
+              {replyTo === comment.id && userId && (
+                <form
+                  onSubmit={(e) => handleSubmit(e, comment.id)}
+                  className="mt-4 ml-13 space-y-3"
+                >
+                  <textarea
+                    rows={3}
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ваш ответ..."
+                    required
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                    >
+                      {submitting ? 'Отправка...' : 'Ответить'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyTo(null)
+                        setReplyContent('')
+                      }}
+                      className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Ответы с возможностью сворачивания */}
+              {hasReplies && (
+                <div className="mt-4 ml-13 pl-4 border-l-2 border-gray-200">
+                  <button
+                    onClick={() => toggleExpand(comment.id)}
+                    className="text-sm text-gray-500 hover:text-gray-700 mb-2 flex items-center gap-1"
+                  >
+                    {isExpanded ? '▼' : '▶'} 
+                    Ответы ({comment.replies!.length})
+                  </button>
+                  
+                  {isExpanded && (
+                    <div className="space-y-4">
+                      {comment.replies!.map((reply: Comment) => (
+                        <div key={reply.id} className="flex items-start gap-3">
+                          <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                            {getUserInitial(reply.user_id)}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div>
+                                <Link
+                                  href={`/profile/${reply.user_id}`}
+                                  className="font-medium text-blue-600 hover:text-blue-700 hover:underline text-sm"
+                                >
+                                  {getUserName(reply.user_id)}
+                                </Link>
+                                <p className="text-xs text-gray-500">
+                                  {formatDate(reply.created_at)}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {/* Счётчик жалоб для ответа */}
+                                {reply.report_count !== undefined && reply.report_count > 0 && (
+                                  <span className={`text-xs px-2 py-1 rounded font-medium ${
+                                    reply.report_count >= banThreshold 
+                                      ? 'bg-red-100 text-red-800' 
+                                      : 'bg-orange-100 text-orange-800'
+                                  }`}>
+                                    ⚠️ {reply.report_count}/{banThreshold}
+                                  </span>
+                                )}
+                                
+                                {reply.user_id === userId && (
+                                  <>
+                                    <button
+                                      onClick={() => handleEditComment(reply)}
+                                      className="text-blue-600 hover:text-blue-700 text-xs"
+                                    >
+                                      ✏️
+                                    </button>
+                                    <button
+                                      onClick={() => handleDelete(reply.id)}
+                                      className="text-red-600 hover:text-red-700 text-xs"
+                                    >
+                                      🗑️
+                                    </button>
+                                  </>
+                                )}
+                                {reply.user_id !== userId && (
+                                  <button
+                                    onClick={() => setReportingCommentId(
+                                      reportingCommentId === reply.id ? null : reply.id
+                                    )}
+                                    className="text-gray-400 hover:text-orange-600 text-xs"
+                                  >
+                                    🚩
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Режим редактирования для ответа */}
+                            {editingCommentId === reply.id ? (
+                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                                <textarea
+                                  rows={2}
+                                  value={editContent}
+                                  onChange={(e) => setEditContent(e.target.value)}
+                                  className="w-full px-2 py-1 border border-blue-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                />
+                                <div className="flex gap-2 mt-2">
+                                  <button
+                                    onClick={() => handleUpdateComment(reply.id)}
+                                    disabled={updating}
+                                    className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-700 disabled:bg-gray-400"
+                                  >
+                                    {updating ? '...' : '💾 Сохранить'}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setEditingCommentId(null)
+                                      setEditContent('')
+                                    }}
+                                    className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium hover:bg-gray-200"
+                                  >
+                                    Отмена
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-gray-700 mt-1 text-sm whitespace-pre-wrap">
+                                {reply.content}
+                              </p>
+                            )}
+
+                            {/* Форма жалобы для ответа */}
+                            {reportingCommentId === reply.id && (
+                              <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                                <textarea
+                                  rows={2}
+                                  value={reportReason}
+                                  onChange={(e) => setReportReason(e.target.value)}
+                                  className="w-full px-2 py-1 border border-orange-300 rounded-md text-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                                  placeholder="Причина жалобы..."
+                                />
+                                <div className="flex gap-2 mt-2">
+                                  <button
+                                    onClick={() => handleReport(reply.id, reply.user_id)}
+                                    disabled={reporting}
+                                    className="bg-orange-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-orange-700 disabled:bg-gray-400"
+                                  >
+                                    {reporting ? '...' : 'Отправить'}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setReportingCommentId(null)
+                                      setReportReason('')
+                                    }}
+                                    className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium hover:bg-gray-200"
+                                  >
+                                    Отмена
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
 
         {comments.length === 0 && (
           <div className="text-center py-8 text-gray-500">
