@@ -14,18 +14,12 @@ interface StopListEntry {
   display_name?: string
 }
 
-interface NewBan {
-  user_id: string
-  reason: string
-  banned_until: string
-}
-
 export default function StopListPage() {
   const supabase = createClient()
   const [entries, setEntries] = useState<StopListEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [newBan, setNewBan] = useState<NewBan>({
+  const [newBan, setNewBan] = useState({
     user_id: '',
     reason: '',
     banned_until: '',
@@ -53,26 +47,18 @@ export default function StopListPage() {
 
       if (error) throw error
 
-      // Загружаем информацию о пользователях
+      // Загружаем информацию о пользователях через coaches
       const entriesWithUsers = await Promise.all(
         (data || []).map(async (entry) => {
-          // Получаем email из auth.users
-          const { data: userData } = await supabase
-            .from('users')
-            .select('email')
-            .eq('id', entry.user_id)
-            .single()
-
-          // Получаем display_name из coaches
           const { data: coachData } = await supabase
             .from('coaches')
-            .select('display_name')
+            .select('display_name, email')
             .eq('user_id', entry.user_id)
             .single()
 
           return {
             ...entry,
-            user_email: userData?.email || 'Неизвестно',
+            user_email: coachData?.email || 'Неизвестно',
             display_name: coachData?.display_name || null,
           }
         })
@@ -81,7 +67,6 @@ export default function StopListPage() {
       setEntries(entriesWithUsers)
     } catch (error) {
       console.error('Error loading stop list:', error)
-      alert('Ошибка при загрузке стоп-листа')
     } finally {
       setLoading(false)
     }
@@ -94,7 +79,6 @@ export default function StopListPage() {
     }
 
     try {
-      // Ищем пользователя по email в auth.users (через coaches)
       const { data, error } = await supabase
         .from('coaches')
         .select('user_id, display_name, email')
@@ -157,11 +141,9 @@ export default function StopListPage() {
 
       if (error) throw error
 
-      alert('Пользователь разблокирован')
       await loadStopList()
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error removing ban:', error)
-      alert('Ошибка при удалении')
     }
   }
 
@@ -182,7 +164,6 @@ export default function StopListPage() {
   return (
     <main className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4 max-w-6xl">
-        {/* Заголовок */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">🚫 Стоп-лист</h1>
@@ -208,19 +189,17 @@ export default function StopListPage() {
 
         {/* Фильтры */}
         <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filterActive}
-                onChange={(e) => setFilterActive(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                Только активные блокировки
-              </span>
-            </label>
-          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filterActive}
+              onChange={(e) => setFilterActive(e.target.checked)}
+              className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Только активные блокировки
+            </span>
+          </label>
         </div>
 
         {/* Список */}
@@ -262,12 +241,8 @@ export default function StopListPage() {
                     </div>
                     <div className="text-sm text-gray-600 space-y-1">
                       <p><strong>Причина:</strong> {entry.reason}</p>
-                      <p>
-                        <strong>Заблокирован:</strong> {formatDate(entry.created_at)}
-                      </p>
-                      <p>
-                        <strong>До:</strong> {formatDate(entry.banned_until)}
-                      </p>
+                      <p><strong>Заблокирован:</strong> {formatDate(entry.created_at)}</p>
+                      <p><strong>До:</strong> {formatDate(entry.banned_until)}</p>
                     </div>
                   </div>
                   <button
@@ -287,14 +262,12 @@ export default function StopListPage() {
               Стоп-лист пуст
             </h2>
             <p className="text-gray-600">
-              {filterActive 
-                ? 'Нет активных блокировок' 
-                : 'В стоп-листе нет записей'}
+              {filterActive ? 'Нет активных блокировок' : 'В стоп-листе нет записей'}
             </p>
           </div>
         )}
 
-        {/* Модальное окно добавления */}
+        {/* Модальное окно */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
@@ -302,7 +275,6 @@ export default function StopListPage() {
                 Добавить в стоп-лист
               </h2>
 
-              {/* Поиск пользователя */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email пользователя
@@ -318,7 +290,6 @@ export default function StopListPage() {
                   placeholder="Введите email..."
                 />
 
-                {/* Результаты поиска */}
                 {searchResults.length > 0 && (
                   <div className="mt-2 border rounded-md divide-y">
                     {searchResults.map((user) => (
@@ -337,7 +308,6 @@ export default function StopListPage() {
                 )}
               </div>
 
-              {/* Причина */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Причина блокировки
@@ -352,7 +322,6 @@ export default function StopListPage() {
                 />
               </div>
 
-              {/* Дата окончания */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Заблокировать до
@@ -364,12 +333,8 @@ export default function StopListPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Оставьте пустым для бессрочной блокировки
-                </p>
               </div>
 
-              {/* Кнопки */}
               <div className="flex gap-3">
                 <button
                   onClick={handleAddBan}
@@ -392,17 +357,6 @@ export default function StopListPage() {
           </div>
         )}
       </div>
-      <Link
-  href="/admin/stop-list"
-  className="block p-4 bg-white rounded-xl shadow-sm border hover:shadow-md transition-shadow"
->
-  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-    🚫 Стоп-лист
-  </h3>
-  <p className="text-gray-600">
-    Управление заблокированными пользователями
-  </p>
-</Link>
     </main>
   )
 }

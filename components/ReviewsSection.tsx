@@ -34,6 +34,8 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
   const [reportReason, setReportReason] = useState('')
   const [reporting, setReporting] = useState(false)
   const [banThreshold, setBanThreshold] = useState(3)
+  const [isBanned, setIsBanned] = useState(false)
+  const [banInfo, setBanInfo] = useState<{ until: string; reason: string } | null>(null)
 
   useEffect(() => {
     checkUser()
@@ -43,6 +45,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
     if (userId !== null) {
       loadReviews()
       loadSettings()
+      checkBanStatus()
     }
   }, [userId, courseId, lessonId])
 
@@ -60,6 +63,28 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
     
     if (data?.value) {
       setBanThreshold(parseInt(data.value))
+    }
+  }
+
+  const checkBanStatus = async () => {
+    if (!userId) return
+    
+    const { data } = await supabase
+      .from('stop_list')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('banned_until', new Date().toISOString())
+      .single()
+    
+    if (data) {
+      setIsBanned(true)
+      setBanInfo({
+        until: data.banned_until,
+        reason: data.reason,
+      })
+    } else {
+      setIsBanned(false)
+      setBanInfo(null)
     }
   }
 
@@ -151,6 +176,11 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
     
     if (!userId) {
       alert('Войдите, чтобы оставить отзыв')
+      return
+    }
+
+    if (isBanned) {
+      alert(`⛔ Вы заблокированы до ${banInfo ? new Date(banInfo.until).toLocaleString('ru-RU') : ''}. Причина: ${banInfo?.reason || 'Нарушение правил'}`)
       return
     }
 
@@ -261,10 +291,12 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         .select('*', { count: 'exact', head: true })
         .eq('review_id', reviewId)
 
-      if (count && count >= banThreshold) {
-        alert(`⚠️ Жалоба отправлена. Отзыв будет удалён автоматически (${count}/${banThreshold})`)
+      const reportCount = count || 0
+
+      if (reportCount >= banThreshold) {
+        alert(`⚠️ Жалоба отправлена. Отзыв будет удалён автоматически (${reportCount}/${banThreshold})`)
       } else {
-        alert(`✅ Жалоба отправлена (${count || 1}/${banThreshold})`)
+        alert(`✅ Жалоба отправлена (${reportCount}/${banThreshold})`)
       }
 
       setReportingReviewId(null)
@@ -350,73 +382,84 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
       </div>
 
       {userId ? (
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <h3 className="font-semibold text-gray-900 mb-3">
-            {userReview ? 'Редактировать отзыв' : 'Оставьте отзыв'}
-          </h3>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ваша оценка
-              </label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setNewRating(star)}
-                    className="focus:outline-none transition-transform hover:scale-110"
-                  >
-                    <svg
-                      className={`w-8 h-8 ${
-                        star <= newRating ? 'text-yellow-400' : 'text-gray-300'
-                      }`}
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
+        isBanned ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-800 font-medium">
+              ⛔ Вы заблокированы до {banInfo ? new Date(banInfo.until).toLocaleString('ru-RU') : ''}
+            </p>
+            <p className="text-red-700 text-sm mt-1">
+              Причина: {banInfo?.reason || 'Нарушение правил'}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <h3 className="font-semibold text-gray-900 mb-3">
+              {userReview ? 'Редактировать отзыв' : 'Оставьте отзыв'}
+            </h3>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ваша оценка
+                </label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setNewRating(star)}
+                      className="focus:outline-none transition-transform hover:scale-110"
                     >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  </button>
-                ))}
+                      <svg
+                        className={`w-8 h-8 ${
+                          star <= newRating ? 'text-yellow-400' : 'text-gray-300'
+                        }`}
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
-                Комментарий (необязательно)
-              </label>
-              <textarea
-                id="comment"
-                rows={3}
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Поделитесь впечатлениями..."
-              />
-            </div>
+              <div>
+                <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
+                  Комментарий (необязательно)
+                </label>
+                <textarea
+                  id="comment"
+                  rows={3}
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Поделитесь впечатлениями..."
+                />
+              </div>
 
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-              >
-                {submitting ? 'Сохранение...' : userReview ? '💾 Обновить отзыв' : '✅ Опубликовать отзыв'}
-              </button>
-              
-              {userReview && (
+              <div className="flex gap-3">
                 <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="bg-red-100 text-red-600 px-6 py-2 rounded-lg font-medium hover:bg-red-200 transition-colors"
+                  type="submit"
+                  disabled={submitting}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
                 >
-                  🗑️ Удалить отзыв
+                  {submitting ? 'Сохранение...' : userReview ? '💾 Обновить отзыв' : '✅ Опубликовать отзыв'}
                 </button>
-              )}
-            </div>
-          </form>
-        </div>
+                
+                {userReview && (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    className="bg-red-100 text-red-600 px-6 py-2 rounded-lg font-medium hover:bg-red-200 transition-colors"
+                  >
+                    🗑️ Удалить отзыв
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        )
       ) : (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
           <p className="text-yellow-800">
@@ -458,8 +501,12 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                   {renderStars(review.rating, 'sm')}
                   
                   {/* Счётчик жалоб */}
-                  {review.report_count && review.report_count > 0 && (
-                    <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                  {review.report_count !== undefined && review.report_count > 0 && (
+                    <span className={`text-xs px-2 py-1 rounded font-medium ${
+                      review.report_count >= banThreshold 
+                        ? 'bg-red-100 text-red-800' 
+                        : 'bg-orange-100 text-orange-800'
+                    }`}>
                       ⚠️ {review.report_count}/{banThreshold}
                     </span>
                   )}
