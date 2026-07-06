@@ -18,6 +18,7 @@ export default function Navbar() {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [isMentor, setIsMentor] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const supabase = createClient()
   const router = useRouter()
   const pathname = usePathname()
@@ -37,6 +38,7 @@ export default function Navbar() {
         setUser(null)
         setProfile(null)
         setIsMentor(false)
+        setIsAdmin(false)
         setIsLoaded(true)
         return
       }
@@ -58,18 +60,22 @@ export default function Navbar() {
           if (coachData) {
             setProfile(coachData)
             setIsMentor(coachData.role === 'mentor' || coachData.role === 'admin')
+            setIsAdmin(coachData.role === 'admin')
           } else {
             setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
             setIsMentor(false)
+            setIsAdmin(false)
           }
         } catch (err) {
           console.error('Coach load error:', err)
           setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
           setIsMentor(false)
+          setIsAdmin(false)
         }
       } else {
         setProfile(null)
         setIsMentor(false)
+        setIsAdmin(false)
       }
 
       setIsLoaded(true)
@@ -78,6 +84,7 @@ export default function Navbar() {
       setUser(null)
       setProfile(null)
       setIsMentor(false)
+      setIsAdmin(false)
       setIsLoaded(true)
     } finally {
       loadingRef.current = false
@@ -144,6 +151,7 @@ export default function Navbar() {
       setUser(null)
       setProfile(null)
       setIsMentor(false)
+      setIsAdmin(false)
       setIsLoaded(true)
       router.push('/')
       router.refresh()
@@ -178,7 +186,7 @@ export default function Navbar() {
                Каталог уроков
             </Link>
             <Link href="/mentors" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-              👨‍ Наставники
+              👨‍🏫 Наставники
             </Link>
             
             {user && isMentor && (
@@ -206,7 +214,7 @@ export default function Navbar() {
                     onClick={handleBecomeMentor}
                     className="hidden md:inline-flex px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
                   >
-                    🎓 Стать наставником
+                     Стать наставником
                   </button>
                 )}
 
@@ -251,11 +259,31 @@ export default function Navbar() {
                                 <p className="text-sm text-gray-500 truncate">
                                   {user.email}
                                 </p>
+                                {isAdmin && (
+                                  <span className="inline-block mt-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-medium">
+                                    👑 Администратор
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
 
                           <div className="py-2">
+                            {/* Админ-панель (только для админов) */}
+                            {isAdmin && (
+                              <Link
+                                href="/admin"
+                                className="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors border-b"
+                                onClick={() => setShowProfileMenu(false)}
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span className="font-semibold">Админ-панель</span>
+                              </Link>
+                            )}
+
                             <Link
                               href="/dashboard/mentor"
                               className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
@@ -284,7 +312,7 @@ export default function Navbar() {
                               className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
                               onClick={() => setShowProfileMenu(false)}
                             >
-                              <span className="text-xl">📚</span>
+                              <span className="text-xl"></span>
                               Мои курсы
                             </Link>
 
@@ -293,7 +321,7 @@ export default function Navbar() {
                               className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
                               onClick={() => setShowProfileMenu(false)}
                             >
-                              <span className="text-xl">📖</span>
+                              <span className="text-xl"></span>
                               Мои уроки
                             </Link>
 
