@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import Link from 'next/link'
 
 interface Notification {
   id: string
@@ -10,7 +9,7 @@ interface Notification {
   type: string
   title: string
   message: string
-  link: string
+  link: string | null
   is_read: boolean
   created_at: string
 }
@@ -19,9 +18,9 @@ export default function NotificationsBell() {
   const supabase = createClient()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [showMenu, setShowMenu] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     checkUser()
@@ -31,6 +30,7 @@ export default function NotificationsBell() {
     if (userId) {
       loadNotifications()
       
+      // Подписка на новые уведомления
       const channel = supabase
         .channel('notifications')
         .on(
@@ -39,7 +39,7 @@ export default function NotificationsBell() {
             event: 'INSERT',
             schema: 'public',
             table: 'notifications',
-            filter: `user_id=eq.${userId}`
+            filter: `user_id=eq.${userId}`,
           },
           () => {
             loadNotifications()
@@ -59,22 +59,23 @@ export default function NotificationsBell() {
   }
 
   const loadNotifications = async () => {
-    if (!userId) return
-
     try {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(50)
+        .limit(20)
 
-      if (error) throw error
+      if (error) {
+        console.error('Error loading notifications:', error)
+        return
+      }
 
       setNotifications(data || [])
       
-      const unread = data?.filter(n => !n.is_read).length || 0
-      setUnreadCount(unread)
+      const unreadCount = data?.filter(n => !n.is_read).length || 0
+      setUnreadCount(unreadCount)
     } catch (error) {
       console.error('Error loading notifications:', error)
     } finally {
@@ -82,7 +83,7 @@ export default function NotificationsBell() {
     }
   }
 
-  const markAsRead = async (notificationId: string) => {
+  const handleMarkAsRead = async (notificationId: string) => {
     try {
       const { error } = await supabase
         .from('notifications')
@@ -90,13 +91,14 @@ export default function NotificationsBell() {
         .eq('id', notificationId)
 
       if (error) throw error
+
       await loadNotifications()
     } catch (error) {
-      console.error('Error marking notification as read:', error)
+      console.error('Error marking as read:', error)
     }
   }
 
-  const markAllAsRead = async () => {
+  const handleMarkAllAsRead = async () => {
     try {
       const { error } = await supabase
         .from('notifications')
@@ -105,6 +107,7 @@ export default function NotificationsBell() {
         .eq('is_read', false)
 
       if (error) throw error
+
       await loadNotifications()
     } catch (error) {
       console.error('Error marking all as read:', error)
@@ -115,15 +118,21 @@ export default function NotificationsBell() {
     const date = new Date(dateString)
     const now = new Date()
     const diff = now.getTime() - date.getTime()
+    
     const minutes = Math.floor(diff / 60000)
     const hours = Math.floor(diff / 3600000)
     const days = Math.floor(diff / 86400000)
-
+    
     if (minutes < 1) return 'Только что'
     if (minutes < 60) return `${minutes} мин. назад`
     if (hours < 24) return `${hours} ч. назад`
     if (days < 7) return `${days} дн. назад`
-    return date.toLocaleDateString('ru-RU')
+    
+    return date.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
   }
 
   const getNotificationIcon = (type: string) => {
@@ -133,93 +142,122 @@ export default function NotificationsBell() {
       case 'new_reply':
         return '↩️'
       case 'mentor_reply':
-        return '‍🏫'
+        return '👨‍🏫'
+      case 'ban':
+        return '🚫'
+      case 'achievement':
+        return '🏆'
       default:
         return '🔔'
     }
   }
 
-  if (!userId || loading) {
-    return null
+  if (!userId) {
+    return (
+      <button className="relative p-2 text-gray-600 hover:text-blue-600 transition-colors">
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      </button>
+    )
   }
 
   return (
     <div className="relative">
       <button
-        onClick={() => setShowDropdown(!showDropdown)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        onClick={() => setShowMenu(!showMenu)}
+        className="relative p-2 text-gray-600 hover:text-blue-600 transition-colors"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
         
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+          <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
-      {showDropdown && (
+      {showMenu && (
         <>
           <div
             className="fixed inset-0 z-10"
-            onClick={() => setShowDropdown(false)}
+            onClick={() => setShowMenu(false)}
           />
-          <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg border z-20 overflow-hidden flex flex-col" style={{ maxHeight: '80vh' }}>
-            <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
-              <h3 className="font-semibold text-gray-900">Уведомления</h3>
+          <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg border z-20 max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">
+                🔔 Уведомления
+              </h2>
               {unreadCount > 0 && (
                 <button
-                  onClick={markAllAsRead}
-                  className="text-sm text-blue-600 hover:text-blue-700"
+                  onClick={handleMarkAllAsRead}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                 >
-                  Все прочитаны
+                  Отметить все как прочитанные
                 </button>
               )}
             </div>
 
-            <div className="overflow-y-auto flex-1" style={{ maxHeight: '60vh' }}>
-              {notifications.length > 0 ? (
-                notifications.map((notification) => (
-                  <Link
-                    key={notification.id}
-                    href={notification.link || '#'}
-                    className={`block p-4 border-b hover:bg-gray-50 transition-colors ${
-                      !notification.is_read ? 'bg-blue-50' : ''
-                    }`}
-                    onClick={() => {
-                      markAsRead(notification.id)
-                      setShowDropdown(false)
-                    }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl flex-shrink-0">
-                        {getNotificationIcon(notification.type)}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 text-sm">
-                          {notification.title}
-                        </p>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {formatDate(notification.created_at)}
-                        </p>
-                      </div>
-                      {!notification.is_read && (
-                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2"></div>
-                      )}
-                    </div>
-                  </Link>
-                ))
+            <div className="overflow-y-auto flex-1">
+              {loading ? (
+                <div className="p-4 text-center">
+                  <div className="animate-pulse text-gray-400">Загрузка...</div>
+                </div>
+              ) : notifications.length === 0 ? (
+                <div className="p-8 text-center">
+                  <div className="text-4xl mb-2">🔕</div>
+                  <p className="text-gray-500">Нет уведомлений</p>
+                </div>
               ) : (
-                <div className="p-8 text-center text-gray-500">
-                  🔕 Нет уведомлений
+                <div className="divide-y">
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`p-4 hover:bg-gray-50 transition-colors ${
+                        !notification.is_read ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 text-2xl">
+                          {getNotificationIcon(notification.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 text-sm mb-1">
+                            {notification.title}
+                          </h3>
+                          <p className="text-sm text-gray-600 mb-2">
+                            {notification.message}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-400">
+                              {formatDate(notification.created_at)}
+                            </span>
+                            {!notification.is_read && (
+                              <button
+                                onClick={() => handleMarkAsRead(notification.id)}
+                                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                              >
+                                Отметить как прочитанное
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
+
+            {notifications.length > 0 && (
+              <div className="p-3 border-t bg-gray-50 text-center">
+                <p className="text-xs text-gray-500">
+                  Показано {notifications.length} из {notifications.length} уведомлений
+                </p>
+              </div>
+            )}
           </div>
         </>
       )}
