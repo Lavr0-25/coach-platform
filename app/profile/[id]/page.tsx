@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import AchievementsBadge from '@/components/AchievementsBadge'
 
 interface ProfilePageProps {
   params: Promise<{
@@ -40,12 +39,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   const coursesCount = coach.courses?.length || 0
   const lessonsCount = coach.lessons?.length || 0
-
-  // Получаем статистику достижений
-  const { count: achievementsCount } = await supabase
-    .from('user_achievements')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', id)
 
   return (
     <main className="min-h-screen bg-gray-50 py-8">
@@ -96,15 +89,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                     {lessonsCount} {lessonsCount === 1 ? 'урок' : lessonsCount < 5 ? 'урока' : 'уроков'}
                   </span>
                 </div>
-
-                {achievementsCount && achievementsCount > 0 && (
-                  <div className="flex items-center gap-2 text-gray-600 bg-yellow-100 px-4 py-2 rounded-lg">
-                    <span className="text-xl">🏆</span>
-                    <span className="font-medium">
-                      {achievementsCount} {achievementsCount === 1 ? 'достижение' : achievementsCount < 5 ? 'достижения' : 'достижений'}
-                    </span>
-                  </div>
-                )}
               </div>
 
               {coach.bio && (
@@ -117,11 +101,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               )}
             </div>
           </div>
-        </div>
-
-        {/* Достижения */}
-        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-          <AchievementsBadge userId={id} />
         </div>
 
         {/* Курсы */}
