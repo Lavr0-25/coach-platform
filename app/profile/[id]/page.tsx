@@ -1,35 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import AchievementsBadge from '@/components/AchievementsBadge'
 
 interface ProfilePageProps {
   params: Promise<{
     id: string
   }>
-}
-
-interface Course {
-  id: string
-  title: string
-  price: number
-  cover_image_url: string | null
-}
-
-interface Lesson {
-  id: string
-  title: string
-  price: number
-  is_free_preview: boolean
-}
-
-interface Coach {
-  id: string
-  user_id: string
-  display_name: string
-  specialization: string | null
-  bio: string | null
-  courses?: Course[]
-  lessons?: Lesson[]
 }
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
@@ -61,9 +38,14 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     notFound()
   }
 
-  const typedCoach = coach as Coach
-  const coursesCount = typedCoach.courses?.length || 0
-  const lessonsCount = typedCoach.lessons?.length || 0
+  const coursesCount = coach.courses?.length || 0
+  const lessonsCount = coach.lessons?.length || 0
+
+  // Получаем статистику достижений
+  const { count: achievementsCount } = await supabase
+    .from('user_achievements')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', id)
 
   return (
     <main className="min-h-screen bg-gray-50 py-8">
@@ -84,19 +66,19 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             {/* Аватар */}
             <div className="flex-shrink-0">
               <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg">
-                {(typedCoach.display_name?.charAt(0).toUpperCase() || 'U')}
+                {(coach.display_name?.charAt(0).toUpperCase() || 'U')}
               </div>
             </div>
 
             {/* Информация */}
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {typedCoach.display_name}
+                {coach.display_name}
               </h1>
               
-              {typedCoach.specialization && (
+              {coach.specialization && (
                 <p className="text-lg text-gray-600 mb-4">
-                  {typedCoach.specialization}
+                  {coach.specialization}
                 </p>
               )}
 
@@ -114,18 +96,32 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                     {lessonsCount} {lessonsCount === 1 ? 'урок' : lessonsCount < 5 ? 'урока' : 'уроков'}
                   </span>
                 </div>
+
+                {achievementsCount && achievementsCount > 0 && (
+                  <div className="flex items-center gap-2 text-gray-600 bg-yellow-100 px-4 py-2 rounded-lg">
+                    <span className="text-xl">🏆</span>
+                    <span className="font-medium">
+                      {achievementsCount} {achievementsCount === 1 ? 'достижение' : achievementsCount < 5 ? 'достижения' : 'достижений'}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {typedCoach.bio && (
+              {coach.bio && (
                 <div className="bg-gray-50 rounded-lg p-4 mt-4">
                   <h3 className="font-semibold text-gray-900 mb-2">О себе</h3>
                   <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {typedCoach.bio}
+                    {coach.bio}
                   </p>
                 </div>
               )}
             </div>
           </div>
+        </div>
+
+        {/* Достижения */}
+        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
+          <AchievementsBadge userId={id} />
         </div>
 
         {/* Курсы */}
@@ -135,7 +131,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               📚 Курсы наставника
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {typedCoach.courses?.map((course: Course) => (
+              {coach.courses?.map((course: any) => (
                 <Link
                   key={course.id}
                   href={`/course/${course.id}`}
@@ -160,7 +156,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               📖 Отдельные уроки
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {typedCoach.lessons?.map((lesson: Lesson) => (
+              {coach.lessons?.map((lesson: any) => (
                 <Link
                   key={lesson.id}
                   href={`/lesson/${lesson.id}`}
