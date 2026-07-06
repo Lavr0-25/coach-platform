@@ -13,55 +13,75 @@ interface Report {
   lesson_id?: string
   reason: string
   created_at: string
-  reporter_email?: string
-  reported_email?: string
+  reporter_name?: string
+  reported_name?: string
 }
 
 export default function ReportsPage() {
   const supabase = createClient()
-  const [reports, setReports] = useState<Report[]>([])
+  const [commentReports, setCommentReports] = useState<Report[]>([])
+  const [reviewReports, setReviewReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'comments' | 'reviews'>('all')
+  const [tab, setTab] = useState<'comments' | 'reviews'>('comments')
 
   useEffect(() => {
     loadReports()
-  }, [filter])
+  }, [])
 
   const loadReports = async () => {
     try {
-      let query = supabase
+      // Загружаем жалобы на комментарии
+      const { data: commentData, error: commentError } = await supabase
         .from('reports')
         .select('*')
         .order('created_at', { ascending: false })
 
-      const { data, error } = await query
+      if (commentError) throw commentError
 
-      if (error) throw error
+      // Загружаем жалобы на отзывы
+      const { data: reviewData, error: reviewError } = await supabase
+        .from('review_reports')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-      // Загружаем email пользователей
-      const reportsWithUsers = await Promise.all(
-        (data || []).map(async (report) => {
-          const { data: reporterData } = await supabase
-            .from('coaches')
-            .select('email')
-            .eq('user_id', report.reporter_id)
-            .single()
+      if (reviewError) throw reviewError
 
-          const { data: reportedData } = await supabase
-            .from('coaches')
-            .select('email')
-            .eq('user_id', report.reported_user_id)
-            .single()
+      // Загружаем имена пользователей
+      const userIds = new Set<string>()
+      ;(commentData || []).forEach(r => {
+        userIds.add(r.reporter_id)
+        userIds.add(r.reported_user_id)
+      })
+      ;(reviewData || []).forEach(r => {
+        userIds.add(r.reporter_id)
+        userIds.add(r.reported_user_id)
+      })
 
-          return {
-            ...report,
-            reporter_email: reporterData?.email || 'Неизвестно',
-            reported_email: reportedData?.email || 'Неизвестно',
-          }
-        })
-      )
+      const namesMap: Record<string, string> = {}
+      for (const uid of userIds) {
+        const { data: coach } = await supabase
+          .from('coaches')
+          .select('display_name, email')
+          .eq('user_id', uid)
+          .single()
+        
+        namesMap[uid] = coach?.display_name || uid.substring(0, 8)
+      }
 
-      setReports(reportsWithUsers)
+      const commentsWithNames = (commentData || []).map(r => ({
+        ...r,
+        reporter_name: namesMap[r.reporter_id] || 'Неизвестно',
+        reported_name: namesMap[r.reported_user_id] || 'Неизвестно',
+      }))
+
+      const reviewsWithNames = (reviewData || []).map(r => ({
+        ...r,
+        reporter_name: namesMap[r.reporter_id] || 'Неизвестно',
+        reported_name: namesMap[r.reported_user_id] || 'Неизвестно',
+      }))
+
+      setCommentReports(commentsWithNames)
+      setReviewReports(reviewsWithNames)
     } catch (error) {
       console.error('Error loading reports:', error)
     } finally {
@@ -69,12 +89,13 @@ export default function ReportsPage() {
     }
   }
 
-  const handleDeleteReport = async (id: string) => {
+  const handleDeleteReport = async (id: string, type: 'comment' | 'review') => {
     if (!confirm('Удалить эту жалобу?')) return
 
     try {
+      const table = type === 'comment' ? 'reports' : 'review_reports'
       const { error } = await supabase
-        .from('reports')
+        .from(table)
         .delete()
         .eq('id', id)
 
@@ -96,14 +117,28 @@ export default function ReportsPage() {
     })
   }
 
+  const getRemainingTime = (bannedUntil: string) => {
+    const now = new Date()
+    const end = new Date(bannedUntil)
+    const diff = end.getTime() - now.getTime()
+    
+    if (diff <= 0) return 'Истекла'
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    
+    if (days > 0) return `${days} дн. ${hours} ч.`
+    return `${hours} ч.`
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">⚠️ Жалобы</h1>
+            <h1 className="text-3xl font-bold text-gray-900">️ Жалобы</h1>
             <p className="text-gray-600 mt-1">
-              Просмотр жалоб на комментарии
+              Просмотр всех жалоб на контент
             </p>
           </div>
           <Link
@@ -114,37 +149,28 @@ export default function ReportsPage() {
           </Link>
         </div>
 
-        {/* Фильтры */}
+        {/* Табы */}
         <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
           <div className="flex gap-3">
             <button
-              onClick={() => setFilter('all')}
+              onClick={() => setTab('comments')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                tab === 'comments' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Все ({reports.length})
+              На комментарии ({commentReports.length})
             </button>
             <button
-              onClick={() => setFilter('comments')}
+              onClick={() => setTab('reviews')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filter === 'comments' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                tab === 'reviews' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              На комментарии
-            </button>
-            <button
-              onClick={() => setFilter('reviews')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filter === 'reviews' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              На отзывы
+              На отзывы ({reviewReports.length})
             </button>
           </div>
         </div>
 
-        {/* Список жалоб */}
         {loading ? (
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <div className="animate-pulse space-y-4">
@@ -153,48 +179,92 @@ export default function ReportsPage() {
               ))}
             </div>
           </div>
-        ) : reports.length > 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border divide-y">
-            {reports.map((report) => (
-              <div key={report.id} className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-medium text-gray-900">
-                        Жалоба от: {report.reporter_email}
-                      </span>
-                      <span className="text-gray-400">→</span>
-                      <span className="text-sm font-medium text-red-600">
-                        на: {report.reported_email}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-700 mb-2">
-                      <strong>Причина:</strong> {report.reason}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {formatDate(report.created_at)}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteReport(report.id)}
-                    className="px-3 py-1 bg-red-100 text-red-600 rounded text-sm font-medium hover:bg-red-200 transition-colors"
-                  >
-                    Удалить
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
-            <div className="text-6xl mb-4">✅</div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-              Жалоб нет
-            </h2>
-            <p className="text-gray-600">
-              Пока никто не жаловался на контент
-            </p>
-          </div>
+          <>
+            {tab === 'comments' ? (
+              commentReports.length > 0 ? (
+                <div className="bg-white rounded-xl shadow-sm border divide-y">
+                  {commentReports.map((report) => (
+                    <div key={report.id} className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className="text-sm font-medium text-gray-900">
+                              От: {report.reporter_name}
+                            </span>
+                            <span className="text-gray-400">→</span>
+                            <span className="text-sm font-medium text-red-600">
+                              На: {report.reported_name}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-700 mb-2">
+                            <strong>Причина:</strong> {report.reason}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(report.created_at)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteReport(report.id, 'comment')}
+                          className="px-3 py-1 bg-red-100 text-red-600 rounded text-sm font-medium hover:bg-red-200 transition-colors"
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
+                  <div className="text-6xl mb-4">✅</div>
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                    Жалоб на комментарии нет
+                  </h2>
+                </div>
+              )
+            ) : (
+              reviewReports.length > 0 ? (
+                <div className="bg-white rounded-xl shadow-sm border divide-y">
+                  {reviewReports.map((report) => (
+                    <div key={report.id} className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className="text-sm font-medium text-gray-900">
+                              От: {report.reporter_name}
+                            </span>
+                            <span className="text-gray-400">→</span>
+                            <span className="text-sm font-medium text-red-600">
+                              На: {report.reported_name}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-700 mb-2">
+                            <strong>Причина:</strong> {report.reason}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(report.created_at)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteReport(report.id, 'review')}
+                          className="px-3 py-1 bg-red-100 text-red-600 rounded text-sm font-medium hover:bg-red-200 transition-colors"
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
+                  <div className="text-6xl mb-4">✅</div>
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                    Жалоб на отзывы нет
+                  </h2>
+                </div>
+              )
+            )}
+          </>
         )}
       </div>
     </main>

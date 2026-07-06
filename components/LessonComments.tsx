@@ -44,12 +44,10 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
   const [banThreshold, setBanThreshold] = useState(3)
   const [banDuration, setBanDuration] = useState(5)
   
-  // Редактирование
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
   const [updating, setUpdating] = useState(false)
   
-  // Сворачивание ответов
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
@@ -118,6 +116,17 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     setUsersMap(prev => ({ ...prev, ...usersInfo }))
   }
 
+  // Функция для получения счётчика жалоб
+  const getReportCount = async (commentId: string): Promise<number> => {
+    const { data, error } = await supabase
+      .from('reports')
+      .select('id')
+      .eq('comment_id', commentId)
+    
+    if (error) return 0
+    return data?.length || 0
+  }
+
   const loadComments = async () => {
     try {
       const { data, error } = await supabase
@@ -129,7 +138,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
       if (error) throw error
 
-      // Загружаем ответы и счётчики жалоб
       const commentsWithReplies = await Promise.all(
         (data || []).map(async (comment: Comment) => {
           const { data: replies } = await supabase
@@ -138,26 +146,20 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
             .eq('parent_id', comment.id)
             .order('created_at', { ascending: true })
           
-          // Счётчик жалоб
-          const { count } = await supabase
-            .from('reports')
-            .select('*', { count: 'exact', head: true })
-            .eq('comment_id', comment.id)
+          // Получаем счётчик жалоб для комментария
+          const reportCount = await getReportCount(comment.id)
           
-          // Счётчики для ответов
+          // Получаем счётчики для ответов
           const repliesWithCounts = await Promise.all(
             (replies || []).map(async (reply) => {
-              const { count: replyCount } = await supabase
-                .from('reports')
-                .select('*', { count: 'exact', head: true })
-                .eq('comment_id', reply.id)
-              return { ...reply, report_count: replyCount || 0 }
+              const replyReportCount = await getReportCount(reply.id)
+              return { ...reply, report_count: replyReportCount }
             })
           )
           
           return { 
             ...comment, 
-            report_count: count || 0,
+            report_count: reportCount,
             replies: repliesWithCounts 
           }
         })
@@ -318,24 +320,20 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
       if (reportError) {
         if (reportError.code === '23505') {
-          alert('⚠️ Вы уже жаловались на этот комментарий')
+          alert('️ Вы уже жаловались на этот комментарий')
         } else {
           throw reportError
         }
         return
       }
 
-      const { count } = await supabase
-        .from('reports')
-        .select('*', { count: 'exact', head: true })
-        .eq('comment_id', commentId)
+      // Получаем обновлённое количество жалоб
+      const newCount = await getReportCount(commentId)
 
-      const reportCount = count || 0
-
-      if (reportCount >= banThreshold) {
-        alert(`️ Жалоба отправлена. Комментарий будет удалён автоматически (${reportCount}/${banThreshold})`)
+      if (newCount >= banThreshold) {
+        alert(`⚠️ Жалоба отправлена. Комментарий будет удалён автоматически (${newCount}/${banThreshold})`)
       } else {
-        alert(`✅ Жалоба отправлена (${reportCount}/${banThreshold})`)
+        alert(`✅ Жалоба отправлена (${newCount}/${banThreshold})`)
       }
 
       setReportingCommentId(null)
@@ -453,7 +451,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
       <div className="max-h-96 overflow-y-auto space-y-6 pr-2">
         {comments.map((comment: Comment) => {
-          const isExpanded = expandedComments[comment.id] !== false // По умолчанию развёрнуто
+          const isExpanded = expandedComments[comment.id] !== false
           const hasReplies = comment.replies && comment.replies.length > 0
           
           return (
@@ -482,7 +480,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                         </span>
                       )}
                       
-                      {/* Счётчик жалоб */}
                       {comment.report_count !== undefined && comment.report_count > 0 && (
                         <span className={`text-xs px-2 py-1 rounded font-medium ${
                           comment.report_count >= banThreshold 
@@ -516,13 +513,12 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                           )}
                           className="text-gray-400 hover:text-orange-600 text-xs flex items-center gap-1"
                         >
-                           Жалоба
+                          🚩 Жалоба
                         </button>
                       )}
                     </div>
                   </div>
                   
-                  {/* Режим редактирования */}
                   {editingCommentId === comment.id ? (
                     <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <textarea
@@ -556,7 +552,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                     </p>
                   )}
 
-                  {/* Форма жалобы */}
                   {reportingCommentId === comment.id && (
                     <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                       <p className="text-sm font-medium text-orange-900 mb-2">
@@ -636,7 +631,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                 </form>
               )}
 
-              {/* Ответы с возможностью сворачивания */}
               {hasReplies && (
                 <div className="mt-4 ml-13 pl-4 border-l-2 border-gray-200">
                   <button
@@ -668,7 +662,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                 </p>
                               </div>
                               <div className="flex items-center gap-2">
-                                {/* Счётчик жалоб для ответа */}
                                 {reply.report_count !== undefined && reply.report_count > 0 && (
                                   <span className={`text-xs px-2 py-1 rounded font-medium ${
                                     reply.report_count >= banThreshold 
@@ -685,13 +678,13 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                       onClick={() => handleEditComment(reply)}
                                       className="text-blue-600 hover:text-blue-700 text-xs"
                                     >
-                                      ✏️
+                                      ️
                                     </button>
                                     <button
                                       onClick={() => handleDelete(reply.id)}
                                       className="text-red-600 hover:text-red-700 text-xs"
                                     >
-                                      🗑️
+                                      ️
                                     </button>
                                   </>
                                 )}
@@ -708,7 +701,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                               </div>
                             </div>
                             
-                            {/* Режим редактирования для ответа */}
                             {editingCommentId === reply.id ? (
                               <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
                                 <textarea
@@ -723,7 +715,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                     disabled={updating}
                                     className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-700 disabled:bg-gray-400"
                                   >
-                                    {updating ? '...' : '💾 Сохранить'}
+                                    {updating ? '...' : ' Сохранить'}
                                   </button>
                                   <button
                                     onClick={() => {
@@ -742,7 +734,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                               </p>
                             )}
 
-                            {/* Форма жалобы для ответа */}
                             {reportingCommentId === reply.id && (
                               <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
                                 <textarea
@@ -785,7 +776,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
         {comments.length === 0 && (
           <div className="text-center py-8 text-gray-500">
-            💬 Пока нет комментариев. Будьте первым!
+             Пока нет комментариев. Будьте первым!
           </div>
         )}
       </div>

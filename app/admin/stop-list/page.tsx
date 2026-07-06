@@ -26,10 +26,14 @@ export default function StopListPage() {
   })
   const [searchEmail, setSearchEmail] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
-  const [filterActive, setFilterActive] = useState(true)
+  const [filterActive, setFilterActive] = useState(false) // По умолчанию показываем все
+  const [, setNow] = useState(Date.now())
 
   useEffect(() => {
     loadStopList()
+    // Обновляем каждую минуту
+    const interval = setInterval(() => setNow(Date.now()), 60000)
+    return () => clearInterval(interval)
   }, [filterActive])
 
   const loadStopList = async () => {
@@ -39,15 +43,10 @@ export default function StopListPage() {
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (filterActive) {
-        query = query.gte('banned_until', new Date().toISOString())
-      }
-
       const { data, error } = await query
 
       if (error) throw error
 
-      // Загружаем информацию о пользователях через coaches
       const entriesWithUsers = await Promise.all(
         (data || []).map(async (entry) => {
           const { data: coachData } = await supabase
@@ -131,7 +130,7 @@ export default function StopListPage() {
   }
 
   const handleRemoveBan = async (id: string) => {
-    if (!confirm('Удалить пользователя из стоп-листа?')) return
+    if (!confirm('Разблокировать пользователя?')) return
 
     try {
       const { error } = await supabase
@@ -147,6 +146,22 @@ export default function StopListPage() {
     }
   }
 
+  const getRemainingTime = (bannedUntil: string) => {
+    const now = new Date()
+    const end = new Date(bannedUntil)
+    const diff = end.getTime() - now.getTime()
+    
+    if (diff <= 0) return 'Истекла'
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    
+    if (days > 0) return `${days} дн. ${hours} ч. ${minutes} мин.`
+    if (hours > 0) return `${hours} ч. ${minutes} мин.`
+    return `${minutes} мин.`
+  }
+
   const isExpired = (bannedUntil: string) => {
     return new Date(bannedUntil) < new Date()
   }
@@ -160,6 +175,10 @@ export default function StopListPage() {
       minute: '2-digit',
     })
   }
+
+  const filteredEntries = filterActive 
+    ? entries.filter(e => !isExpired(e.banned_until))
+    : entries
 
   return (
     <main className="min-h-screen bg-gray-50 py-8">
@@ -200,9 +219,11 @@ export default function StopListPage() {
               Только активные блокировки
             </span>
           </label>
+          <p className="text-xs text-gray-500 mt-2">
+            Всего записей: {entries.length} | Показано: {filteredEntries.length}
+          </p>
         </div>
 
-        {/* Список */}
         {loading ? (
           <div className="bg-white rounded-xl shadow-sm border p-6">
             <div className="animate-pulse space-y-4">
@@ -211,17 +232,18 @@ export default function StopListPage() {
               ))}
             </div>
           </div>
-        ) : entries.length > 0 ? (
+        ) : filteredEntries.length > 0 ? (
           <div className="bg-white rounded-xl shadow-sm border divide-y">
-            {entries.map((entry) => {
+            {filteredEntries.map((entry) => {
               const expired = isExpired(entry.banned_until)
+              const remaining = getRemainingTime(entry.banned_until)
               
               return (
                 <div key={entry.id} className="p-4 flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                        {(entry.user_email || 'U').charAt(0).toUpperCase()}
+                        {(entry.display_name || entry.user_email || 'U').charAt(0).toUpperCase()}
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">
@@ -243,6 +265,11 @@ export default function StopListPage() {
                       <p><strong>Причина:</strong> {entry.reason}</p>
                       <p><strong>Заблокирован:</strong> {formatDate(entry.created_at)}</p>
                       <p><strong>До:</strong> {formatDate(entry.banned_until)}</p>
+                      {!expired && (
+                        <p className="text-orange-600 font-medium">
+                          ⏱️ Осталось: {remaining}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <button
@@ -267,7 +294,6 @@ export default function StopListPage() {
           </div>
         )}
 
-        {/* Модальное окно */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
@@ -291,7 +317,7 @@ export default function StopListPage() {
                 />
 
                 {searchResults.length > 0 && (
-                  <div className="mt-2 border rounded-md divide-y">
+                  <div className="mt-2 border rounded-md divide-y max-h-40 overflow-y-auto">
                     {searchResults.map((user) => (
                       <button
                         key={user.user_id}
