@@ -19,7 +19,7 @@ function FileDisplayCard({
   fileType: string
 }) {
   const getFileIcon = () => {
-    if (fileType === 'pdf') return ''
+    if (fileType === 'pdf') return '📄'
     if (fileType === 'image') return '🖼️'
     if (fileType === 'yandex_disk') return '💾'
     if (fileType === 'presentation') return '📊'
@@ -322,7 +322,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
       {lesson.description && (
         <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            📖 Описание
+             Описание
           </h2>
           <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
             {lesson.description}

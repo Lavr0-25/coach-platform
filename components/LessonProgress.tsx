@@ -72,6 +72,16 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
     setUpdating(true)
 
     try {
+      // Отслеживаем начало урока
+      await supabase
+        .from('analytics_events')
+        .insert({
+          event_type: 'lesson_start',
+          user_id: userId,
+          target_id: lessonId,
+          target_type: 'lesson',
+        })
+
       const { error } = await supabase
         .from('lesson_progress')
         .upsert({
@@ -100,6 +110,16 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
     setUpdating(true)
 
     try {
+      // Отслеживаем завершение урока
+      await supabase
+        .from('analytics_events')
+        .insert({
+          event_type: 'lesson_complete',
+          user_id: userId,
+          target_id: lessonId,
+          target_type: 'lesson',
+        })
+
       const { error } = await supabase
         .from('lesson_progress')
         .upsert({
@@ -168,12 +188,10 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
     )
   }
 
-  // Если пользователь не авторизован
   if (!userId) {
     return null
   }
 
-  // Если прогресса нет
   if (!progress) {
     return (
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
@@ -196,7 +214,6 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
     )
   }
 
-  // Если урок в процессе
   if (progress.status === 'started') {
     return (
       <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4">
@@ -212,7 +229,6 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
           </span>
         </div>
 
-        {/* Прогресс-бар */}
         <div className="mb-3">
           <div className="flex justify-between text-xs text-gray-600 mb-1">
             <span>Прогресс</span>
@@ -250,12 +266,11 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
     )
   }
 
-  // Если урок завершён
   return (
     <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
       <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
         <div>
-          <h3 className="font-semibold text-gray-900 mb-1"> Урок пройден!</h3>
+          <h3 className="font-semibold text-gray-900 mb-1">🎉 Урок пройден!</h3>
           <p className="text-sm text-gray-600">
             Поздравляем! Вы успешно завершили этот урок.
           </p>
@@ -265,7 +280,6 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
         </span>
       </div>
 
-      {/* Прогресс-бар 100% */}
       <div className="mb-3">
         <div className="flex justify-between text-xs text-gray-600 mb-1">
           <span>Прогресс</span>
@@ -288,7 +302,7 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
         disabled={updating}
         className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:bg-gray-400"
       >
-         Пройти ещё раз
+        🔄 Пройти ещё раз
       </button>
     </div>
   )
