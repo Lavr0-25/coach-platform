@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import ReviewsSection from '@/components/ReviewsSection'
 import LessonComments from '@/components/LessonComments'
+import LessonProgress from '@/components/LessonProgress'
 
 interface LessonPageProps {
   params: Promise<{
@@ -18,7 +19,7 @@ function FileDisplayCard({
   fileType: string
 }) {
   const getFileIcon = () => {
-    if (fileType === 'pdf') return '📄'
+    if (fileType === 'pdf') return ''
     if (fileType === 'image') return '🖼️'
     if (fileType === 'yandex_disk') return '💾'
     if (fileType === 'presentation') return '📊'
@@ -134,7 +135,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
     notFound()
   }
 
-  // Получаем первого наставника (coaches может быть массивом)
   const coach = Array.isArray(lesson.coaches) ? lesson.coaches[0] : lesson.coaches
 
   const { data: content, error: contentError } = await supabase
@@ -306,7 +306,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
       {(!content || content.length === 0) && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6">
           <div className="flex items-start gap-3">
-            <span className="text-2xl">⚠️</span>
+            <span className="text-2xl">️</span>
             <div>
               <h3 className="font-semibold text-yellow-900 mb-1">
                 Контент не добавлен
@@ -329,6 +329,11 @@ export default async function LessonPage({ params }: LessonPageProps) {
           </div>
         </div>
       )}
+
+      {/* Прогресс урока */}
+      <div className="mb-6">
+        <LessonProgress lessonId={id} />
+      </div>
 
       {/* Отзывы */}
       <div className="mb-6">
