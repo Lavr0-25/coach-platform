@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
@@ -22,15 +22,11 @@ export default function Navbar() {
   const supabase = createClient()
   const router = useRouter()
   const pathname = usePathname()
-  const loadingRef = useRef(false)
 
   const loadUser = async () => {
-    loadingRef.current = true
     setIsLoaded(false)
 
     try {
-      await supabase.auth.refreshSession()
-      
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       
       if (userError) {
@@ -86,8 +82,6 @@ export default function Navbar() {
       setIsMentor(false)
       setIsAdmin(false)
       setIsLoaded(true)
-    } finally {
-      loadingRef.current = false
     }
   }
 
@@ -96,27 +90,19 @@ export default function Navbar() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      setIsLoaded(true)
+      if (session?.user) {
+        loadUser()
+      } else {
+        setProfile(null)
+        setIsMentor(false)
+        setIsAdmin(false)
+        setIsLoaded(true)
+      }
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
-
-  useEffect(() => {
-    loadUser()
-  }, [pathname])
-
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key?.includes('auth-token')) {
-        loadUser()
-      }
-    }
-
-    window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
   const handleBecomeMentor = async () => {
@@ -206,7 +192,6 @@ export default function Navbar() {
               <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
             ) : user ? (
               <>
-                {/* Уведомления */}
                 <NotificationsBell />
 
                 {!isMentor && (
@@ -261,7 +246,7 @@ export default function Navbar() {
                                 </p>
                                 {isAdmin && (
                                   <span className="inline-block mt-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-medium">
-                                    👑 Администратор
+                                     Администратор
                                   </span>
                                 )}
                               </div>
@@ -269,7 +254,6 @@ export default function Navbar() {
                           </div>
 
                           <div className="py-2">
-                            {/* Админ-панель (только для админов) */}
                             {isAdmin && (
                               <Link
                                 href="/admin"
@@ -339,7 +323,7 @@ export default function Navbar() {
                               className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
                               onClick={() => setShowProfileMenu(false)}
                             >
-                              <span className="text-xl">🎓</span>
+                              <span className="text-xl"></span>
                               Мои курсы
                             </Link>
 

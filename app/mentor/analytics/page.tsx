@@ -1,6 +1,20 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import AnalyticsDashboard from '@/components/AnalyticsDashboard'
+import dynamic from 'next/dynamic'
+
+// Lazy load компонента аналитики
+const AnalyticsDashboard = dynamic(
+  () => import('@/components/AnalyticsDashboard'),
+  { 
+    loading: () => (
+      <div className="animate-pulse space-y-4">
+        <div className="h-32 bg-gray-200 rounded"></div>
+        <div className="h-64 bg-gray-200 rounded"></div>
+      </div>
+    ),
+    ssr: false // Отключаем SSR для тяжёлой аналитики
+  }
+)
 
 export default async function MentorAnalyticsPage() {
   const supabase = await createClient()
@@ -11,7 +25,6 @@ export default async function MentorAnalyticsPage() {
     redirect('/login')
   }
 
-  // Проверяем, что пользователь — ментор
   const { data: coach } = await supabase
     .from('coaches')
     .select('role')
