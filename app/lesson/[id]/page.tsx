@@ -118,6 +118,20 @@ export default async function LessonPage({ params }: LessonPageProps) {
   
   const supabase = await createClient()
 
+  // Отслеживаем просмотр урока
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (user) {
+    await supabase
+      .from('analytics_events')
+      .insert({
+        event_type: 'lesson_view',
+        user_id: user.id,
+        target_id: id,
+        target_type: 'lesson',
+      })
+  }
+
   const { data: lesson, error: lessonError } = await supabase
     .from('lessons')
     .select(`
@@ -171,7 +185,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
               href={`/mentor/${coach.id}`}
               className="text-gray-600 hover:text-blue-600 transition-colors inline-flex items-center gap-2"
             >
-              👨‍ <span className="font-medium">{coach.display_name}</span>
+              👨‍🏫 <span className="font-medium">{coach.display_name}</span>
               {coach.specialization && (
                 <span className="text-gray-500">— {coach.specialization}</span>
               )}
@@ -306,7 +320,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
       {(!content || content.length === 0) && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6">
           <div className="flex items-start gap-3">
-            <span className="text-2xl">️</span>
+            <span className="text-2xl">⚠️</span>
             <div>
               <h3 className="font-semibold text-yellow-900 mb-1">
                 Контент не добавлен
@@ -322,7 +336,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
       {lesson.description && (
         <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
-             Описание
+            📖 Описание
           </h2>
           <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
             {lesson.description}
