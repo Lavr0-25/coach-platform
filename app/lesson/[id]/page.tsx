@@ -1,9 +1,35 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import ReviewsSection from '@/components/ReviewsSection'
-import LessonComments from '@/components/LessonComments'
-import LessonProgress from '@/components/LessonProgress'
+import dynamic from 'next/dynamic'
+
+// Ленивая загрузка тяжёлых компонентов
+const ReviewsSection = dynamic(
+  () => import('@/components/ReviewsSection'),
+  { 
+    loading: () => <div className="animate-pulse space-y-4">
+      <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+      <div className="h-24 bg-gray-200 rounded"></div>
+    </div>
+  }
+)
+
+const LessonComments = dynamic(
+  () => import('@/components/LessonComments'),
+  { 
+    loading: () => <div className="animate-pulse space-y-4">
+      <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+      <div className="h-32 bg-gray-200 rounded"></div>
+    </div>
+  }
+)
+
+const LessonProgress = dynamic(
+  () => import('@/components/LessonProgress'),
+  { 
+    loading: () => <div className="animate-pulse h-24 bg-gray-200 rounded-xl"></div>
+  }
+)
 
 interface LessonPageProps {
   params: Promise<{
@@ -23,7 +49,7 @@ function FileDisplayCard({
     if (fileType === 'image') return '🖼️'
     if (fileType === 'yandex_disk') return '💾'
     if (fileType === 'presentation') return '📊'
-    if (fileType === 'vk_video') return '📹'
+    if (fileType === 'vk_video') return ''
     return '📎'
   }
 
@@ -336,7 +362,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
       {lesson.description && (
         <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            📖 Описание
+             Описание
           </h2>
           <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
             {lesson.description}
