@@ -1,154 +1,80 @@
 import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
 import Link from 'next/link'
 
-interface LessonPageProps {
-  params: Promise<{
-    id: string
-  }>
-}
-
-export default async function LessonPage({ params }: LessonPageProps) {
-  const { id } = await params
-  console.log('🔍 Загрузка урока с ID:', id)
-  
+export default async function MentorsPage() {
   const supabase = await createClient()
 
-  // Получаем урок
-  const { data: lesson, error: lessonError } = await supabase
-    .from('lessons')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const { data: mentors, error } = await supabase
+    .from('coaches')
+    .select(`
+      id,
+      display_name,
+      specialization,
+      bio,
+      user_id
+    `)
+    .in('role', ['mentor', 'admin'])
+    .order('created_at', { ascending: false })
 
-  console.log('📦 Результат запроса:', { lesson, error: lessonError })
-
-  if (lessonError || !lesson) {
-    console.error('❌ Ошибка загрузки урока:', lessonError)
-    notFound()
+  if (error) {
+    console.error('Error loading mentors:', error)
   }
 
-  // Получаем наставника
-  const { data: coach } = await supabase
-    .from('coaches')
-    .select('id, display_name, specialization')
-    .eq('id', lesson.coach_id)
-    .single()
-
-  console.log('👨 Наставник:', coach)
-
-  // Получаем контент
-  const { data: content } = await supabase
-    .from('lesson_content')
-    .select('*')
-    .eq('lesson_id', id)
-    .order('order_index', { ascending: true })
-    .limit(1)
-
-  console.log('📺 Контент:', content)
-
-  const isFree = lesson.price === 0 || lesson.is_free_preview
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <Link href="/catalog" className="text-blue-600 hover:text-blue-700">
-            ← Назад к каталогу
-          </Link>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {lesson.title}
+    <main className="min-h-screen bg-gray-50 py-8">
+      <div className="container mx-auto px-4 max-w-6xl">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            👨‍🏫 Наставники
           </h1>
-          
-          {coach && (
-            <p className="text-gray-600 mb-4">
-              👨‍🏫 {coach.display_name}
-              {coach.specialization && ` — ${coach.specialization}`}
-            </p>
-          )}
-
-          <div className="flex items-center gap-4">
-            {isFree ? (
-              <span className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-lg">
-                🆓 Бесплатно
-              </span>
-            ) : (
-              <span className="bg-purple-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-lg">
-                💰 {lesson.price} ₽
-              </span>
-            )}
-            
-            <span className="text-sm text-gray-500">
-              📅 {new Date(lesson.created_at).toLocaleDateString('ru-RU')}
-            </span>
-          </div>
+          <p className="text-gray-600 text-lg">
+            Лучшие специалисты готовы поделиться знаниями
+          </p>
         </div>
 
-        {content && content.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              📺 Контент урока
-            </h2>
-            
-            {content[0].content_type === 'youtube' && content[0].content_url && (
-              <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                <iframe
-                  src={content[0].content_url}
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            )}
-
-            {content[0].content_type === 'vk_video' && content[0].content_url && (
-              <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                <iframe
-                  src={content[0].content_url}
-                  className="w-full h-full"
-                  allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            )}
-
-            {!['youtube', 'vk_video'].includes(content[0].content_type) && (
-              <div className="text-center py-12 bg-gray-50 rounded-lg">
-                <div className="text-6xl mb-4">📄</div>
-                <p className="text-gray-700 mb-4">
-                  Тип контента: {content[0].content_type}
-                </p>
-                {content[0].content_url && (
-                  <a
-                    href={content[0].content_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors inline-block"
-                  >
-                    📥 Открыть контент
-                  </a>
-                )}
-              </div>
-            )}
+        {mentors && mentors.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {mentors.map((mentor) => (
+              <Link
+                key={mentor.id}
+                href={`/profile/${mentor.user_id}`}
+                className="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+                    {mentor.display_name?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-1 truncate">
+                      {mentor.display_name}
+                    </h3>
+                    {mentor.specialization && (
+                      <p className="text-sm text-gray-600 mb-3">
+                        {mentor.specialization}
+                      </p>
+                    )}
+                    {mentor.bio && (
+                      <p className="text-sm text-gray-700 line-clamp-2">
+                        {mentor.bio}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
-        )}
-
-        {lesson.description && (
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              📖 Описание
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
+            <div className="text-6xl mb-4">👨‍🏫</div>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+              Пока нет наставников
             </h2>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {lesson.description}
+            <p className="text-gray-600">
+              Станьте первым наставником на платформе!
             </p>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </main>
   )
 }
