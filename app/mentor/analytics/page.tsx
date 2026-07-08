@@ -12,7 +12,7 @@ const AnalyticsDashboard = dynamic(
         <div className="h-64 bg-gray-200 rounded"></div>
       </div>
     ),
-    ssr: false // Отключаем SSR для тяжёлой аналитики
+    ssr: false
   }
 )
 
