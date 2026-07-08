@@ -51,8 +51,15 @@ export default async function FavoritesPage() {
         {favorites && favorites.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {favorites.map((favorite) => {
-              const lesson = favorite.lessons
-              if (!lesson) return null
+              const lesson = Array.isArray(favorite.lessons) 
+                ? favorite.lessons[0] 
+                : favorite.lessons
+
+              if (!lesson || !lesson.id) return null
+
+              const coach = Array.isArray(lesson.coaches) 
+                ? lesson.coaches[0] 
+                : lesson.coaches
 
               return (
                 <Link
@@ -69,9 +76,9 @@ export default async function FavoritesPage() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
                       {lesson.title}
                     </h3>
-                    {lesson.coaches && (
+                    {coach && (
                       <p className="text-sm text-gray-600 mb-2">
-                        👨‍🏫 {lesson.coaches.display_name}
+                        👨‍🏫 {coach.display_name}
                       </p>
                     )}
                   </div>
