@@ -176,14 +176,9 @@ export default function Navbar() {
             </Link>
             
             {user && isMentor && (
-              <>
-                <Link href="/favorites" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                   Избранное
-                </Link>
-                <Link href="/purchases" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                   Мои курсы
-                </Link>
-              </>
+              <Link href="/favorites" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                 Избранное
+              </Link>
             )}
           </div>
 
@@ -316,15 +311,6 @@ export default function Navbar() {
                             >
                               <span className="text-xl">⭐</span>
                               Избранное
-                            </Link>
-
-                            <Link
-                              href="/purchases"
-                              className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
-                              onClick={() => setShowProfileMenu(false)}
-                            >
-                              <span className="text-xl"></span>
-                              Мои курсы
                             </Link>
 
                             <hr className="my-2" />
