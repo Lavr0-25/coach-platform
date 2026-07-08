@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import ReviewsSection from '@/components/ReviewsSection'
 
 interface ProfilePageProps {
   params: Promise<{
@@ -13,6 +12,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { id } = await params
   const supabase = await createClient()
 
+  console.log('🔍 Поиск ментора с user_id:', id)
+
   const { data: coach, error: coachError } = await supabase
     .from('coaches')
     .select(`
@@ -21,13 +22,20 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       specialization,
       bio,
       avatar_url,
-      created_at
+      created_at,
+      role
     `)
     .eq('user_id', id)
-    .in('role', ['mentor', 'admin'])
     .single()
 
-  if (coachError || !coach) {
+  console.log('📦 Результат:', { coach, error: coachError })
+
+  if (coachError) {
+    console.error('❌ Ошибка:', coachError)
+  }
+
+  if (!coach) {
+    console.error('❌ Ментор не найден')
     notFound()
   }
 
@@ -191,8 +199,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             </div>
           )}
         </div>
-
-        {/* Отзывы будут добавлены позже */}
       </div>
     </main>
   )
