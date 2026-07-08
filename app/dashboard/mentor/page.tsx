@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import MentorDashboardClient from './MentorDashboardClient'
 
 export default async function MentorDashboard() {
@@ -8,14 +9,12 @@ export default async function MentorDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Проверяем, есть ли запись в coaches с ролью mentor или admin
   const { data: coach } = await supabase
     .from('coaches')
     .select('id, display_name, role')
     .eq('user_id', user.id)
     .single()
 
-  // Если нет записи в coaches или роль не mentor/admin — показываем сообщение
   if (!coach || (coach.role !== 'mentor' && coach.role !== 'admin')) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -52,10 +51,8 @@ export default async function MentorDashboard() {
     )
   }
 
-  // coach уже содержит данные (id, display_name, role)
   const coachData = coach
 
-  // Мои уроки - последние 2
   const { data: myLessons } = await supabase
     .from('lessons')
     .select('id, title, created_at')
@@ -63,7 +60,6 @@ export default async function MentorDashboard() {
     .order('created_at', { ascending: false })
     .limit(2)
 
-  // Избранное
   const { data: favorites } = await supabase
     .from('favorites')
     .select(`
@@ -79,7 +75,6 @@ export default async function MentorDashboard() {
     .order('created_at', { ascending: false })
     .limit(20)
 
-  // В процессе изучения
   const { data: inProgress } = await supabase
     .from('learning_progress')
     .select(`
@@ -97,7 +92,6 @@ export default async function MentorDashboard() {
     .order('last_watched_at', { ascending: false })
     .limit(20)
 
-  // Завершено
   const { data: completed } = await supabase
     .from('learning_progress')
     .select(`
@@ -115,7 +109,6 @@ export default async function MentorDashboard() {
     .order('last_watched_at', { ascending: false })
     .limit(20)
 
-  // Мои покупки
   const { data: purchases } = await supabase
     .from('purchases')
     .select(`
@@ -145,6 +138,24 @@ export default async function MentorDashboard() {
             Управляйте своими уроками и учитесь у других наставников
           </p>
         </div>
+
+        {/* Ссылка на статистику */}
+        <Link
+          href="/mentor/analytics"
+          className="block bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6 mb-6 hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-1">
+                📊 Моя статистика
+              </h3>
+              <p className="text-gray-600">
+                Просмотры, конверсия, рейтинг и активность
+              </p>
+            </div>
+            <div className="text-4xl">📈</div>
+          </div>
+        </Link>
 
         {/* Клиентский компонент с 2 вкладками */}
         <MentorDashboardClient
