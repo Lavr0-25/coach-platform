@@ -2,10 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import dynamic from 'next/dynamic'
 
-// Lazy load компонента аналитики
+// Ленивая загрузка компонента аналитики
 const AnalyticsDashboard = dynamic(
   () => import('@/components/AnalyticsDashboard'),
-  { 
+  {
     loading: () => (
       <div className="animate-pulse space-y-4">
         <div className="h-32 bg-gray-200 rounded"></div>
