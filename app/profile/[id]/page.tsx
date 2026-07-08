@@ -12,8 +12,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { id } = await params
   const supabase = await createClient()
 
-  console.log('🔍 Поиск ментора с user_id:', id)
-
   const { data: coach, error: coachError } = await supabase
     .from('coaches')
     .select(`
@@ -22,20 +20,13 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       specialization,
       bio,
       avatar_url,
-      created_at,
-      role
+      created_at
     `)
     .eq('user_id', id)
+    .in('role', ['mentor', 'admin'])
     .single()
 
-  console.log('📦 Результат:', { coach, error: coachError })
-
-  if (coachError) {
-    console.error('❌ Ошибка:', coachError)
-  }
-
-  if (!coach) {
-    console.error('❌ Ментор не найден')
+  if (coachError || !coach) {
     notFound()
   }
 
@@ -141,7 +132,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           {coach.bio && (
             <div className="mt-6 pt-6 border-t">
               <h2 className="text-xl font-semibold text-gray-900 mb-3">
-                 Обо мне
+                Обо мне
               </h2>
               <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                 {coach.bio}
