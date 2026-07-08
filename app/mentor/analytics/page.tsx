@@ -1,20 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
+﻿import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import dynamic from 'next/dynamic'
-
-// Ленивая загрузка компонента аналитики
-const AnalyticsDashboard = dynamic(
-  () => import('@/components/AnalyticsDashboard'),
-  {
-    loading: () => (
-      <div className="animate-pulse space-y-4">
-        <div className="h-32 bg-gray-200 rounded"></div>
-        <div className="h-64 bg-gray-200 rounded"></div>
-      </div>
-    ),
-    ssr: false
-  }
-)
+import AnalyticsDashboard from '@/components/AnalyticsDashboard'
 
 export default async function MentorAnalyticsPage() {
   const supabase = await createClient()
