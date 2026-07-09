@@ -24,7 +24,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
     .order('created_at', { ascending: false })
 
   const totalLessons = lessons?.length || 0
-  
   const { data: reviews } = await supabase
     .from('reviews')
     .select('rating')
@@ -104,7 +103,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
                 onClick={() => alert('Функция сообщений скоро будет доступна!')}
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
               >
-                ✉️ Написать сообщение 
+                ✉️ Написать сообщение
               </button>
             </div>
           </div>
