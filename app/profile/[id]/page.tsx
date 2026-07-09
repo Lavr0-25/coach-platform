@@ -14,14 +14,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   const { data: coach, error: coachError } = await supabase
     .from('coaches')
-    .select(`
-      id,
-      display_name,
-      specialization,
-      bio,
-      avatar_url,
-      created_at
-    `)
+    .select('id, display_name, specialization, bio, avatar_url, created_at')
     .eq('user_id', id)
     .in('role', ['mentor', 'admin'])
     .single()
@@ -183,7 +176,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             </div>
           ) : (
             <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
-              <div className="text-6xl mb-4">📚</div>
+              <div className="text-6xl mb-4"></div>
               <p className="text-gray-600">
                 У этого ментора пока нет уроков
               </p>
