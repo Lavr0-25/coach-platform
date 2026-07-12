@@ -3,6 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -26,14 +29,14 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-1 bg-gray-50">{children}</main>
-        <footer className="bg-white border-t mt-auto">
-          <div className="container mx-auto px-4 py-6 text-center text-gray-600">
-            <p>© 2026 CoachPlatform. Все права защищены.</p>
+        <footer className="bg-white border-t flex-shrink-0">
+          <div className="container mx-auto px-4 py-3 text-center text-gray-500 text-sm">
+            <p>© CoachPlatform. Все права защищены.</p>
           </div>
         </footer>
       </body>

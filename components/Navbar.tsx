@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import NotificationsBell from './NotificationsBell'
+import MessagesBell from './MessagesBell'
+import FeedbackModal from './FeedbackModal'
 
 interface Profile {
   display_name?: string
@@ -16,6 +18,7 @@ export default function Navbar() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [isMentor, setIsMentor] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -23,72 +26,82 @@ export default function Navbar() {
   const router = useRouter()
   const pathname = usePathname()
 
-  const loadUser = async () => {
-    setIsLoaded(false)
+  useEffect(() => {
+    let mounted = true
 
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      
-      if (userError) {
-        console.error('Auth error:', userError)
+    const loadUser = async () => {
+      if (!mounted) return
+      setIsLoaded(false)
+
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        
+        if (!mounted) return
+
+        if (userError) {
+          console.error('Auth error:', userError)
+          setUser(null)
+          setProfile(null)
+          setIsMentor(false)
+          setIsAdmin(false)
+          setIsLoaded(true)
+          return
+        }
+        
+        setUser(user)
+
+        if (user) {
+          try {
+            const { data: coachData, error: coachError } = await supabase
+              .from('coaches')
+              .select('display_name, role')
+              .eq('user_id', user.id)
+              .single()
+
+            if (!mounted) return
+
+            if (coachError && coachError.code !== 'PGRST116') {
+              console.error('Coach query error:', coachError)
+            }
+
+            if (coachData) {
+              setProfile(coachData)
+              setIsMentor(coachData.role === 'mentor' || coachData.role === 'admin')
+              setIsAdmin(coachData.role === 'admin')
+            } else {
+              setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
+              setIsMentor(false)
+              setIsAdmin(false)
+            }
+          } catch (err) {
+            if (!mounted) return
+            console.error('Coach load error:', err)
+            setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
+            setIsMentor(false)
+            setIsAdmin(false)
+          }
+        } else {
+          setProfile(null)
+          setIsMentor(false)
+          setIsAdmin(false)
+        }
+
+        if (mounted) setIsLoaded(true)
+      } catch (error) {
+        if (!mounted) return
+        console.error('Navbar load error:', error)
         setUser(null)
         setProfile(null)
         setIsMentor(false)
         setIsAdmin(false)
         setIsLoaded(true)
-        return
       }
-      
-      setUser(user)
-
-      if (user) {
-        try {
-          const { data: coachData, error: coachError } = await supabase
-            .from('coaches')
-            .select('display_name, role')
-            .eq('user_id', user.id)
-            .single()
-
-          if (coachError && coachError.code !== 'PGRST116') {
-            console.error('Coach query error:', coachError)
-          }
-
-          if (coachData) {
-            setProfile(coachData)
-            setIsMentor(coachData.role === 'mentor' || coachData.role === 'admin')
-            setIsAdmin(coachData.role === 'admin')
-          } else {
-            setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
-            setIsMentor(false)
-            setIsAdmin(false)
-          }
-        } catch (err) {
-          console.error('Coach load error:', err)
-          setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
-          setIsMentor(false)
-          setIsAdmin(false)
-        }
-      } else {
-        setProfile(null)
-        setIsMentor(false)
-        setIsAdmin(false)
-      }
-
-      setIsLoaded(true)
-    } catch (error) {
-      console.error('Navbar load error:', error)
-      setUser(null)
-      setProfile(null)
-      setIsMentor(false)
-      setIsAdmin(false)
-      setIsLoaded(true)
     }
-  }
 
-  useEffect(() => {
     loadUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return
       setUser(session?.user ?? null)
       if (session?.user) {
         loadUser()
@@ -101,6 +114,7 @@ export default function Navbar() {
     })
 
     return () => {
+      mounted = false
       subscription.unsubscribe()
     }
   }, [])
@@ -166,13 +180,13 @@ export default function Navbar() {
 
           <div className="hidden md:flex items-center gap-8">
             <Link href="/courses" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-              📚 Каталог курсов
+               Каталог курсов
             </Link>
             <Link href="/catalog" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
                Каталог уроков
             </Link>
             <Link href="/mentors" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-              👨‍🏫 Наставники
+              🏫 Наставники
             </Link>
             
             {user && isMentor && (
@@ -187,6 +201,7 @@ export default function Navbar() {
               <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
             ) : user ? (
               <>
+                <MessagesBell />
                 <NotificationsBell />
 
                 {!isMentor && (
@@ -313,6 +328,20 @@ export default function Navbar() {
                               Избранное
                             </Link>
 
+                            {/* Обратная связь - в меню профиля */}
+                            <button
+                              onClick={() => {
+                                setShowProfileMenu(false)
+                                setShowFeedbackModal(true)
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                              </svg>
+                              Обратная связь
+                            </button>
+
                             <hr className="my-2" />
 
                             <button
@@ -357,6 +386,14 @@ export default function Navbar() {
           </div>
         </div>
       </div>
+
+      {/* Модальное окно обратной связи */}
+      {user && (
+        <FeedbackModal 
+          isOpen={showFeedbackModal} 
+          onClose={() => setShowFeedbackModal(false)} 
+        />
+      )}
     </nav>
   )
 }
