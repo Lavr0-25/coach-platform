@@ -46,7 +46,7 @@ function MessageContent({ content }: { content: string }) {
   }, [content])
 
   if (lessonInfo) {
-    const icon = lessonInfo.type === 'lesson' ? '🎬' : ''
+    const icon = lessonInfo.type === 'lesson' ? '' : ''
     const href = lessonInfo.type === 'lesson' ? `/lesson/${lessonInfo.id}` : `/course/${lessonInfo.id}`
     const textWithoutUrl = content.replace(/https?:\/\/[^\s]+/, '').trim()
     
@@ -403,7 +403,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-screen overflow-hidden">
       {/* Шапка */}
       <div className="bg-white border-b px-4 py-3 flex items-center gap-4 flex-shrink-0">
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -442,7 +442,7 @@ export default function ChatPage() {
                 onClick={() => setSearchQuery('')}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                ✕
+                
               </button>
             )}
           </div>
@@ -504,7 +504,7 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Поле ввода */}
+      {/* Поле ввода - приклеено к низу */}
       <form onSubmit={handleSend} className="bg-white border-t p-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <input
