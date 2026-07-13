@@ -9,7 +9,12 @@ interface EmojiPickerProps {
 export default function EmojiPicker({ onEmojiSelect }: EmojiPickerProps) {
   const [showPicker, setShowPicker] = useState(false)
   
-  const emojis = ['😀', '😂', '', '❤️', '🎉', '🔥', '👏', '😊', '😎', '🤔', '', '👌', '👍', '🙏', '💪', '✨', '🌟', '']
+  // Оптимизированный набор эмодзи
+  const emojis = [
+    '😀', '😂', '🥰', '❤️',  '🔥','',
+    '👏', '😊', '😎', '🤔',  '👌','',
+    '🙏', '💪', '✨', '🌟', '🎯', '💯'
+  ]
   
   const handleEmojiClick = (emoji: string) => {
     onEmojiSelect?.(emoji)
@@ -38,14 +43,15 @@ export default function EmojiPicker({ onEmojiSelect }: EmojiPickerProps) {
             onClick={() => setShowPicker(false)}
           />
           {/* Панель с эмодзи */}
-          <div className="absolute bottom-full right-0 mb-2 p-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 w-64">
-            <div className="grid grid-cols-6 gap-1 max-h-40 overflow-y-auto custom-scrollbar">
-              {emojis.map((emoji) => (
+          <div className="absolute bottom-full right-0 mb-2 p-3 bg-white border border-gray-200 rounded-xl shadow-xl z-50 w-72">
+            <div className="grid grid-cols-6 gap-1">
+              {emojis.map((emoji, index) => (
                 <button
-                  key={emoji}
+                  key={index}
                   onClick={() => handleEmojiClick(emoji)}
-                  className="text-xl hover:bg-gray-100 p-1 rounded transition-colors flex items-center justify-center"
+                  className="text-2xl hover:bg-gray-100 p-2 rounded-lg transition-colors flex items-center justify-center w-10 h-10"
                   type="button"
+                  title={emoji}
                 >
                   {emoji}
                 </button>
