@@ -108,14 +108,20 @@ export default function ChatPage() {
   const [blockedBy, setBlockedBy] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // 🔥 ОТКЛЮЧАЕМ глобальную прокрутку страницы только для чата
+  // 🔥 БЛОКИРУЕМ глобальный скролл и делаем чат резиновым
   useEffect(() => {
-    const originalStyle = window.getComputedStyle(document.body).overflow
-    document.body.style.overflow = 'hidden'
+    // Сохраняем оригинальные стили
+    const originalBodyOverflow = document.body.style.overflow
+    const originalHtmlOverflow = document.documentElement.style.overflow
     
-    // Возвращаем прокрутку при уходе со страницы чата
+    // Блокируем скролл на body и html
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    
+    // Возвращаем при уходе со страницы
     return () => {
-      document.body.style.overflow = originalStyle
+      document.body.style.overflow = originalBodyOverflow
+      document.documentElement.style.overflow = originalHtmlOverflow
     }
   }, [])
 
@@ -408,9 +414,9 @@ export default function ChatPage() {
   }
 
   return (
-    // 🔥 h-screen и overflow-hidden делают чат фиксированным по высоте экрана
-    <div className="flex flex-col h-screen overflow-hidden">
-      {/* Шапка (не скроллится) */}
+    // 🔥 РЕЗИНОВЫЙ ЧАТ: занимает всю высоту экрана минус Navbar
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 64px)' }}>
+      {/* Шапка (фиксированная) */}
       <div className="bg-white border-b px-4 py-3 flex items-center gap-4 flex-shrink-0">
         <div className="flex items-center gap-3 flex-shrink-0">
           <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
@@ -455,7 +461,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Сообщения (скроллится только эта область) */}
+      {/* Сообщения (резиновая область со скроллом) */}
       <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-gray-50">
         {filteredMessages.length === 0 ? (
           <div className="text-center text-gray-500 mt-8">
@@ -510,7 +516,7 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Поле ввода (приклеено к низу, не скроллится) */}
+      {/* Поле ввода (фиксированное внизу) */}
       <form onSubmit={handleSend} className="bg-white border-t p-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <input
