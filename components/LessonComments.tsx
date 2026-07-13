@@ -62,6 +62,26 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     }
   }, [userId])
 
+  // 🔥 НОВЫЙ ЭФФЕКТ: Прокрутка к якорю (комментарию) при переходе из уведомлений
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash && comments.length > 0) {
+      // Небольшая задержка, чтобы DOM успел полностью отрисоваться
+      setTimeout(() => {
+        const element = document.querySelector(hash)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          // Добавляем плавную подсветку
+          element.classList.add('ring-2', 'ring-blue-400', 'bg-blue-50', 'transition-all', 'duration-500')
+          // Убираем подсветку через 2.5 секунды
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-50')
+          }, 2500)
+        }
+      }, 300)
+    }
+  }, [comments])
+
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     setUserId(user?.id || null)
@@ -128,7 +148,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     setUsersMap(prev => ({ ...prev, ...usersInfo }))
   }
 
-  // Надёжная функция подсчёта жалоб
   const getReportCount = async (commentId: string): Promise<number> => {
     try {
       const { data, error } = await supabase
@@ -172,7 +191,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
             .eq('parent_id', comment.id)
             .order('created_at', { ascending: true })
           
-          // Получаем счётчик жалоб
           const reportCount = await getReportCount(comment.id)
           console.log(`  💬 Комментарий ${comment.id.substring(0, 8)}... — жалоб: ${reportCount}`)
           
@@ -354,7 +372,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
         return
       }
 
-      // Перезагружаем комментарии для обновления счётчика
       await loadComments()
 
       const newCount = await getReportCount(commentId)
@@ -483,7 +500,12 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
           const hasReplies = comment.replies && comment.replies.length > 0
           
           return (
-            <div key={comment.id} className="border-b pb-6 last:border-0">
+            // 🔥 ДОБАВЛЕН ID И TRANSITION ДЛЯ ПОДСВЕТКИ
+            <div 
+              key={comment.id} 
+              id={`comment-${comment.id}`}
+              className="border-b pb-6 last:border-0 transition-all duration-500"
+            >
               <div className="flex items-start gap-3 mb-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
                   {getUserInitial(comment.user_id)}
@@ -530,7 +552,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                             onClick={() => handleDelete(comment.id)}
                             className="text-red-600 hover:text-red-700 text-xs"
                           >
-                            ️ Удалить
+                            🗑️ Удалить
                           </button>
                         </>
                       )}
@@ -672,7 +694,12 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                   {isExpanded && (
                     <div className="space-y-4">
                       {comment.replies!.map((reply: Comment) => (
-                        <div key={reply.id} className="flex items-start gap-3">
+                        // 🔥 ДОБАВЛЕН ID И TRANSITION ДЛЯ ПОДСВЕТКИ ОТВЕТА
+                        <div 
+                          key={reply.id} 
+                          id={`comment-${reply.id}`}
+                          className="flex items-start gap-3 transition-all duration-500"
+                        >
                           <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                             {getUserInitial(reply.user_id)}
                           </div>
