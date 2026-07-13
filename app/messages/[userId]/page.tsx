@@ -46,7 +46,7 @@ function MessageContent({ content }: { content: string }) {
   }, [content])
 
   if (lessonInfo) {
-    const icon = lessonInfo.type === 'lesson' ? '🎬' : ''
+    const icon = lessonInfo.type === 'lesson' ? '🎬' : '📚'
     const href = lessonInfo.type === 'lesson' ? `/lesson/${lessonInfo.id}` : `/course/${lessonInfo.id}`
     const textWithoutUrl = content.replace(/https?:\/\/[^\s]+/, '').trim()
     
@@ -383,7 +383,7 @@ export default function ChatPage() {
     return (
       <div className="flex flex-col h-full items-center justify-center bg-gray-50 p-8">
         <div className="text-center">
-          <div className="text-6xl mb-4"></div>
+          <div className="text-6xl mb-4">🚫</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {isBlocked 
               ? `Вы заблокировали ${otherUser?.display_name || 'этого пользователя'}` 
@@ -411,10 +411,10 @@ export default function ChatPage() {
   }
 
   return (
-    // Чат занимает всю высоту родителя (который задан в layout)
+    // Чат занимает всю высоту родителя
     <div className="flex flex-col h-full">
-      {/* Шапка чата (фиксированная) */}
-      <div className="bg-white border-b px-4 py-3 flex items-center gap-4 flex-shrink-0">
+      {/* Шапка чата - одинаковая высота с сайдбаром (64px) */}
+      <div className="bg-white border-b px-4 py-3 flex items-center gap-4 flex-shrink-0" style={{ height: '64px' }}>
         <div className="flex items-center gap-3 flex-shrink-0">
           <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
             {otherUser?.display_name?.[0]?.toUpperCase() || '?'}
@@ -458,8 +458,8 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Сообщения (резиновая область со скроллом) */}
-      <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-gray-50">
+      {/* Сообщения (резиновая область со скроллом) - убираем серый фон */}
+      <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-white">
         {filteredMessages.length === 0 ? (
           <div className="text-center text-gray-500 mt-8">
             {searchQuery ? 'Ничего не найдено' : 'Нет сообщений'}
