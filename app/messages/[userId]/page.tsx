@@ -414,8 +414,8 @@ export default function ChatPage() {
   }
 
   return (
-    // 🔥 РЕЗИНОВЫЙ ЧАТ: занимает всю высоту экрана минус Navbar
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 64px)' }}>
+    //  РЕЗИНОВЫЙ ЧАТ: занимает всю доступную высоту
+    <div className="flex flex-col h-full">
       {/* Шапка (фиксированная) */}
       <div className="bg-white border-b px-4 py-3 flex items-center gap-4 flex-shrink-0">
         <div className="flex items-center gap-3 flex-shrink-0">
