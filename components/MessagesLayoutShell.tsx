@@ -20,7 +20,7 @@ export default function MessagesLayoutShell({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
   return (
-    <div className="flex flex-1 overflow-hidden relative min-h-0">
+    <div className="flex flex-1 overflow-hidden relative min-h-0 bg-white">
       {/* Кнопка сворачивания/разворачивания */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -42,18 +42,18 @@ export default function MessagesLayoutShell({
         </svg>
       </button>
 
-      {/* Левая панель (Сайдбар) - растягивается на всю высоту */}
+      {/* Левая панель (Сайдбар) */}
       <div
         className={`bg-white flex-shrink-0 transition-all duration-300 ease-in-out border-r overflow-hidden flex flex-col ${
           isSidebarOpen ? 'w-80' : 'w-0'
         }`}
       >
-        <div className="w-80 flex-1 flex flex-col min-h-0">
+        <div className="w-80 flex-1 flex flex-col min-h-0 bg-white">
           <MessagesSidebar coaches={coaches} />
         </div>
       </div>
 
-      {/* Правая часть - сам чат - растягивается на всю высоту */}
+      {/* Правая часть - сам чат */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
         {children}
       </div>
