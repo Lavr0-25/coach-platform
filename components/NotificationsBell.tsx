@@ -34,6 +34,16 @@ export default function NotificationsBell() {
     try {
       console.log('🔔 Загрузка уведомлений для пользователя:', user.id)
 
+      // 🔥 ВАЖНО: Получаем coach_id текущего пользователя из таблицы coaches
+      const { data: coachData } = await supabase
+        .from('coaches')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+      const currentCoachId = coachData?.id
+      console.log('📋 Coach ID текущего пользователя:', currentCoachId)
+
       const newNotifications: Notification[] = []
       const userIds = new Set<string>()
 
@@ -45,7 +55,7 @@ export default function NotificationsBell() {
         .limit(50)
 
       if (lessonError) {
-        console.error(' Ошибка загрузки комментариев к урокам:', lessonError)
+        console.error('❌ Ошибка загрузки комментариев к урокам:', lessonError)
       } else {
         console.log(`📥 Загружено комментариев к урокам: ${lessonComments?.length || 0}`)
         
@@ -101,7 +111,7 @@ export default function NotificationsBell() {
         const authorName = userNames.get(comment.user_id) || 'Пользователь'
         const isReplyToMe = parentUserId === user.id
 
-        // Проверяем, мой ли это урок
+        // Проверяем, мой ли это урок (сравниваем с coach_id из таблицы coaches!)
         if (comment.lesson_id) {
           const { data: lessonData } = await supabase
             .from('lessons')
@@ -110,8 +120,9 @@ export default function NotificationsBell() {
             .single()
           
           if (lessonData) {
-            const isMyLesson = lessonData.coach_id === user.id
-            console.log(`  📚 Урок "${lessonData.title}", coach_id: ${lessonData.coach_id}, isMyLesson: ${isMyLesson}`)
+            // 🔥 ИСПРАВЛЕНО: Сравниваем с coach_id, а не с user.id
+            const isMyLesson = lessonData.coach_id === currentCoachId
+            console.log(`  📚 Урок "${lessonData.title}", coach_id: ${lessonData.coach_id}, currentCoachId: ${currentCoachId}, isMyLesson: ${isMyLesson}`)
 
             if (isReplyToMe) {
               console.log('✅ Найдено: ответ на мой комментарий к уроку')
@@ -146,10 +157,8 @@ export default function NotificationsBell() {
 
       // ====== 5. Обрабатываем комментарии к курсам ======
       for (const comment of courseComments || []) {
-        // Пропускаем собственные комментарии
         if (comment.user_id === user.id) continue
 
-        // Получаем данные о родительском комментарии
         let parentUserId = null
         if (comment.parent_id) {
           const { data: parentData } = await supabase
@@ -163,7 +172,6 @@ export default function NotificationsBell() {
         const authorName = userNames.get(comment.user_id) || 'Пользователь'
         const isReplyToMe = parentUserId === user.id
 
-        // Проверяем, мой ли это курс
         if (comment.course_id) {
           const { data: courseData } = await supabase
             .from('courses')
@@ -172,8 +180,8 @@ export default function NotificationsBell() {
             .single()
           
           if (courseData) {
-            const isMyCourse = courseData.coach_id === user.id
-            console.log(`  📖 Курс "${courseData.title}", coach_id: ${courseData.coach_id}, isMyCourse: ${isMyCourse}`)
+            const isMyCourse = courseData.coach_id === currentCoachId
+            console.log(`   Курс "${courseData.title}", coach_id: ${courseData.coach_id}, isMyCourse: ${isMyCourse}`)
 
             if (isReplyToMe) {
               console.log('✅ Найдено: ответ на мой комментарий к курсу')
@@ -228,7 +236,6 @@ export default function NotificationsBell() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // Определяем тип уведомления и таблицу
     if (notificationId.startsWith('lesson_')) {
       const commentId = notificationId.replace('lesson_', '')
       await supabase
@@ -267,7 +274,6 @@ export default function NotificationsBell() {
   useEffect(() => {
     loadNotifications()
 
-    // Realtime подписка на комментарии к урокам
     const lessonChannel = supabase
       .channel('lesson-comments-notify')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => {
@@ -276,11 +282,10 @@ export default function NotificationsBell() {
       })
       .subscribe()
 
-    // Realtime подписка на комментарии к курсам
     const courseChannel = supabase
       .channel('course-comments-notify')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'course_comments' }, () => {
-        console.log(' Новый комментарий к курсу, обновляем уведомления...')
+        console.log('🔔 Новый комментарий к курсу, обновляем уведомления...')
         loadNotifications()
       })
       .subscribe()
