@@ -32,130 +32,97 @@ export default function NotificationsBell() {
     }
 
     try {
-      const allNotifications: Notification[] = []
-
-      // 1. Комментарии к урокам (где автор - текущий пользователь или отвечают ему)
-      const { data: lessonComments } = await supabase
-        .from('lesson_comments')
+      // Запрашиваем комментарии с данными об авторе, родительском комментарии и уроке
+      const { data: comments, error } = await supabase
+        .from('comments')
         .select(`
           id,
           content,
           created_at,
           is_read,
+          user_id,
+          parent_id,
           lesson_id,
-          user_id,
-          parent_id,
           profiles:user_id (display_name),
-          lessons:lesson_id (title)
+          parent_comment:parent_id (user_id),
+          lessons:lesson_id (title, coaches(user_id))
         `)
-        .eq('user_id', user.id)
-        .or(`parent_id.not.is.null`)
         .order('created_at', { ascending: false })
-        .limit(20)
+        .limit(50)
 
-      // 2. Комментарии к курсам
-      const { data: courseComments } = await supabase
-        .from('course_comments')
-        .select(`
-          id,
-          content,
-          created_at,
-          is_read,
-          course_id,
-          user_id,
-          parent_id,
-          profiles:user_id (display_name),
-          courses:course_id (title)
-        `)
-        .eq('user_id', user.id)
-        .or(`parent_id.not.is.null`)
-        .order('created_at', { ascending: false })
-        .limit(20)
+      if (error) {
+        console.error('Ошибка загрузки уведомлений:', error)
+        throw error
+      }
 
-      // 3. Ответы на отзывы
-      const { data: reviewReplies } = await supabase
-        .from('review_comments')
-        .select(`
-          id,
-          content,
-          created_at,
-          is_read,
-          review_id,
-          user_id,
-          parent_id,
-          profiles:user_id (display_name),
-          reviews:review_id (lesson_id)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(20)
+      const newNotifications: Notification[] = []
 
-      // Формируем уведомления для комментариев к урокам
-      if (lessonComments) {
-        lessonComments.forEach((comment: any) => {
-          const isReply = comment.parent_id !== null
-          allNotifications.push({
-            id: `lesson_${comment.id}`,
+      for (const comment of comments || []) {
+        // Не показываем уведомления о собственных действиях
+        if (comment.user_id === user.id) continue
+
+        // Безопасное извлечение данных из вложенных объектов (Supabase может возвращать массивы)
+        const parentComment = Array.isArray(comment.parent_comment) 
+          ? comment.parent_comment[0] 
+          : comment.parent_comment
+        
+        const lesson = Array.isArray(comment.lessons) 
+          ? comment.lessons[0] 
+          : comment.lessons
+        
+        const coachesData = lesson && Array.isArray(lesson.coaches) 
+          ? lesson.coaches[0] 
+          : lesson?.coaches
+        
+        const profile = Array.isArray(comment.profiles) 
+          ? comment.profiles[0] 
+          : comment.profiles
+
+        // Сценарий 1: Кто-то ответил на мой комментарий
+        const isReplyToMe = parentComment?.user_id === user.id
+        
+        // Сценарий 2: Кто-то оставил комментарий к моему уроку
+        // coachesData может быть объектом или массивом, берем user_id корректно
+        const coachUserId = Array.isArray(coachesData) 
+          ? coachesData[0]?.user_id 
+          : coachesData?.user_id
+        const isMyLesson = coachUserId === user.id
+
+        if (isReplyToMe) {
+          newNotifications.push({
+            id: comment.id,
             type: 'lesson_comment',
-            title: isReply ? 'Новый ответ на ваш комментарий' : 'Новый комментарий к уроку',
+            title: 'Новый ответ на ваш комментарий',
             content: comment.content,
-            authorName: comment.profiles?.display_name || 'Пользователь',
+            authorName: profile?.display_name || 'Пользователь',
             createdAt: comment.created_at,
             isRead: comment.is_read || false,
             link: `/lesson/${comment.lesson_id}`,
             anchorId: `comment-${comment.id}`
           })
-        })
-      }
-
-      // Формируем уведомления для комментариев к курсам
-      if (courseComments) {
-        courseComments.forEach((comment: any) => {
-          const isReply = comment.parent_id !== null
-          allNotifications.push({
-            id: `course_${comment.id}`,
-            type: 'course_comment',
-            title: isReply ? 'Новый ответ на ваш комментарий' : 'Новый комментарий к курсу',
+        } else if (isMyLesson && !comment.parent_id) {
+          // Новый комментарий к моему уроку (только основные комментарии, не ответы)
+          newNotifications.push({
+            id: comment.id,
+            type: 'lesson_comment',
+            title: `Новый комментарий к уроку "${lesson?.title || 'Урок'}"`,
             content: comment.content,
-            authorName: comment.profiles?.display_name || 'Пользователь',
+            authorName: profile?.display_name || 'Пользователь',
             createdAt: comment.created_at,
             isRead: comment.is_read || false,
-            link: `/course/${comment.course_id}`,
+            link: `/lesson/${comment.lesson_id}`,
             anchorId: `comment-${comment.id}`
           })
-        })
+        }
       }
 
-      // Формируем уведомления для ответов на отзывы
-      if (reviewReplies) {
-        reviewReplies.forEach((reply: any) => {
-          allNotifications.push({
-            id: `review_${reply.id}`,
-            type: 'review_reply',
-            title: 'Новый ответ на ваш отзыв',
-            content: reply.content,
-            authorName: reply.profiles?.display_name || 'Пользователь',
-            createdAt: reply.created_at,
-            isRead: reply.is_read || false,
-            link: `/lesson/${reply.reviews?.lesson_id}`,
-            anchorId: `review-comment-${reply.id}`
-          })
-        })
-      }
-
-      // Сортируем по дате
-      allNotifications.sort((a, b) => 
+      // Сортируем по дате (самые новые сверху)
+      newNotifications.sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
 
-      // Оставляем только последние 50
-      const recentNotifications = allNotifications.slice(0, 50)
-
-      setNotifications(recentNotifications)
-      
-      // Считаем непрочитанные
-      const unread = recentNotifications.filter(n => !n.isRead).length
-      setUnreadCount(unread)
+      setNotifications(newNotifications)
+      setUnreadCount(newNotifications.filter(n => !n.isRead).length)
       
     } catch (error) {
       console.error('Error loading notifications:', error)
@@ -168,29 +135,14 @@ export default function NotificationsBell() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // Определяем тип и ID комментария
-    const parts = notificationId.split('_')
-    const type = parts[0]
-    const commentId = parts[1]
+    // Помечаем комментарий как прочитанный
+    await supabase
+      .from('comments')
+      .update({ is_read: true })
+      .eq('id', notificationId)
 
-    let tableName = ''
-    if (type === 'lesson') tableName = 'lesson_comments'
-    else if (type === 'course') tableName = 'course_comments'
-    else if (type === 'review') tableName = 'review_comments'
-
-    if (tableName) {
-      await supabase
-        .from(tableName)
-        .update({ is_read: true })
-        .eq('id', commentId)
-        .eq('user_id', user.id)
-    }
-
-    // Обновляем состояние
     setNotifications(prev => 
-      prev.map(n => 
-        n.id === notificationId ? { ...n, isRead: true } : n
-      )
+      prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
     )
     setUnreadCount(prev => Math.max(0, prev - 1))
   }
@@ -214,40 +166,22 @@ export default function NotificationsBell() {
     loadNotifications()
 
     // Realtime подписка на новые комментарии
-    const lessonChannel = supabase
-      .channel('lesson-comments')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'lesson_comments' }, () => {
+    const channel = supabase
+      .channel('comments-notify')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => {
         loadNotifications()
       })
       .subscribe()
 
-    const courseChannel = supabase
-      .channel('course-comments')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'course_comments' }, () => {
-        loadNotifications()
-      })
-      .subscribe()
-
-    const reviewChannel = supabase
-      .channel('review-comments')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'review_comments' }, () => {
-        loadNotifications()
-      })
-      .subscribe()
-
-    // Закрытие dropdown при клике вне
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false)
       }
     }
-
     document.addEventListener('mousedown', handleClickOutside)
 
     return () => {
-      supabase.removeChannel(lessonChannel)
-      supabase.removeChannel(courseChannel)
-      supabase.removeChannel(reviewChannel)
+      supabase.removeChannel(channel)
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [loadNotifications])
@@ -283,10 +217,7 @@ export default function NotificationsBell() {
             <div className="p-4 border-b bg-gray-50 flex items-center justify-between flex-shrink-0">
               <h3 className="font-semibold text-gray-900">Уведомления</h3>
               {unreadCount > 0 && (
-                <button
-                  onClick={loadNotifications}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                >
+                <button onClick={loadNotifications} className="text-xs text-blue-600 hover:text-blue-800 font-medium">
                   Обновить
                 </button>
               )}
@@ -300,10 +231,7 @@ export default function NotificationsBell() {
                 </div>
               ) : notifications.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
-                  <svg className="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                  </svg>
-                  <p className="text-sm">Нет уведомлений</p>
+                  <p className="text-sm">Нет новых уведомлений</p>
                 </div>
               ) : (
                 <div className="divide-y">
@@ -322,9 +250,7 @@ export default function NotificationsBell() {
                         }`} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
-                            <p className={`text-sm font-medium ${
-                              !notification.isRead ? 'text-gray-900' : 'text-gray-700'
-                            }`}>
+                            <p className={`text-sm font-medium ${!notification.isRead ? 'text-gray-900' : 'text-gray-700'}`}>
                               {notification.title}
                             </p>
                             <span className="text-xs text-gray-500 flex-shrink-0">
@@ -344,18 +270,6 @@ export default function NotificationsBell() {
                 </div>
               )}
             </div>
-
-            {notifications.length > 0 && (
-              <div className="p-3 border-t bg-gray-50 flex-shrink-0">
-                <Link
-                  href="/notifications"
-                  className="text-center text-sm text-blue-600 hover:text-blue-700 font-medium block"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Все уведомления →
-                </Link>
-              </div>
-            )}
           </div>
         </>
       )}
