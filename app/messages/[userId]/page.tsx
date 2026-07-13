@@ -46,7 +46,7 @@ function MessageContent({ content }: { content: string }) {
   }, [content])
 
   if (lessonInfo) {
-    const icon = lessonInfo.type === 'lesson' ? '🎬' : '📚'
+    const icon = lessonInfo.type === 'lesson' ? '🎬' : ''
     const href = lessonInfo.type === 'lesson' ? `/lesson/${lessonInfo.id}` : `/course/${lessonInfo.id}`
     const textWithoutUrl = content.replace(/https?:\/\/[^\s]+/, '').trim()
     
@@ -108,17 +108,14 @@ export default function ChatPage() {
   const [blockedBy, setBlockedBy] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // 🔥 БЛОКИРУЕМ глобальный скролл и делаем чат резиновым
+  // 🔥 БЛОКИРУЕМ глобальный скролл
   useEffect(() => {
-    // Сохраняем оригинальные стили
     const originalBodyOverflow = document.body.style.overflow
     const originalHtmlOverflow = document.documentElement.style.overflow
     
-    // Блокируем скролл на body и html
     document.body.style.overflow = 'hidden'
     document.documentElement.style.overflow = 'hidden'
     
-    // Возвращаем при уходе со страницы
     return () => {
       document.body.style.overflow = originalBodyOverflow
       document.documentElement.style.overflow = originalHtmlOverflow
@@ -414,8 +411,8 @@ export default function ChatPage() {
   }
 
   return (
-    //  РЕЗИНОВЫЙ ЧАТ: занимает всю доступную высоту
-    <div className="flex flex-col h-full">
+    // 🔥 FIXED позиционирование: чат занимает весь экран под Navbar
+    <div className="fixed inset-0 top-16 flex flex-col bg-white">
       {/* Шапка (фиксированная) */}
       <div className="bg-white border-b px-4 py-3 flex items-center gap-4 flex-shrink-0">
         <div className="flex items-center gap-3 flex-shrink-0">
