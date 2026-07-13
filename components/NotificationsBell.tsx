@@ -6,7 +6,7 @@ import Link from 'next/link'
 
 interface Notification {
   id: string
-  type: 'lesson_comment' | 'course_comment' | 'review_reply'
+  type: 'lesson_comment' | 'course_comment'
   title: string
   content: string
   authorName: string
@@ -34,7 +34,7 @@ export default function NotificationsBell() {
     try {
       console.log('🔔 Загрузка уведомлений для пользователя:', user.id)
 
-      // Загружаем все комментарии БЕЗ JOIN
+      // Загружаем все комментарии
       const { data: comments, error } = await supabase
         .from('comments')
         .select('*')
@@ -54,12 +54,9 @@ export default function NotificationsBell() {
       // Собираем все user_id для загрузки имен
       for (const comment of comments || []) {
         if (comment.user_id) userIds.add(comment.user_id)
-        if (comment.parent_id) {
-          // Найдем parent позже
-        }
       }
 
-      // Загружаем имена пользователей одним запросом
+      // Загружаем имена пользователей
       const { data: usersData } = await supabase
         .from('coaches')
         .select('user_id, display_name')
@@ -74,7 +71,7 @@ export default function NotificationsBell() {
         // Пропускаем собственные комментарии
         if (comment.user_id === user.id) continue
 
-        // Получаем данные о родительском комментарии (если это ответ)
+        // Получаем данные о родительском комментарии
         let parentUserId = null
         if (comment.parent_id) {
           const { data: parentData } = await supabase
@@ -85,10 +82,10 @@ export default function NotificationsBell() {
           parentUserId = parentData?.user_id
         }
 
-        // Получаем данные об уроке
-        let lessonTitle = 'Урок'
-        let isMyLesson = false
-        
+        const authorName = userNames.get(comment.user_id) || 'Пользователь'
+        const isReplyToMe = parentUserId === user.id
+
+        // Проверяем: это комментарий к уроку?
         if (comment.lesson_id) {
           const { data: lessonData } = await supabase
             .from('lessons')
@@ -97,41 +94,79 @@ export default function NotificationsBell() {
             .single()
           
           if (lessonData) {
-            lessonTitle = lessonData.title || 'Урок'
-            isMyLesson = lessonData.coach_id === user.id
-            console.log(`  📚 Урок "${lessonTitle}", coach_id: ${lessonData.coach_id}, isMyLesson: ${isMyLesson}`)
+            const isMyLesson = lessonData.coach_id === user.id
+            console.log(`  📚 Урок "${lessonData.title}", coach_id: ${lessonData.coach_id}, isMyLesson: ${isMyLesson}`)
+
+            if (isReplyToMe) {
+              console.log('✅ Найдено: ответ на мой комментарий к уроку')
+              newNotifications.push({
+                id: comment.id,
+                type: 'lesson_comment',
+                title: 'Новый ответ на ваш комментарий',
+                content: comment.content,
+                authorName: authorName,
+                createdAt: comment.created_at,
+                isRead: comment.is_read || false,
+                link: `/lesson/${comment.lesson_id}`,
+                anchorId: `comment-${comment.id}`
+              })
+            } else if (isMyLesson && !comment.parent_id) {
+              console.log('✅ Найдено: комментарий к моему уроку')
+              newNotifications.push({
+                id: comment.id,
+                type: 'lesson_comment',
+                title: `Новый комментарий к уроку "${lessonData.title}"`,
+                content: comment.content,
+                authorName: authorName,
+                createdAt: comment.created_at,
+                isRead: comment.is_read || false,
+                link: `/lesson/${comment.lesson_id}`,
+                anchorId: `comment-${comment.id}`
+              })
+            }
           }
         }
 
-        const authorName = userNames.get(comment.user_id) || 'Пользователь'
-        const isReplyToMe = parentUserId === user.id
+        // Проверяем: это комментарий к курсу? (если есть поле course_id)
+        if (comment.course_id) {
+          const { data: courseData } = await supabase
+            .from('courses')
+            .select('title, coach_id')
+            .eq('id', comment.course_id)
+            .single()
+          
+          if (courseData) {
+            const isMyCourse = courseData.coach_id === user.id
+            console.log(`  📖 Курс "${courseData.title}", coach_id: ${courseData.coach_id}, isMyCourse: ${isMyCourse}`)
 
-        if (isReplyToMe) {
-          console.log('✅ Найдено: ответ на мой комментарий')
-          newNotifications.push({
-            id: comment.id,
-            type: 'lesson_comment',
-            title: 'Новый ответ на ваш комментарий',
-            content: comment.content,
-            authorName: authorName,
-            createdAt: comment.created_at,
-            isRead: comment.is_read || false,
-            link: `/lesson/${comment.lesson_id}`,
-            anchorId: `comment-${comment.id}`
-          })
-        } else if (isMyLesson && !comment.parent_id) {
-          console.log('✅ Найдено: комментарий к моему уроку')
-          newNotifications.push({
-            id: comment.id,
-            type: 'lesson_comment',
-            title: `Новый комментарий к уроку "${lessonTitle}"`,
-            content: comment.content,
-            authorName: authorName,
-            createdAt: comment.created_at,
-            isRead: comment.is_read || false,
-            link: `/lesson/${comment.lesson_id}`,
-            anchorId: `comment-${comment.id}`
-          })
+            if (isReplyToMe) {
+              console.log('✅ Найдено: ответ на мой комментарий к курсу')
+              newNotifications.push({
+                id: comment.id,
+                type: 'course_comment',
+                title: 'Новый ответ на ваш комментарий',
+                content: comment.content,
+                authorName: authorName,
+                createdAt: comment.created_at,
+                isRead: comment.is_read || false,
+                link: `/course/${comment.course_id}`,
+                anchorId: `comment-${comment.id}`
+              })
+            } else if (isMyCourse && !comment.parent_id) {
+              console.log('✅ Найдено: комментарий к моему курсу')
+              newNotifications.push({
+                id: comment.id,
+                type: 'course_comment',
+                title: `Новый комментарий к курсу "${courseData.title}"`,
+                content: comment.content,
+                authorName: authorName,
+                createdAt: comment.created_at,
+                isRead: comment.is_read || false,
+                link: `/course/${comment.course_id}`,
+                anchorId: `comment-${comment.id}`
+              })
+            }
+          }
         }
       }
 
@@ -140,8 +175,8 @@ export default function NotificationsBell() {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
 
-      console.log(`📊 Всего уведомлений: ${newNotifications.length}`)
-      console.log(` Непрочитанных: ${newNotifications.filter(n => !n.isRead).length}`)
+      console.log(` Всего уведомлений: ${newNotifications.length}`)
+      console.log(`📪 Непрочитанных: ${newNotifications.filter(n => !n.isRead).length}`)
 
       setNotifications(newNotifications)
       setUnreadCount(newNotifications.filter(n => !n.isRead).length)
