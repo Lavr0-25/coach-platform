@@ -32,21 +32,12 @@ export default function NotificationsBell() {
     }
 
     try {
-      console.log(' Загрузка уведомлений для пользователя:', user.id)
+      console.log('🔔 Загрузка уведомлений для пользователя:', user.id)
 
-      // Загружаем все комментарии с данными
+      // Загружаем все комментарии БЕЗ JOIN
       const { data: comments, error } = await supabase
         .from('comments')
-        .select(`
-          id,
-          content,
-          created_at,
-          is_read,
-          user_id,
-          parent_id,
-          lesson_id,
-          profiles:user_id (display_name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100)
 
@@ -58,23 +49,43 @@ export default function NotificationsBell() {
       console.log(`📥 Загружено комментариев: ${comments?.length || 0}`)
 
       const newNotifications: Notification[] = []
+      const userIds = new Set<string>()
+
+      // Собираем все user_id для загрузки имен
+      for (const comment of comments || []) {
+        if (comment.user_id) userIds.add(comment.user_id)
+        if (comment.parent_id) {
+          // Найдем parent позже
+        }
+      }
+
+      // Загружаем имена пользователей одним запросом
+      const { data: usersData } = await supabase
+        .from('coaches')
+        .select('user_id, display_name')
+        .in('user_id', Array.from(userIds))
+
+      const userNames = new Map<string, string>()
+      usersData?.forEach((u: any) => {
+        userNames.set(u.user_id, u.display_name || 'Пользователь')
+      })
 
       for (const comment of comments || []) {
         // Пропускаем собственные комментарии
         if (comment.user_id === user.id) continue
 
         // Получаем данные о родительском комментарии (если это ответ)
-        let parentComment = null
+        let parentUserId = null
         if (comment.parent_id) {
           const { data: parentData } = await supabase
             .from('comments')
             .select('user_id')
             .eq('id', comment.parent_id)
             .single()
-          parentComment = parentData
+          parentUserId = parentData?.user_id
         }
 
-        // Получаем данные об уроке и проверяем, мой ли это урок
+        // Получаем данные об уроке
         let lessonTitle = 'Урок'
         let isMyLesson = false
         
@@ -87,20 +98,13 @@ export default function NotificationsBell() {
           
           if (lessonData) {
             lessonTitle = lessonData.title || 'Урок'
-            // Проверяем, совпадает ли coach_id с текущим пользователем
             isMyLesson = lessonData.coach_id === user.id
             console.log(`  📚 Урок "${lessonTitle}", coach_id: ${lessonData.coach_id}, isMyLesson: ${isMyLesson}`)
           }
         }
 
-        // Безопасно получаем имя автора
-        const profileArray = Array.isArray(comment.profiles) 
-          ? comment.profiles 
-          : comment.profiles ? [comment.profiles] : []
-        const authorName = profileArray[0]?.display_name || 'Пользователь'
-
-        // Проверяем: это ответ на мой комментарий?
-        const isReplyToMe = parentComment?.user_id === user.id
+        const authorName = userNames.get(comment.user_id) || 'Пользователь'
+        const isReplyToMe = parentUserId === user.id
 
         if (isReplyToMe) {
           console.log('✅ Найдено: ответ на мой комментарий')
@@ -182,7 +186,6 @@ export default function NotificationsBell() {
   useEffect(() => {
     loadNotifications()
 
-    // Realtime подписка
     const channel = supabase
       .channel('comments-notify')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => {
