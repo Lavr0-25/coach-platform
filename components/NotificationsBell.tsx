@@ -32,7 +32,7 @@ export default function NotificationsBell() {
     }
 
     try {
-      console.log('🔔 Загрузка уведомлений для пользователя:', user.id)
+      console.log(' Загрузка уведомлений для пользователя:', user.id)
 
       // Загружаем все комментарии с данными
       const { data: comments, error } = await supabase
@@ -74,37 +74,33 @@ export default function NotificationsBell() {
           parentComment = parentData
         }
 
-        // Получаем данные об уроке
-        let lesson = null
-        let coachId = null
+        // Получаем данные об уроке и проверяем, мой ли это урок
+        let lessonTitle = 'Урок'
+        let isMyLesson = false
+        
         if (comment.lesson_id) {
           const { data: lessonData } = await supabase
             .from('lessons')
-            .select('title, coaches(user_id)')
+            .select('title, coach_id')
             .eq('id', comment.lesson_id)
             .single()
-          lesson = lessonData
           
-          // Извлекаем coach_id корректно
-          if (lessonData?.coaches) {
-            const coachesArray = Array.isArray(lessonData.coaches) 
-              ? lessonData.coaches 
-              : [lessonData.coaches]
-            coachId = coachesArray[0]?.user_id || null
+          if (lessonData) {
+            lessonTitle = lessonData.title || 'Урок'
+            // Проверяем, совпадает ли coach_id с текущим пользователем
+            isMyLesson = lessonData.coach_id === user.id
+            console.log(`  📚 Урок "${lessonTitle}", coach_id: ${lessonData.coach_id}, isMyLesson: ${isMyLesson}`)
           }
         }
-
-        // Проверяем: это ответ на мой комментарий?
-        const isReplyToMe = parentComment?.user_id === user.id
-
-        // Проверяем: это комментарий к моему уроку?
-        const isMyLesson = coachId === user.id
 
         // Безопасно получаем имя автора
         const profileArray = Array.isArray(comment.profiles) 
           ? comment.profiles 
           : comment.profiles ? [comment.profiles] : []
         const authorName = profileArray[0]?.display_name || 'Пользователь'
+
+        // Проверяем: это ответ на мой комментарий?
+        const isReplyToMe = parentComment?.user_id === user.id
 
         if (isReplyToMe) {
           console.log('✅ Найдено: ответ на мой комментарий')
@@ -124,7 +120,7 @@ export default function NotificationsBell() {
           newNotifications.push({
             id: comment.id,
             type: 'lesson_comment',
-            title: `Новый комментарий к уроку "${lesson?.title || 'Урок'}"`,
+            title: `Новый комментарий к уроку "${lessonTitle}"`,
             content: comment.content,
             authorName: authorName,
             createdAt: comment.created_at,
@@ -141,7 +137,7 @@ export default function NotificationsBell() {
       )
 
       console.log(`📊 Всего уведомлений: ${newNotifications.length}`)
-      console.log(`📪 Непрочитанных: ${newNotifications.filter(n => !n.isRead).length}`)
+      console.log(` Непрочитанных: ${newNotifications.filter(n => !n.isRead).length}`)
 
       setNotifications(newNotifications)
       setUnreadCount(newNotifications.filter(n => !n.isRead).length)
