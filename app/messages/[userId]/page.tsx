@@ -46,7 +46,7 @@ function MessageContent({ content }: { content: string }) {
   }, [content])
 
   if (lessonInfo) {
-    const icon = lessonInfo.type === 'lesson' ? '' : ''
+    const icon = lessonInfo.type === 'lesson' ? '🎬' : '📚'
     const href = lessonInfo.type === 'lesson' ? `/lesson/${lessonInfo.id}` : `/course/${lessonInfo.id}`
     const textWithoutUrl = content.replace(/https?:\/\/[^\s]+/, '').trim()
     
@@ -108,6 +108,17 @@ export default function ChatPage() {
   const [blockedBy, setBlockedBy] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // 🔥 ОТКЛЮЧАЕМ глобальную прокрутку страницы только для чата
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow
+    document.body.style.overflow = 'hidden'
+    
+    // Возвращаем прокрутку при уходе со страницы чата
+    return () => {
+      document.body.style.overflow = originalStyle
+    }
+  }, [])
+
   // Автопрокрутка вниз при новых сообщениях
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -139,17 +150,14 @@ export default function ChatPage() {
           setOtherUser(coach)
         }
 
-        // Проверяем блокировку в обе стороны с обработкой 406
-        // 1. Я заблокировал его
-        const { data: iBlockedHim, error: blockError1 } = await supabase
+        const { data: iBlockedHim } = await supabase
           .from('blocked_users')
           .select('id')
           .eq('blocker_id', user.id)
           .eq('blocked_id', userId)
           .maybeSingle()
 
-        // 2. Он заблокировал меня
-        const { data: heBlockedMe, error: blockError2 } = await supabase
+        const { data: heBlockedMe } = await supabase
           .from('blocked_users')
           .select('id')
           .eq('blocker_id', userId)
@@ -158,7 +166,6 @@ export default function ChatPage() {
 
         if (!mounted) return
 
-        // Игнорируем ошибки 406 (Not Acceptable) - это нормально когда запись не найдена
         const blocked = !!iBlockedHim
         const blockedByOther = !!heBlockedMe
 
@@ -186,8 +193,6 @@ export default function ChatPage() {
             if (updateError) {
               console.error('Error updating messages:', updateError)
             } else {
-              console.log(`✅ Обновлено ${unreadMessages.length} сообщений как прочитанные`)
-              
               window.dispatchEvent(new CustomEvent('messages-read', { 
                 detail: { userId } 
               }))
@@ -403,8 +408,9 @@ export default function ChatPage() {
   }
 
   return (
+    // 🔥 h-screen и overflow-hidden делают чат фиксированным по высоте экрана
     <div className="flex flex-col h-screen overflow-hidden">
-      {/* Шапка */}
+      {/* Шапка (не скроллится) */}
       <div className="bg-white border-b px-4 py-3 flex items-center gap-4 flex-shrink-0">
         <div className="flex items-center gap-3 flex-shrink-0">
           <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
@@ -442,14 +448,14 @@ export default function ChatPage() {
                 onClick={() => setSearchQuery('')}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                
+                ✕
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Сообщения */}
+      {/* Сообщения (скроллится только эта область) */}
       <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-gray-50">
         {filteredMessages.length === 0 ? (
           <div className="text-center text-gray-500 mt-8">
@@ -504,7 +510,7 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Поле ввода - приклеено к низу */}
+      {/* Поле ввода (приклеено к низу, не скроллится) */}
       <form onSubmit={handleSend} className="bg-white border-t p-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <input
