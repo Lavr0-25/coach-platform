@@ -257,11 +257,9 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
 
   return (
     <aside className="w-80 bg-white border-r flex flex-col h-full">
-      {/* Шапка - фиксированная */}
-      <div className="p-4 border-b flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-gray-900">Сообщения</h1>
-        </div>
+      {/* Шапка - фиксированная высота 72px, как в чате */}
+      <div className="px-4 border-b flex-shrink-0 flex items-center" style={{ height: '72px' }}>
+        <h1 className="text-xl font-bold text-gray-900">Сообщения</h1>
       </div>
 
       {/* Поиск - фиксированный */}
