@@ -41,6 +41,7 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
     }
     return []
   })
+  
   const supabase = createClient()
   const pathname = usePathname()
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
@@ -48,6 +49,8 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
   const loadConversations = async () => {
     const cacheKey = 'conversations'
     const cached = cache.get(cacheKey)
+    
+    // Если есть свежий кэш, используем его
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       setConversations(cached.data)
       setIsLoading(false)
@@ -61,6 +64,7 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
         return
       }
 
+      // 1. Получаем последние сообщения
       const { data: allMessages, error: messagesError } = await supabase
         .from('messages')
         .select('*')
@@ -80,12 +84,14 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
         return
       }
 
+      // 2. Собираем ID всех собеседников
       const otherUserIds = new Set<string>()
       allMessages.forEach((msg: any) => {
         if (msg.sender_id !== user.id) otherUserIds.add(msg.sender_id)
         if (msg.receiver_id !== user.id) otherUserIds.add(msg.receiver_id)
       })
 
+      // 3. Пытаемся найти их в таблице coaches
       const { data: coachesData } = await supabase
         .from('coaches')
         .select('user_id, display_name, avatar_url')
@@ -101,12 +107,17 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
 
       const conversationsMap = new Map<string, Conversation>()
 
+      // 4. Формируем список диалогов
       for (const message of allMessages) {
         const isSender = message.sender_id === user.id
         const otherUserId = isSender ? message.receiver_id : message.sender_id
-        const otherUser = userMap.get(otherUserId)
-
-        if (!otherUser) continue
+        
+        // 🔥 ИСПРАВЛЕНИЕ: Если пользователя нет в coaches, используем запасной вариант, 
+        // а НЕ пропускаем диалог через 'continue'!
+        const otherUser = userMap.get(otherUserId) || { 
+          display_name: 'Пользователь', 
+          avatar_url: null 
+        }
 
         const userName = otherUser.display_name || 'Пользователь'
         const userAvatar = otherUser.avatar_url
@@ -124,16 +135,19 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
             isOnline: false
           })
         } else {
-          if (new Date(message.created_at) > new Date(existing.lastMessageTime)) {
+          // Обновляем последнее сообщение, если текущее новее
+          if (new Date(message.created_at).getTime() > new Date(existing.lastMessageTime).getTime()) {
             existing.lastMessage = message.content
             existing.lastMessageTime = message.created_at
           }
+          // Увеличиваем счетчик непрочитанных
           if (!isSender && !message.is_read) {
             existing.unreadCount += 1
           }
         }
       }
 
+      // 5. Сортируем: сначала непрочитанные, потом по времени
       const sortedConversations = Array.from(conversationsMap.values()).sort((a, b) => {
         if (a.unreadCount > 0 && b.unreadCount === 0) return -1
         if (a.unreadCount === 0 && b.unreadCount > 0) return 1
@@ -162,7 +176,6 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
   const hideConversation = (userId: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    
     const newHidden = [...hiddenConversations, userId]
     setHiddenConversations(newHidden)
     localStorage.setItem('hidden-conversations', JSON.stringify(newHidden))
@@ -257,12 +270,12 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
 
   return (
     <aside className="w-80 bg-white border-r flex flex-col h-full">
-      {/* Шапка - фиксированная высота 72px, как в чате */}
+      {/* Шапка */}
       <div className="px-4 border-b flex-shrink-0 flex items-center" style={{ height: '72px' }}>
         <h1 className="text-xl font-bold text-gray-900">Сообщения</h1>
       </div>
 
-      {/* Поиск - фиксированный */}
+      {/* Поиск */}
       <div className="p-4 border-b flex-shrink-0">
         <div className="relative">
           <input
@@ -278,7 +291,7 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
         </div>
       </div>
 
-      {/* Прокручиваемая область - ключевое изменение */}
+      {/* Список диалогов */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {isLoading ? (
           <div className="p-4 text-center text-gray-500">
@@ -287,7 +300,6 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
           </div>
         ) : hasAnyConversations ? (
           <>
-            {/* Шапка "Диалоги" - sticky */}
             <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 flex items-center justify-between sticky top-0 z-10 border-b">
               <span>Диалоги ({visibleConversations.length})</span>
               {hiddenConversations.length > 0 && (
@@ -295,75 +307,82 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
                   onClick={showAllConversations}
                   className="text-xs text-blue-600 hover:text-blue-800 font-normal normal-case"
                 >
-                  Показать все скрытые ({hiddenConversations.length})
+                  Показать скрытые ({hiddenConversations.length})
                 </button>
               )}
             </div>
 
             {visibleConversations.length > 0 ? (
-              visibleConversations.map((conv) => (
-                <Link
-                  key={conv.userId}
-                  href={`/messages/${conv.userId}`}
-                  className={`flex items-start gap-3 p-4 border-b transition-colors relative ${
-                    conv.unreadCount > 0 
-                      ? 'bg-blue-50 hover:bg-blue-100' 
-                      : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="relative flex-shrink-0">
-                    {conv.userAvatar ? (
-                      <img
-                        src={conv.userAvatar}
-                        alt={conv.userName}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-lg font-bold">
-                        {conv.userName.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    {conv.isOnline && (
-                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className={`font-semibold truncate ${
-                        conv.unreadCount > 0 ? 'text-gray-900 font-bold' : 'text-gray-700'
-                      }`}>
-                        {conv.userName}
-                      </h3>
-                      <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                        {formatTime(conv.lastMessageTime)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className={`text-sm truncate flex-1 ${
-                        conv.unreadCount > 0 ? 'text-gray-900 font-semibold' : 'text-gray-600'
-                      }`}>
-                        {conv.lastMessage}
-                      </p>
-                      {conv.unreadCount > 0 && (
-                        <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[24px] h-6 px-1.5 flex items-center justify-center flex-shrink-0">
-                          {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
-                        </span>
+              visibleConversations.map((conv) => {
+                // 🔥 ИСПРАВЛЕНИЕ: Подсветка активного диалога
+                const isActive = pathname === `/messages/${conv.userId}`
+                
+                return (
+                  <Link
+                    key={conv.userId}
+                    href={`/messages/${conv.userId}`}
+                    className={`flex items-start gap-3 p-4 border-b transition-colors relative ${
+                      isActive 
+                        ? 'bg-blue-50 border-l-4 border-l-blue-600' 
+                        : conv.unreadCount > 0 
+                          ? 'bg-blue-50/50 hover:bg-blue-100' 
+                          : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="relative flex-shrink-0">
+                      {conv.userAvatar ? (
+                        <img
+                          src={conv.userAvatar}
+                          alt={conv.userName}
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-lg font-bold">
+                          {conv.userName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      {conv.isOnline && (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
                       )}
                     </div>
-                  </div>
-                  
-                  <button
-                    onClick={(e) => hideConversation(conv.userId, e)}
-                    className="absolute top-2 right-2 opacity-0 hover:opacity-100 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all flex-shrink-0 z-10"
-                    title="Скрыть диалог"
-                    type="button"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </Link>
-              ))
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className={`font-semibold truncate ${
+                          conv.unreadCount > 0 ? 'text-gray-900 font-bold' : 'text-gray-700'
+                        }`}>
+                          {conv.userName}
+                        </h3>
+                        <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                          {formatTime(conv.lastMessageTime)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className={`text-sm truncate flex-1 ${
+                          conv.unreadCount > 0 ? 'text-gray-900 font-semibold' : 'text-gray-600'
+                        }`}>
+                          {conv.lastMessage}
+                        </p>
+                        {conv.unreadCount > 0 && (
+                          <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[24px] h-6 px-1.5 flex items-center justify-center flex-shrink-0">
+                            {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={(e) => hideConversation(conv.userId, e)}
+                      className="absolute top-2 right-2 opacity-0 hover:opacity-100 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all flex-shrink-0 z-10"
+                      title="Скрыть диалог"
+                      type="button"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </Link>
+                )
+              })
             ) : (
               <div className="p-6 text-center text-gray-500 text-sm bg-gray-50">
                 <p className="mb-2">Все диалоги скрыты</p>
@@ -376,6 +395,7 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
               </div>
             )}
 
+            {/* Скрытые диалоги */}
             {hiddenConvObjects.length > 0 && (
               <>
                 <div className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider bg-gray-100 flex items-center justify-between sticky top-0 z-10 border-b">
@@ -394,11 +414,7 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
                   >
                     <div className="relative flex-shrink-0">
                       {conv.userAvatar ? (
-                        <img
-                          src={conv.userAvatar}
-                          alt={conv.userName}
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
+                        <img src={conv.userAvatar} alt={conv.userName} className="w-12 h-12 rounded-full object-cover" />
                       ) : (
                         <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center text-white text-lg font-bold">
                           {conv.userName.charAt(0).toUpperCase()}
@@ -406,14 +422,9 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium truncate text-gray-600">
-                        {conv.userName}
-                      </h3>
-                      <p className="text-sm truncate text-gray-500">
-                        {conv.lastMessage}
-                      </p>
+                      <h3 className="font-medium truncate text-gray-600">{conv.userName}</h3>
+                      <p className="text-sm truncate text-gray-500">{conv.lastMessage}</p>
                     </div>
-                    
                     <button
                       onClick={(e) => unhideConversation(conv.userId, e)}
                       className="absolute top-2 right-2 p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-all flex-shrink-0 z-10"
@@ -436,6 +447,7 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
           </div>
         )}
 
+        {/* Результаты поиска наставников */}
         {searchQuery && (
           <>
             <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0 z-10 border-b">
@@ -452,24 +464,16 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
                       className="flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors"
                     >
                       {coach.avatar_url ? (
-                        <img
-                          src={coach.avatar_url}
-                          alt={userName}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
+                        <img src={coach.avatar_url} alt={userName} className="w-10 h-10 rounded-full object-cover" />
                       ) : (
                         <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
                           {userName.charAt(0).toUpperCase()}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 text-sm truncate">
-                          {userName}
-                        </h3>
+                        <h3 className="font-medium text-gray-900 text-sm truncate">{userName}</h3>
                         {coach.specialization && (
-                          <p className="text-xs text-gray-500 truncate">
-                            {coach.specialization}
-                          </p>
+                          <p className="text-xs text-gray-500 truncate">{coach.specialization}</p>
                         )}
                       </div>
                     </Link>
