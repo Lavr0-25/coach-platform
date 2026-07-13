@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import MessagesSidebar from '@/components/MessagesSidebar'
+import MessagesLayoutShell from '@/components/MessagesLayoutShell'
 
 interface Coach {
   user_id: string
@@ -9,7 +9,7 @@ interface Coach {
 }
 
 export default async function MessagesLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()  // ← Добавлен await здесь!
+  const supabase = await createClient()
 
   const { data: allCoaches } = await supabase
     .from('coaches')
@@ -17,15 +17,8 @@ export default async function MessagesLayout({ children }: { children: React.Rea
     .order('display_name')
 
   return (
-    <div className="h-full flex overflow-hidden bg-gray-100">
-      <div className="w-80 border-r bg-white flex-shrink-0 h-full overflow-hidden">
-        <MessagesSidebar
-          coaches={allCoaches || []}
-        />
-      </div>
-      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
-        {children}
-      </div>
-    </div>
+    <MessagesLayoutShell coaches={allCoaches || []}>
+      {children}
+    </MessagesLayoutShell>
   )
 }
