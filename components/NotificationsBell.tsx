@@ -34,29 +34,44 @@ export default function NotificationsBell() {
     try {
       console.log('🔔 Загрузка уведомлений для пользователя:', user.id)
 
-      // Загружаем все комментарии
-      const { data: comments, error } = await supabase
-        .from('comments')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100)
-
-      if (error) {
-        console.error('❌ Ошибка загрузки комментариев:', error)
-        throw error
-      }
-
-      console.log(`📥 Загружено комментариев: ${comments?.length || 0}`)
-
       const newNotifications: Notification[] = []
       const userIds = new Set<string>()
 
-      // Собираем все user_id для загрузки имен
-      for (const comment of comments || []) {
-        if (comment.user_id) userIds.add(comment.user_id)
+      // ====== 1. КОММЕНТАРИИ К УРОКАМ ======
+      const { data: lessonComments, error: lessonError } = await supabase
+        .from('comments')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (lessonError) {
+        console.error('❌ Ошибка загрузки комментариев к урокам:', lessonError)
+      } else {
+        console.log(`📥 Загружено комментариев к урокам: ${lessonComments?.length || 0}`)
+        
+        for (const comment of lessonComments || []) {
+          if (comment.user_id) userIds.add(comment.user_id)
+        }
       }
 
-      // Загружаем имена пользователей
+      // ====== 2. КОММЕНТАРИИ К КУРСАМ ======
+      const { data: courseComments, error: courseError } = await supabase
+        .from('course_comments')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (courseError) {
+        console.error(' Ошибка загрузки комментариев к курсам:', courseError)
+      } else {
+        console.log(`📥 Загружено комментариев к курсам: ${courseComments?.length || 0}`)
+        
+        for (const comment of courseComments || []) {
+          if (comment.user_id) userIds.add(comment.user_id)
+        }
+      }
+
+      // ====== 3. Загружаем имена пользователей ======
       const { data: usersData } = await supabase
         .from('coaches')
         .select('user_id, display_name')
@@ -67,7 +82,8 @@ export default function NotificationsBell() {
         userNames.set(u.user_id, u.display_name || 'Пользователь')
       })
 
-      for (const comment of comments || []) {
+      // ====== 4. Обрабатываем комментарии к урокам ======
+      for (const comment of lessonComments || []) {
         // Пропускаем собственные комментарии
         if (comment.user_id === user.id) continue
 
@@ -85,7 +101,7 @@ export default function NotificationsBell() {
         const authorName = userNames.get(comment.user_id) || 'Пользователь'
         const isReplyToMe = parentUserId === user.id
 
-        // Проверяем: это комментарий к уроку?
+        // Проверяем, мой ли это урок
         if (comment.lesson_id) {
           const { data: lessonData } = await supabase
             .from('lessons')
@@ -100,7 +116,7 @@ export default function NotificationsBell() {
             if (isReplyToMe) {
               console.log('✅ Найдено: ответ на мой комментарий к уроку')
               newNotifications.push({
-                id: comment.id,
+                id: `lesson_${comment.id}`,
                 type: 'lesson_comment',
                 title: 'Новый ответ на ваш комментарий',
                 content: comment.content,
@@ -113,7 +129,7 @@ export default function NotificationsBell() {
             } else if (isMyLesson && !comment.parent_id) {
               console.log('✅ Найдено: комментарий к моему уроку')
               newNotifications.push({
-                id: comment.id,
+                id: `lesson_${comment.id}`,
                 type: 'lesson_comment',
                 title: `Новый комментарий к уроку "${lessonData.title}"`,
                 content: comment.content,
@@ -126,8 +142,28 @@ export default function NotificationsBell() {
             }
           }
         }
+      }
 
-        // Проверяем: это комментарий к курсу? (если есть поле course_id)
+      // ====== 5. Обрабатываем комментарии к курсам ======
+      for (const comment of courseComments || []) {
+        // Пропускаем собственные комментарии
+        if (comment.user_id === user.id) continue
+
+        // Получаем данные о родительском комментарии
+        let parentUserId = null
+        if (comment.parent_id) {
+          const { data: parentData } = await supabase
+            .from('course_comments')
+            .select('user_id')
+            .eq('id', comment.parent_id)
+            .single()
+          parentUserId = parentData?.user_id
+        }
+
+        const authorName = userNames.get(comment.user_id) || 'Пользователь'
+        const isReplyToMe = parentUserId === user.id
+
+        // Проверяем, мой ли это курс
         if (comment.course_id) {
           const { data: courseData } = await supabase
             .from('courses')
@@ -137,12 +173,12 @@ export default function NotificationsBell() {
           
           if (courseData) {
             const isMyCourse = courseData.coach_id === user.id
-            console.log(`  📖 Курс "${courseData.title}", coach_id: ${courseData.coach_id}, isMyCourse: ${isMyCourse}`)
+            console.log(`   Курс "${courseData.title}", coach_id: ${courseData.coach_id}, isMyCourse: ${isMyCourse}`)
 
             if (isReplyToMe) {
               console.log('✅ Найдено: ответ на мой комментарий к курсу')
               newNotifications.push({
-                id: comment.id,
+                id: `course_${comment.id}`,
                 type: 'course_comment',
                 title: 'Новый ответ на ваш комментарий',
                 content: comment.content,
@@ -155,7 +191,7 @@ export default function NotificationsBell() {
             } else if (isMyCourse && !comment.parent_id) {
               console.log('✅ Найдено: комментарий к моему курсу')
               newNotifications.push({
-                id: comment.id,
+                id: `course_${comment.id}`,
                 type: 'course_comment',
                 title: `Новый комментарий к курсу "${courseData.title}"`,
                 content: comment.content,
@@ -170,13 +206,13 @@ export default function NotificationsBell() {
         }
       }
 
-      // Сортируем по дате
+      // ====== 6. Сортируем по дате ======
       newNotifications.sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
 
-      console.log(` Всего уведомлений: ${newNotifications.length}`)
-      console.log(`📪 Непрочитанных: ${newNotifications.filter(n => !n.isRead).length}`)
+      console.log(`📊 Всего уведомлений: ${newNotifications.length}`)
+      console.log(` Непрочитанных: ${newNotifications.filter(n => !n.isRead).length}`)
 
       setNotifications(newNotifications)
       setUnreadCount(newNotifications.filter(n => !n.isRead).length)
@@ -192,10 +228,20 @@ export default function NotificationsBell() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    await supabase
-      .from('comments')
-      .update({ is_read: true })
-      .eq('id', notificationId)
+    // Определяем тип уведомления и таблицу
+    if (notificationId.startsWith('lesson_')) {
+      const commentId = notificationId.replace('lesson_', '')
+      await supabase
+        .from('comments')
+        .update({ is_read: true })
+        .eq('id', commentId)
+    } else if (notificationId.startsWith('course_')) {
+      const commentId = notificationId.replace('course_', '')
+      await supabase
+        .from('course_comments')
+        .update({ is_read: true })
+        .eq('id', commentId)
+    }
 
     setNotifications(prev => 
       prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
@@ -221,10 +267,20 @@ export default function NotificationsBell() {
   useEffect(() => {
     loadNotifications()
 
-    const channel = supabase
-      .channel('comments-notify')
+    // Realtime подписка на комментарии к урокам
+    const lessonChannel = supabase
+      .channel('lesson-comments-notify')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => {
-        console.log('🔔 Новое сообщение в comments, обновляем уведомления...')
+        console.log(' Новый комментарий к уроку, обновляем уведомления...')
+        loadNotifications()
+      })
+      .subscribe()
+
+    // Realtime подписка на комментарии к курсам
+    const courseChannel = supabase
+      .channel('course-comments-notify')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'course_comments' }, () => {
+        console.log('🔔 Новый комментарий к курсу, обновляем уведомления...')
         loadNotifications()
       })
       .subscribe()
@@ -237,7 +293,8 @@ export default function NotificationsBell() {
     document.addEventListener('mousedown', handleClickOutside)
 
     return () => {
-      supabase.removeChannel(channel)
+      supabase.removeChannel(lessonChannel)
+      supabase.removeChannel(courseChannel)
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [loadNotifications])
