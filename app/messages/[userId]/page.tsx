@@ -413,7 +413,7 @@ export default function ChatPage() {
   return (
     // Чат занимает всю высоту родителя
     <div className="flex flex-col h-full">
-      {/* Шапка чата - без фиксированной высоты, выравнивается автоматически */}
+      {/* Шапка чата */}
       <div className="bg-white border-b px-4 py-3 flex items-center gap-4 flex-shrink-0">
         <div className="flex items-center gap-3 flex-shrink-0">
           <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
@@ -451,14 +451,14 @@ export default function ChatPage() {
                 onClick={() => setSearchQuery('')}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                
+                ✕
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Сообщения (резиновая область со скроллом) */}
+      {/* Сообщения */}
       <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-white">
         {filteredMessages.length === 0 ? (
           <div className="text-center text-gray-500 mt-8">
@@ -513,7 +513,7 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Поле ввода (фиксированное внизу) */}
+      {/* Поле ввода - ВЫРАВНИВАНИЕ КНОПКИ И ПОЛЯ */}
       <form onSubmit={handleSend} className="bg-white border-t p-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <input
@@ -521,13 +521,13 @@ export default function ChatPage() {
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Сообщение..."
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0"
+            className="flex-1 px-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0 h-[46px]"
           />
           <EmojiPicker onEmojiSelect={(emoji) => setNewMessage(prev => prev + emoji)} />
           <button
             type="submit"
             disabled={!newMessage.trim()}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+            className="px-6 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0 h-[46px] flex items-center justify-center"
           >
             Отправить
           </button>
