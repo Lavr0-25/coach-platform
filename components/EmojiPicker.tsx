@@ -9,7 +9,7 @@ interface EmojiPickerProps {
 export default function EmojiPicker({ onEmojiSelect }: EmojiPickerProps) {
   const [showPicker, setShowPicker] = useState(false)
   
-  const emojis = ['😀', '😂', '🥰', '❤️', '🎉', '', '👏', '😊', '😎', '🤔', '', '👌']
+  const emojis = ['😀', '😂', '🥰', '❤️', '🎉', '', '', '😊', '😎', '', '', '👌']
   
   const handleEmojiClick = (emoji: string) => {
     onEmojiSelect?.(emoji)
@@ -37,8 +37,8 @@ export default function EmojiPicker({ onEmojiSelect }: EmojiPickerProps) {
             className="fixed inset-0 z-40" 
             onClick={() => setShowPicker(false)}
           />
-          {/* Панель с эмодзи - позиционируем выше кнопки */}
-          <div className="absolute bottom-full right-0 mb-2 p-3 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+          {/* Панель с эмодзи - справа от кнопки */}
+          <div className="absolute right-0 bottom-full mb-2 p-3 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[200px]">
             <div className="grid grid-cols-6 gap-1">
               {emojis.map((emoji) => (
                 <button
