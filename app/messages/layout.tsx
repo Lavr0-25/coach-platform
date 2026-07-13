@@ -17,7 +17,7 @@ export default async function MessagesLayout({ children }: { children: React.Rea
     .order('display_name')
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 128px)' }}>
       <MessagesLayoutShell coaches={allCoaches || []}>
         {children}
       </MessagesLayoutShell>
