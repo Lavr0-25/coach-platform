@@ -45,7 +45,7 @@ export default function NotificationsBell() {
         .limit(50)
 
       if (lessonError) {
-        console.error('❌ Ошибка загрузки комментариев к урокам:', lessonError)
+        console.error(' Ошибка загрузки комментариев к урокам:', lessonError)
       } else {
         console.log(`📥 Загружено комментариев к урокам: ${lessonComments?.length || 0}`)
         
@@ -62,7 +62,7 @@ export default function NotificationsBell() {
         .limit(50)
 
       if (courseError) {
-        console.error(' Ошибка загрузки комментариев к курсам:', courseError)
+        console.error('❌ Ошибка загрузки комментариев к курсам:', courseError)
       } else {
         console.log(`📥 Загружено комментариев к курсам: ${courseComments?.length || 0}`)
         
@@ -173,7 +173,7 @@ export default function NotificationsBell() {
           
           if (courseData) {
             const isMyCourse = courseData.coach_id === user.id
-            console.log(`   Курс "${courseData.title}", coach_id: ${courseData.coach_id}, isMyCourse: ${isMyCourse}`)
+            console.log(`  📖 Курс "${courseData.title}", coach_id: ${courseData.coach_id}, isMyCourse: ${isMyCourse}`)
 
             if (isReplyToMe) {
               console.log('✅ Найдено: ответ на мой комментарий к курсу')
@@ -212,7 +212,7 @@ export default function NotificationsBell() {
       )
 
       console.log(`📊 Всего уведомлений: ${newNotifications.length}`)
-      console.log(` Непрочитанных: ${newNotifications.filter(n => !n.isRead).length}`)
+      console.log(`📮 Непрочитанных: ${newNotifications.filter(n => !n.isRead).length}`)
 
       setNotifications(newNotifications)
       setUnreadCount(newNotifications.filter(n => !n.isRead).length)
@@ -271,7 +271,7 @@ export default function NotificationsBell() {
     const lessonChannel = supabase
       .channel('lesson-comments-notify')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => {
-        console.log(' Новый комментарий к уроку, обновляем уведомления...')
+        console.log('🔔 Новый комментарий к уроку, обновляем уведомления...')
         loadNotifications()
       })
       .subscribe()
@@ -280,7 +280,7 @@ export default function NotificationsBell() {
     const courseChannel = supabase
       .channel('course-comments-notify')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'course_comments' }, () => {
-        console.log('🔔 Новый комментарий к курсу, обновляем уведомления...')
+        console.log(' Новый комментарий к курсу, обновляем уведомления...')
         loadNotifications()
       })
       .subscribe()
@@ -344,6 +344,9 @@ export default function NotificationsBell() {
                 </div>
               ) : notifications.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
+                  <svg className="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
                   <p className="text-sm">Нет новых уведомлений</p>
                 </div>
               ) : (
@@ -383,6 +386,18 @@ export default function NotificationsBell() {
                 </div>
               )}
             </div>
+
+            {notifications.length > 0 && (
+              <div className="p-3 border-t bg-gray-50 flex-shrink-0">
+                <Link
+                  href="/notifications"
+                  className="text-center text-sm text-blue-600 hover:text-blue-700 font-medium block"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Все уведомления →
+                </Link>
+              </div>
+            )}
           </div>
         </>
       )}
