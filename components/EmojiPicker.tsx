@@ -9,7 +9,7 @@ interface EmojiPickerProps {
 export default function EmojiPicker({ onEmojiSelect }: EmojiPickerProps) {
   const [showPicker, setShowPicker] = useState(false)
   
-  const emojis = ['😀', '😂', '🥰', '❤️', '🎉', '🔥', '👏', '😊', '', '😎', '', '👌']
+  const emojis = ['😀', '😂', '🥰', '❤️', '🎉', '', '👏', '😊', '😎', '🤔', '', '👌']
   
   const handleEmojiClick = (emoji: string) => {
     onEmojiSelect?.(emoji)
