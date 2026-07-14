@@ -412,7 +412,7 @@ export default function ChatPage() {
 
   return (
     // Чат занимает всю высоту родителя
-    <div className="flex flex-col h-full pt-16">
+    <div className="flex flex-col h-full">
            {/* Шапка чата - фиксированная высота 72px */}
       <div className="bg-white border-b px-4 flex items-center gap-4 flex-shrink-0" style={{ height: '72px' }}>
         <div className="flex items-center gap-3 flex-shrink-0">
