@@ -50,7 +50,6 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
     const cacheKey = 'conversations'
     const cached = cache.get(cacheKey)
     
-    // Если есть свежий кэш, используем его
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       setConversations(cached.data)
       setIsLoading(false)
@@ -64,7 +63,6 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
         return
       }
 
-      // 1. Получаем последние сообщения
       const { data: allMessages, error: messagesError } = await supabase
         .from('messages')
         .select('*')
@@ -84,14 +82,12 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
         return
       }
 
-      // 2. Собираем ID всех собеседников
       const otherUserIds = new Set<string>()
       allMessages.forEach((msg: any) => {
         if (msg.sender_id !== user.id) otherUserIds.add(msg.sender_id)
         if (msg.receiver_id !== user.id) otherUserIds.add(msg.receiver_id)
       })
 
-      // 3. Пытаемся найти их в таблице coaches
       const { data: coachesData } = await supabase
         .from('coaches')
         .select('user_id, display_name, avatar_url')
@@ -107,13 +103,10 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
 
       const conversationsMap = new Map<string, Conversation>()
 
-      // 4. Формируем список диалогов
       for (const message of allMessages) {
         const isSender = message.sender_id === user.id
         const otherUserId = isSender ? message.receiver_id : message.sender_id
         
-        // 🔥 ИСПРАВЛЕНИЕ: Если пользователя нет в coaches, используем запасной вариант, 
-        // а НЕ пропускаем диалог через 'continue'!
         const otherUser = userMap.get(otherUserId) || { 
           display_name: 'Пользователь', 
           avatar_url: null 
@@ -135,19 +128,16 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
             isOnline: false
           })
         } else {
-          // Обновляем последнее сообщение, если текущее новее
           if (new Date(message.created_at).getTime() > new Date(existing.lastMessageTime).getTime()) {
             existing.lastMessage = message.content
             existing.lastMessageTime = message.created_at
           }
-          // Увеличиваем счетчик непрочитанных
           if (!isSender && !message.is_read) {
             existing.unreadCount += 1
           }
         }
       }
 
-      // 5. Сортируем: сначала непрочитанные, потом по времени
       const sortedConversations = Array.from(conversationsMap.values()).sort((a, b) => {
         if (a.unreadCount > 0 && b.unreadCount === 0) return -1
         if (a.unreadCount === 0 && b.unreadCount > 0) return 1
@@ -270,27 +260,21 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
 
   return (
     <aside className="w-80 bg-white border-r flex flex-col h-full">
-      {/* Шапка с поиском - объединены для выравнивания с чатом */}
-      <div className="border-b flex-shrink-0 bg-white">
-        {/* Заголовок */}
-        <div className="px-4 flex items-center" style={{ height: '36px' }}>
-          <h1 className="text-xl font-bold text-gray-900">Сообщения</h1>
-        </div>
-        
-        {/* Поиск */}
-        <div className="px-4 pb-3">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Поиск наставников..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            />
-            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
+      
+      {/* 🔥 ИСПРАВЛЕНИЕ: Жесткая высота 72px и идеальное выравнивание с правой частью */}
+      <div className="border-b flex-shrink-0 bg-white flex flex-col justify-center px-4 gap-2" style={{ height: '72px' }}>
+        <h1 className="text-xl font-bold text-gray-900 leading-none">Сообщения</h1>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Поиск наставников..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-1.5 pl-9 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          />
+          <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
         </div>
       </div>
 
@@ -317,7 +301,6 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
 
             {visibleConversations.length > 0 ? (
               visibleConversations.map((conv) => {
-                // 🔥 ИСПРАВЛЕНИЕ: Подсветка активного диалога
                 const isActive = pathname === `/messages/${conv.userId}`
                 
                 return (
@@ -398,7 +381,6 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
               </div>
             )}
 
-            {/* Скрытые диалоги */}
             {hiddenConvObjects.length > 0 && (
               <>
                 <div className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider bg-gray-100 flex items-center justify-between sticky top-0 z-10 border-b">
@@ -450,7 +432,6 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
           </div>
         )}
 
-        {/* Результаты поиска наставников */}
         {searchQuery && (
           <>
             <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0 z-10 border-b">
