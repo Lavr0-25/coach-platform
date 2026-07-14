@@ -171,7 +171,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
+    <nav className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="text-2xl font-bold text-blue-600 hover:text-blue-700 transition-colors">
@@ -328,7 +328,6 @@ export default function Navbar() {
                               Избранное
                             </Link>
 
-                            {/* Обратная связь - в меню профиля */}
                             <button
                               onClick={() => {
                                 setShowProfileMenu(false)
@@ -387,7 +386,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Модальное окно обратной связи */}
       {user && (
         <FeedbackModal 
           isOpen={showFeedbackModal} 
