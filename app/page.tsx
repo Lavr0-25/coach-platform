@@ -26,16 +26,28 @@ interface Coach {
   specialization: string | null
 }
 
+interface Subscription {
+  coach_id: string
+  subscribed_at: string
+  coach?: {
+    display_name: string | null
+    avatar_url: string | null
+    specialization: string | null
+  }
+}
+
 type FilterType = 'all' | 'new' | 'popular' | 'free'
 
 export default function Home() {
   const supabase = createClient()
   const [user, setUser] = useState<any>(null)
   const [lessons, setLessons] = useState<Lesson[]>([])
-  const [coaches, setCoaches] = useState<Coach[]>([])
+  const [allCoaches, setAllCoaches] = useState<Coach[]>([])
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [coachSearchQuery, setCoachSearchQuery] = useState('')
 
   useEffect(() => {
     const loadData = async () => {
@@ -56,15 +68,27 @@ export default function Home() {
           setLessons(lessonsData)
         }
 
-        // Загружаем наставников для боковой панели
+        // Загружаем всех наставников
         const { data: coachesData } = await supabase
           .from('coaches')
           .select('user_id, display_name, avatar_url, specialization')
           .order('display_name')
-          .limit(10)
 
         if (coachesData) {
-          setCoaches(coachesData)
+          setAllCoaches(coachesData)
+        }
+
+        // Загружаем подписки (если пользователь авторизован)
+        if (user) {
+          const { data: subsData } = await supabase
+            .from('subscriptions')
+            .select('coach_id, subscribed_at, coach:coaches(display_name, avatar_url, specialization)')
+            .eq('user_id', user.id)
+            .order('subscribed_at', { ascending: false })
+
+          if (subsData) {
+            setSubscriptions(subsData)
+          }
         }
       } catch (error) {
         console.error('Error loading data:', error)
@@ -82,6 +106,60 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Подписка на наставника
+  const handleSubscribe = async (coachId: string) => {
+    if (!user) {
+      alert('Сначала войдите в систему')
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('subscriptions')
+        .insert({
+          user_id: user.id,
+          coach_id: coachId
+        })
+
+      if (error) throw error
+
+      // Обновляем список подписок
+      const { data: subsData } = await supabase
+        .from('subscriptions')
+        .select('coach_id, subscribed_at, coach:coaches(display_name, avatar_url, specialization)')
+        .eq('user_id', user.id)
+        .order('subscribed_at', { ascending: false })
+
+      if (subsData) {
+        setSubscriptions(subsData)
+      }
+    } catch (error) {
+      console.error('Error subscribing:', error)
+      alert('Ошибка при подписке')
+    }
+  }
+
+  // Отписка от наставника
+  const handleUnsubscribe = async (coachId: string) => {
+    if (!confirm('Отписаться от этого наставника?')) return
+
+    try {
+      const { error } = await supabase
+        .from('subscriptions')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('coach_id', coachId)
+
+      if (error) throw error
+
+      // Обновляем список подписок
+      setSubscriptions(prev => prev.filter(sub => sub.coach_id !== coachId))
+    } catch (error) {
+      console.error('Error unsubscribing:', error)
+      alert('Ошибка при отписке')
+    }
+  }
+
   // Фильтрация уроков
   const getFilteredLessons = () => {
     let filtered = lessons
@@ -98,13 +176,11 @@ export default function Home() {
     // Фильтры
     switch (activeFilter) {
       case 'new':
-        // Последние 30 дней
         const monthAgo = new Date()
         monthAgo.setMonth(monthAgo.getMonth() - 1)
         filtered = filtered.filter(l => new Date(l.created_at) >= monthAgo)
         break
       case 'popular':
-        // Сортировка по дате (можно добавить счетчик просмотров)
         filtered = [...filtered].sort((a, b) => 
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         ).slice(0, 9)
@@ -116,6 +192,15 @@ export default function Home() {
 
     return filtered
   }
+
+  // Фильтрация наставников для поиска
+  const filteredCoaches = allCoaches.filter(coach => {
+    const query = coachSearchQuery.toLowerCase()
+    return (
+      coach.display_name?.toLowerCase().includes(query) ||
+      coach.specialization?.toLowerCase().includes(query)
+    )
+  })
 
   const filteredLessons = getFilteredLessons()
 
@@ -144,7 +229,7 @@ export default function Home() {
       {/* Шапка с поиском */}
       <div className="bg-white border-b sticky top-16 z-40">
         <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-center gap-4">
             <div className="flex-1 max-w-2xl">
               <div className="relative">
                 <input
@@ -174,73 +259,98 @@ export default function Home() {
 
       <div className="container mx-auto px-4 py-6">
         <div className="flex gap-6">
-          {/* Боковая панель */}
+          {/* Боковая панель с подписками */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
             <div className="sticky top-32 space-y-6">
-              {/* Статистика */}
+              {/* Подписки */}
               <div className="bg-white rounded-xl p-4 shadow-sm border">
-                <h3 className="font-semibold text-gray-900 mb-3">📊 Статистика</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Уроков:</span>
-                    <span className="font-semibold">{lessons.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Наставников:</span>
-                    <span className="font-semibold">{coaches.length}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Бесплатных:</span>
-                    <span className="font-semibold">{lessons.filter(l => l.is_free).length}</span>
-                  </div>
+                <h3 className="font-semibold text-gray-900 mb-3">📬 Подписки</h3>
+                
+                {/* Поиск по наставникам */}
+                <div className="mb-3 relative">
+                  <input
+                    type="text"
+                    placeholder="Поиск наставников..."
+                    value={coachSearchQuery}
+                    onChange={(e) => setCoachSearchQuery(e.target.value)}
+                    className="w-full px-3 py-1.5 pl-8 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                  <svg className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                 </div>
-              </div>
 
-              {/* Наставники */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border">
-                <h3 className="font-semibold text-gray-900 mb-3">👨‍🏫 Наставники</h3>
-                <div className="space-y-3">
-                  {coaches.slice(0, 5).map((coach) => (
-                    <Link
-                      key={coach.user_id}
-                      href={`/mentors/${coach.user_id}`}
-                      className="flex items-center gap-3 hover:bg-gray-50 p-2 rounded-lg transition-colors"
-                    >
-                      {coach.avatar_url ? (
-                        <img
-                          src={coach.avatar_url}
-                          alt={coach.display_name || ''}
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                          {coach.display_name?.charAt(0).toUpperCase() || '?'}
+                {/* Список подписок */}
+                {user ? (
+                  <div className="space-y-2">
+                    {subscriptions.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-2">
+                        Нет подписок
+                      </p>
+                    ) : (
+                      subscriptions.map((sub) => (
+                        <div
+                          key={sub.coach_id}
+                          className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg group"
+                        >
+                          {sub.coach?.avatar_url ? (
+                            <img
+                              src={sub.coach.avatar_url}
+                              alt={sub.coach.display_name || ''}
+                              className="w-8 h-8 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                              {sub.coach?.display_name?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {sub.coach?.display_name || 'Наставник'}
+                            </p>
+                            {sub.coach?.specialization && (
+                              <p className="text-xs text-gray-500 truncate">
+                                {sub.coach.specialization}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleUnsubscribe(sub.coach_id)}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
+                            title="Отписаться"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {coach.display_name || 'Наставник'}
-                        </p>
-                        {coach.specialization && (
-                          <p className="text-xs text-gray-500 truncate">
-                            {coach.specialization}
-                          </p>
-                        )}
-                      </div>
+                      ))
+                    )}
+                    <Link
+                      href="/mentors"
+                      className="block text-center text-sm text-blue-600 hover:text-blue-700 font-medium mt-3"
+                    >
+                      Все наставники →
                     </Link>
-                  ))}
-                </div>
-                <Link
-                  href="/mentors"
-                  className="mt-3 block text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  Все наставники →
-                </Link>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500 mb-3">
+                      Войдите, чтобы подписываться
+                    </p>
+                    <Link
+                      href="/login"
+                      className="inline-block px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Войти
+                    </Link>
+                  </div>
+                )}
               </div>
 
               {/* Быстрые ссылки */}
               <div className="bg-white rounded-xl p-4 shadow-sm border">
-                <h3 className="font-semibold text-gray-900 mb-3"> Быстрые ссылки</h3>
+                <h3 className="font-semibold text-gray-900 mb-3">🔗 Быстрые ссылки</h3>
                 <div className="space-y-2">
                   <Link href="/catalog" className="block text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors">
                     📚 Каталог уроков
@@ -249,7 +359,7 @@ export default function Home() {
                     🎓 Курсы
                   </Link>
                   <Link href="/mentors" className="block text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors">
-                    🏫 Наставники
+                     Наставники
                   </Link>
                   {user && (
                     <Link href="/favorites" className="block text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors">
@@ -308,7 +418,7 @@ export default function Home() {
               </div>
             ) : filteredLessons.length === 0 ? (
               <div className="text-center py-16">
-                <div className="text-6xl mb-4">📚</div>
+                <div className="text-6xl mb-4"></div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">
                   {searchQuery ? 'Ничего не найдено' : 'Уроки не найдены'}
                 </h2>
@@ -390,6 +500,63 @@ export default function Home() {
                     </div>
                   </Link>
                 ))}
+              </div>
+            )}
+
+            {/* Результаты поиска наставников (под основным контентом) */}
+            {coachSearchQuery && user && (
+              <div className="mt-8 bg-white rounded-xl p-4 shadow-sm border">
+                <h3 className="font-semibold text-gray-900 mb-3">
+                  Найдено наставников: {filteredCoaches.length}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {filteredCoaches.slice(0, 6).map((coach) => {
+                    const isSubscribed = subscriptions.some(s => s.coach_id === coach.user_id)
+                    return (
+                      <div
+                        key={coach.user_id}
+                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                      >
+                        {coach.avatar_url ? (
+                          <img
+                            src={coach.avatar_url}
+                            alt={coach.display_name || ''}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                            {coach.display_name?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {coach.display_name || 'Наставник'}
+                          </p>
+                          {coach.specialization && (
+                            <p className="text-xs text-gray-500 truncate">
+                              {coach.specialization}
+                            </p>
+                          )}
+                        </div>
+                        {isSubscribed ? (
+                          <button
+                            onClick={() => handleUnsubscribe(coach.user_id)}
+                            className="px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            Отписаться
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleSubscribe(coach.user_id)}
+                            className="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                          >
+                            Подписаться
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
           </main>
