@@ -1,6 +1,66 @@
 @import "tailwindcss";
 
-/* Кастомный скроллбар для чата */
+/* Градиентный текст */
+.gradient-text {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Градиентная кнопка */
+.gradient-btn {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
+  transition: all 0.3s ease;
+}
+
+.gradient-btn:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #2563eb 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+}
+
+/* Градиентная иконка */
+.gradient-icon {
+  background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #60a5fa 100%);
+}
+
+/* Карточка с эффектом свечения при наведении */
+.style-card {
+  position: relative;
+  background: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.08);
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.style-card::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 1.5rem;
+  padding: 2px;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1, #3b82f6);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.style-card:hover {
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.3), 0 0 60px rgba(59, 130, 246, 0.2);
+  transform: translateY(-4px);
+}
+
+.style-card:hover::before {
+  opacity: 1;
+}
+
+/* Кастомный скроллбар */
 .messages-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -10,15 +70,15 @@
 }
 
 .messages-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
+  background: #a78bfa;
   border-radius: 3px;
 }
 
 .messages-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #a0aec0;
+  background: #8b5cf6;
 }
 
 .messages-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e0 transparent;
+  scrollbar-color: #a78bfa transparent;
 }
