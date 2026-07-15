@@ -120,8 +120,7 @@ export default function Home() {
             query = query.order('created_at', { ascending: false })
             break
           case 'free':
-            // Исправление: проверяем is_free === true
-            query = query.eq('is_free', true).order('created_at', { ascending: false })
+            // Бесплатные фильтруем на клиенте
             break
           case 'subscriptions':
             if (subscriptions.length > 0) {
@@ -143,6 +142,13 @@ export default function Home() {
 
         if (data) {
           let processedLessons = data as Lesson[]
+
+          // Фильтр бесплатных на клиенте
+          if (activeFilter === 'free') {
+            processedLessons = processedLessons.filter(lesson => 
+              lesson.price === 0 || lesson.is_free === true
+            )
+          }
 
           // Для "Популярных" считаем количество отзывов
           if (activeFilter === 'popular') {
@@ -167,7 +173,6 @@ export default function Home() {
             )
             
             processedLessons = lessonsWithReviews.sort((a, b) => {
-              // Сначала по количеству отзывов, потом по рейтингу
               if (b.reviews_count !== a.reviews_count) {
                 return b.reviews_count - a.reviews_count
               }
@@ -178,6 +183,13 @@ export default function Home() {
           // Для "Все" перемешиваем
           if (activeFilter === 'all') {
             processedLessons = processedLessons.sort(() => Math.random() - 0.5)
+          }
+
+          // Для "Бесплатных" сортируем по дате
+          if (activeFilter === 'free') {
+            processedLessons = processedLessons.sort((a, b) => 
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            )
           }
 
           setLessons(processedLessons.slice(0, LESSONS_PER_PAGE))
