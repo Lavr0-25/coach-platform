@@ -254,7 +254,7 @@ export default function Home() {
         <div className="flex gap-6">
           {/* Боковая панель с подписками */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
-            <div className="sticky top-32">
+            <div className="sticky top-32 mt-12">
               <div className="bg-white rounded-xl p-4 shadow-sm border">
                 {/* Поиск по наставникам */}
                 <div className="mb-3 relative">
@@ -374,7 +374,7 @@ export default function Home() {
               </div>
             ) : filteredLessons.length === 0 ? (
               <div className="text-center py-16">
-                <div className="text-6xl mb-4">📚</div>
+                <div className="text-6xl mb-4"></div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">
                   {searchQuery ? 'Ничего не найдено' : 'Уроки не найдены'}
                 </h2>
