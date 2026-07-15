@@ -51,7 +51,6 @@ export default function Home() {
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
 
-        // Загружаем уроки с данными наставников
         const { data: lessonsData } = await supabase
           .from('lessons')
           .select(`
@@ -64,7 +63,6 @@ export default function Home() {
           setLessons(lessonsData)
         }
 
-        // Загружаем всех наставников
         const { data: coachesData } = await supabase
           .from('coaches')
           .select('user_id, display_name, avatar_url, specialization')
@@ -74,7 +72,6 @@ export default function Home() {
           setAllCoaches(coachesData)
         }
 
-        // Загружаем подписки (если пользователь авторизован)
         if (user) {
           const { data: subsData } = await supabase
             .from('subscriptions')
@@ -106,7 +103,6 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Подписка на наставника
   const handleSubscribe = async (coachId: string) => {
     if (!user) {
       alert('Сначала войдите в систему')
@@ -123,7 +119,6 @@ export default function Home() {
 
       if (error) throw error
 
-      // Обновляем список подписок
       const { data: subsData } = await supabase
         .from('subscriptions')
         .select(`
@@ -143,7 +138,6 @@ export default function Home() {
     }
   }
 
-  // Отписка от наставника
   const handleUnsubscribe = async (coachId: string) => {
     if (!confirm('Отписаться от этого наставника?')) return
 
@@ -156,7 +150,6 @@ export default function Home() {
 
       if (error) throw error
 
-      // Обновляем список подписок
       setSubscriptions(prev => prev.filter(sub => sub.coach_id !== coachId))
     } catch (error) {
       console.error('Error unsubscribing:', error)
@@ -164,11 +157,9 @@ export default function Home() {
     }
   }
 
-  // Фильтрация уроков
   const getFilteredLessons = () => {
     let filtered = lessons
 
-    // Поиск
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(l => 
@@ -177,7 +168,6 @@ export default function Home() {
       )
     }
 
-    // Фильтры
     switch (activeFilter) {
       case 'new':
         const monthAgo = new Date()
@@ -197,7 +187,6 @@ export default function Home() {
     return filtered
   }
 
-  // Фильтрация наставников для поиска
   const filteredCoaches = allCoaches.filter(coach => {
     const query = coachSearchQuery.toLowerCase()
     return (
@@ -265,10 +254,10 @@ export default function Home() {
         <div className="flex gap-6">
           {/* Боковая панель с подписками */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
-            <div className="sticky top-32 space-y-6">
+            <div className="sticky top-32">
               {/* Подписки */}
               <div className="bg-white rounded-xl p-4 shadow-sm border">
-                <h3 className="font-semibold text-gray-900 mb-3">📬 Подписки</h3>
+                <h3 className="font-semibold text-gray-900 mb-3"> Подписки</h3>
                 
                 {/* Поиск по наставникам */}
                 <div className="mb-3 relative">
@@ -351,27 +340,6 @@ export default function Home() {
                   </div>
                 )}
               </div>
-
-              {/* Быстрые ссылки */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border">
-                <h3 className="font-semibold text-gray-900 mb-3">🔗 Быстрые ссылки</h3>
-                <div className="space-y-2">
-                  <Link href="/catalog" className="block text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors">
-                    📚 Каталог уроков
-                  </Link>
-                  <Link href="/courses" className="block text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors">
-                     Курсы
-                  </Link>
-                  <Link href="/mentors" className="block text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors">
-                    🏫 Наставники
-                  </Link>
-                  {user && (
-                    <Link href="/favorites" className="block text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors">
-                      ⭐ Избранное
-                    </Link>
-                  )}
-                </div>
-              </div>
             </div>
           </aside>
 
@@ -450,7 +418,7 @@ export default function Home() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-4xl">
-                          
+                          📚
                         </div>
                       )}
                       
@@ -507,7 +475,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* Результаты поиска наставников (под основным контентом) */}
+            {/* Результаты поиска наставников */}
             {coachSearchQuery && user && (
               <div className="mt-8 bg-white rounded-xl p-4 shadow-sm border">
                 <h3 className="font-semibold text-gray-900 mb-3">
