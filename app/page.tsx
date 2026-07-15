@@ -45,6 +45,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('')
   const [coachSearchQuery, setCoachSearchQuery] = useState('')
   const [subscribing, setSubscribing] = useState<string | null>(null)
+  const [isExpanded, setIsExpanded] = useState(true)
 
   useEffect(() => {
     const loadData = async () => {
@@ -284,7 +285,7 @@ export default function Home() {
 
                 {/* Список подписок или результаты поиска */}
                 {user ? (
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                  <div className="space-y-2">
                     {coachSearchQuery ? (
                       // Результаты поиска наставников
                       filteredCoaches.length === 0 ? (
@@ -323,17 +324,23 @@ export default function Home() {
                               {isSubscribed ? (
                                 <button
                                   onClick={() => handleUnsubscribe(coach.user_id)}
-                                  className="px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                                  title="Отписаться"
                                 >
-                                  Отписаться
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
                                 </button>
                               ) : (
                                 <button
                                   onClick={() => handleSubscribe(coach.user_id)}
                                   disabled={subscribing === coach.user_id}
-                                  className="px-2 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors flex-shrink-0 disabled:opacity-50"
+                                  className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors flex-shrink-0 disabled:opacity-50"
+                                  title="Подписаться"
                                 >
-                                  {subscribing === coach.user_id ? '...' : 'Подписаться'}
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
                                 </button>
                               )}
                             </div>
@@ -342,49 +349,71 @@ export default function Home() {
                       )
                     ) : (
                       // Список подписок
-                      subscriptions.length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-2">
-                          Нет подписок
-                        </p>
-                      ) : (
-                        subscriptions.map((sub) => (
-                          <div
-                            key={sub.coach_id}
-                            className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg group"
-                          >
-                            {sub.coach?.avatar_url ? (
-                              <img
-                                src={sub.coach.avatar_url}
-                                alt={sub.coach.display_name || ''}
-                                className="w-8 h-8 rounded-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                {sub.coach?.display_name?.charAt(0).toUpperCase() || '?'}
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {sub.coach?.display_name || 'Наставник'}
+                      <>
+                        {isExpanded && (
+                          <div className="max-h-96 overflow-y-auto space-y-2">
+                            {subscriptions.length === 0 ? (
+                              <p className="text-sm text-gray-500 text-center py-2">
+                                Нет подписок
                               </p>
-                              {sub.coach?.specialization && (
-                                <p className="text-xs text-gray-500 truncate">
-                                  {sub.coach.specialization}
-                                </p>
-                              )}
-                            </div>
-                            <button
-                              onClick={() => handleUnsubscribe(sub.coach_id)}
-                              className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
-                              title="Отписаться"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
+                            ) : (
+                              subscriptions.map((sub) => (
+                                <div
+                                  key={sub.coach_id}
+                                  className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg group"
+                                >
+                                  {sub.coach?.avatar_url ? (
+                                    <img
+                                      src={sub.coach.avatar_url}
+                                      alt={sub.coach.display_name || ''}
+                                      className="w-8 h-8 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                      {sub.coach?.display_name?.charAt(0).toUpperCase() || '?'}
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      {sub.coach?.display_name || 'Наставник'}
+                                    </p>
+                                    {sub.coach?.specialization && (
+                                      <p className="text-xs text-gray-500 truncate">
+                                        {sub.coach.specialization}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <button
+                                    onClick={() => handleUnsubscribe(sub.coach_id)}
+                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all flex-shrink-0"
+                                    title="Отписаться"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              ))
+                            )}
                           </div>
-                        ))
-                      )
+                        )}
+                        
+                        {/* Кнопка Свернуть/Развернуть */}
+                        <button
+                          onClick={() => setIsExpanded(!isExpanded)}
+                          className="w-full flex items-center gap-2 px-2 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                        >
+                          <svg 
+                            className={`w-4 h-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                          <span>{isExpanded ? 'Свернуть' : 'Развернуть'}</span>
+                        </button>
+                      </>
                     )}
                     <Link
                       href="/mentors"
