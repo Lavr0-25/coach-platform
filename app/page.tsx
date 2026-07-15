@@ -61,18 +61,14 @@ export default function Home() {
           `)
           .order('created_at', { ascending: false })
 
-        if (lessonsData) {
-          setLessons(lessonsData)
-        }
+        if (lessonsData) setLessons(lessonsData)
 
         const { data: coachesData } = await supabase
           .from('coaches')
           .select('user_id, display_name, avatar_url, specialization')
           .order('display_name')
 
-        if (coachesData) {
-          setAllCoaches(coachesData)
-        }
+        if (coachesData) setAllCoaches(coachesData)
 
         if (user) {
           const { data: subsData } = await supabase
@@ -85,9 +81,7 @@ export default function Home() {
             .eq('user_id', user.id)
             .order('subscribed_at', { ascending: false })
 
-          if (subsData) {
-            setSubscriptions(subsData as any)
-          }
+          if (subsData) setSubscriptions(subsData as any)
         }
       } catch (error) {
         console.error('Error loading data:', error)
@@ -116,17 +110,12 @@ export default function Home() {
     try {
       const { error } = await supabase
         .from('subscriptions')
-        .insert({
-          user_id: user.id,
-          coach_id: coachId
-        })
+        .insert({ user_id: user.id, coach_id: coachId })
 
       if (error) {
         if (error.code === '23505') {
           alert('Вы уже подписаны на этого наставника')
-        } else {
-          throw error
-        }
+        } else throw error
         return
       }
 
@@ -140,9 +129,7 @@ export default function Home() {
         .eq('user_id', user.id)
         .order('subscribed_at', { ascending: false })
 
-      if (subsData) {
-        setSubscriptions(subsData as any)
-      }
+      if (subsData) setSubscriptions(subsData as any)
     } catch (error) {
       console.error('Error subscribing:', error)
       alert('Ошибка при подписке')
@@ -162,7 +149,6 @@ export default function Home() {
         .eq('coach_id', coachId)
 
       if (error) throw error
-
       setSubscriptions(prev => prev.filter(sub => sub.coach_id !== coachId))
     } catch (error) {
       console.error('Error unsubscribing:', error)
@@ -231,9 +217,9 @@ export default function Home() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Шапка с поиском */}
-      <div className="bg-white border-b sticky top-16 z-40">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-purple-100 sticky top-16 z-40">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-center gap-4">
             <div className="flex-1 max-w-2xl">
@@ -243,9 +229,9 @@ export default function Home() {
                   placeholder="Поиск уроков..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 pl-10 bg-gray-100 border-0 rounded-full focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
+                  className="w-full px-4 py-2.5 pl-10 bg-purple-50/50 border border-purple-200 rounded-full focus:bg-white focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300 transition-all text-sm"
                 />
-                <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
@@ -254,7 +240,7 @@ export default function Home() {
             {!loading && !user && (
               <Link 
                 href="/login" 
-                className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                className="gradient-btn px-6 py-2.5 text-white text-sm font-medium rounded-full"
               >
                 Войти
               </Link>
@@ -263,33 +249,32 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex gap-6">
-          {/* Боковая панель с подписками */}
-          <aside className="hidden lg:block w-64 flex-shrink-0">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex gap-8">
+          {/* Боковая панель */}
+          <aside className="hidden lg:block w-72 flex-shrink-0">
             <div className="sticky top-32 mt-17">
-              <div className="bg-white rounded-xl p-4 shadow-sm border">
+              <div className="style-card p-5">
                 {/* Поиск по наставникам */}
-                <div className="mb-3 relative">
+                <div className="mb-4 relative">
                   <input
                     type="text"
                     placeholder="Поиск наставников..."
                     value={coachSearchQuery}
                     onChange={(e) => setCoachSearchQuery(e.target.value)}
-                    className="w-full px-3 py-1.5 pl-8 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full px-3 py-2 pl-9 text-sm bg-purple-50/50 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300"
                   />
-                  <svg className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
 
-                {/* Список подписок или результаты поиска */}
+                {/* Список */}
                 {user ? (
                   <div className="space-y-2">
                     {coachSearchQuery ? (
-                      // Результаты поиска наставников
                       filteredCoaches.length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-2">
+                        <p className="text-sm text-gray-500 text-center py-3">
                           Наставники не найдены
                         </p>
                       ) : (
@@ -298,21 +283,21 @@ export default function Home() {
                           return (
                             <div
                               key={coach.user_id}
-                              className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
+                              className="flex items-center gap-3 p-2.5 bg-purple-50/30 rounded-xl hover:bg-purple-50/60 transition-colors"
                             >
                               {coach.avatar_url ? (
                                 <img
                                   src={coach.avatar_url}
                                   alt={coach.display_name || ''}
-                                  className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                                  className="w-9 h-9 rounded-full object-cover flex-shrink-0"
                                 />
                               ) : (
-                                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                <div className="w-9 h-9 gradient-icon rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                                   {coach.display_name?.charAt(0).toUpperCase() || '?'}
                                 </div>
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">
+                                <p className="text-sm font-semibold text-gray-900 truncate">
                                   {coach.display_name || 'Наставник'}
                                 </p>
                                 {coach.specialization && (
@@ -324,7 +309,7 @@ export default function Home() {
                               {isSubscribed ? (
                                 <button
                                   onClick={() => handleUnsubscribe(coach.user_id)}
-                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
                                   title="Отписаться"
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,7 +320,7 @@ export default function Home() {
                                 <button
                                   onClick={() => handleSubscribe(coach.user_id)}
                                   disabled={subscribing === coach.user_id}
-                                  className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors flex-shrink-0 disabled:opacity-50"
+                                  className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex-shrink-0 disabled:opacity-50"
                                   title="Подписаться"
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -348,33 +333,32 @@ export default function Home() {
                         })
                       )
                     ) : (
-                      // Список подписок
                       <>
                         {isExpanded && (
                           <div className="max-h-96 overflow-y-auto space-y-2">
                             {subscriptions.length === 0 ? (
-                              <p className="text-sm text-gray-500 text-center py-2">
+                              <p className="text-sm text-gray-500 text-center py-3">
                                 Нет подписок
                               </p>
                             ) : (
                               subscriptions.map((sub) => (
                                 <div
                                   key={sub.coach_id}
-                                  className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg group"
+                                  className="flex items-center gap-3 p-2.5 bg-purple-50/30 rounded-xl group"
                                 >
                                   {sub.coach?.avatar_url ? (
                                     <img
                                       src={sub.coach.avatar_url}
                                       alt={sub.coach.display_name || ''}
-                                      className="w-8 h-8 rounded-full object-cover"
+                                      className="w-9 h-9 rounded-full object-cover"
                                     />
                                   ) : (
-                                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                    <div className="w-9 h-9 gradient-icon rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                                       {sub.coach?.display_name?.charAt(0).toUpperCase() || '?'}
                                     </div>
                                   )}
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                    <p className="text-sm font-semibold text-gray-900 truncate">
                                       {sub.coach?.display_name || 'Наставник'}
                                     </p>
                                     {sub.coach?.specialization && (
@@ -385,7 +369,7 @@ export default function Home() {
                                   </div>
                                   <button
                                     onClick={() => handleUnsubscribe(sub.coach_id)}
-                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all flex-shrink-0"
+                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
                                     title="Отписаться"
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -398,10 +382,9 @@ export default function Home() {
                           </div>
                         )}
                         
-                        {/* Кнопка Свернуть/Развернуть */}
                         <button
                           onClick={() => setIsExpanded(!isExpanded)}
-                          className="w-full flex items-center gap-2 px-2 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-purple-600 hover:bg-purple-50 rounded-xl transition-colors font-medium"
                         >
                           <svg 
                             className={`w-4 h-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} 
@@ -417,7 +400,7 @@ export default function Home() {
                     )}
                     <Link
                       href="/mentors"
-                      className="block text-center text-sm text-blue-600 hover:text-blue-700 font-medium mt-3"
+                      className="block text-center text-sm text-purple-600 hover:text-purple-700 font-semibold mt-4"
                     >
                       Все наставники →
                     </Link>
@@ -429,7 +412,7 @@ export default function Home() {
                     </p>
                     <Link
                       href="/login"
-                      className="inline-block px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                      className="inline-block gradient-btn px-6 py-2.5 text-white text-sm rounded-full font-medium"
                     >
                       Войти
                     </Link>
@@ -442,15 +425,15 @@ export default function Home() {
           {/* Основной контент */}
           <main className="flex-1 min-w-0">
             {/* Фильтры */}
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+            <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
               {filters.map((filter) => (
                 <button
                   key={filter.id}
                   onClick={() => setActiveFilter(filter.id)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                  className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
                     activeFilter === filter.id
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                      ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
+                      : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
                   }`}
                 >
                   {filter.label}
@@ -462,11 +445,11 @@ export default function Home() {
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="bg-white rounded-xl overflow-hidden shadow-sm border animate-pulse">
-                    <div className="aspect-video bg-gray-200" />
-                    <div className="p-4 space-y-3">
-                      <div className="h-4 bg-gray-200 rounded w-3/4" />
-                      <div className="h-3 bg-gray-200 rounded w-1/2" />
+                  <div key={i} className="style-card overflow-hidden animate-pulse">
+                    <div className="aspect-video bg-purple-100" />
+                    <div className="p-5 space-y-3">
+                      <div className="h-4 bg-purple-100 rounded w-3/4" />
+                      <div className="h-3 bg-purple-100 rounded w-1/2" />
                     </div>
                   </div>
                 ))}
@@ -474,7 +457,7 @@ export default function Home() {
             ) : filteredLessons.length === 0 ? (
               <div className="text-center py-16">
                 <div className="text-6xl mb-4"></div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   {searchQuery ? 'Ничего не найдено' : 'Уроки не найдены'}
                 </h2>
                 <p className="text-gray-600">
@@ -489,64 +472,63 @@ export default function Home() {
                   <Link
                     key={lesson.id}
                     href={`/lesson/${lesson.id}`}
-                    className="group bg-white rounded-xl overflow-hidden shadow-sm border hover:shadow-lg hover:border-blue-200 transition-all duration-200"
+                    className="group style-card overflow-hidden"
                   >
                     {/* Превью */}
-                    <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 relative overflow-hidden">
+                    <div className="aspect-video bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100 relative overflow-hidden">
                       {lesson.cover_url ? (
                         <img
                           src={lesson.cover_url}
                           alt={lesson.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-4xl">
-                          📚
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="w-16 h-16 gradient-icon rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
+                            📚
+                          </div>
                         </div>
                       )}
                       
-                      {/* Бейдж бесплатного */}
                       {lesson.is_free && (
-                        <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
+                        <div className="absolute top-3 left-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
                           Бесплатно
                         </div>
                       )}
                       
-                      {/* Цена */}
                       {!lesson.is_free && lesson.price > 0 && (
-                        <div className="absolute top-2 right-2 bg-black/70 text-white text-xs font-bold px-2 py-1 rounded">
+                        <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full">
                           {lesson.price} ₽
                         </div>
                       )}
                     </div>
 
                     {/* Контент */}
-                    <div className="p-4">
-                      <h3 className="font-semibold text-gray-900 line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
+                    <div className="p-5">
+                      <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-purple-600 transition-colors text-base">
                         {lesson.title}
                       </h3>
                       
                       {lesson.description && (
-                        <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                        <p className="text-sm text-gray-600 line-clamp-2 mb-4">
                           {lesson.description}
                         </p>
                       )}
 
-                      {/* Автор и дата */}
-                      <div className="flex items-center justify-between text-xs text-gray-500">
+                      <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-purple-100">
                         <div className="flex items-center gap-2">
                           {lesson.coach?.avatar_url ? (
                             <img
                               src={lesson.coach.avatar_url}
                               alt={lesson.coach.display_name || ''}
-                              className="w-5 h-5 rounded-full object-cover"
+                              className="w-6 h-6 rounded-full object-cover"
                             />
                           ) : (
-                            <div className="w-5 h-5 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
+                            <div className="w-6 h-6 gradient-icon rounded-full flex items-center justify-center text-white text-[10px] font-bold">
                               {lesson.coach?.display_name?.charAt(0).toUpperCase() || '?'}
                             </div>
                           )}
-                          <span className="truncate max-w-[120px]">
+                          <span className="truncate max-w-[120px] font-medium">
                             {lesson.coach?.display_name || 'Наставник'}
                           </span>
                         </div>
