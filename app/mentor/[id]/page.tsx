@@ -12,7 +12,7 @@ export default async function MentorPage({ params }: MentorPageProps) {
   const { id } = await params
   const supabase = await createClient()
 
-  // Получаем данные наставника
+  // Получаем данные автора
   const { data: coach, error: coachError } = await supabase
     .from('coaches')
     .select('*')
@@ -23,7 +23,7 @@ export default async function MentorPage({ params }: MentorPageProps) {
     notFound()
   }
 
-  // Получаем курсы наставника
+  // Получаем курсы автора
   const { data: courses } = await supabase
     .from('courses')
     .select(`
@@ -42,7 +42,7 @@ export default async function MentorPage({ params }: MentorPageProps) {
     .eq('is_published', true)
     .order('created_at', { ascending: false })
 
-  // Получаем уроки наставника (не в курсах)
+  // Получаем уроки автора  (не в курсах)
   const { data: lessons } = await supabase
     .from('lessons')
     .select(`
@@ -83,7 +83,7 @@ export default async function MentorPage({ params }: MentorPageProps) {
         </Link>
       </div>
 
-      {/* Профиль наставника */}
+      {/* Профиль автора */}
       <div className="bg-white rounded-xl shadow-sm border p-8 mb-8">
         <div className="flex items-start gap-6 flex-col md:flex-row">
           {/* Аватар */}
@@ -133,11 +133,11 @@ export default async function MentorPage({ params }: MentorPageProps) {
         </div>
       </div>
 
-      {/* Курсы наставника */}
+      {/* Курсы автора */}
       {coursesCount > 0 && (
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            📚 Курсы наставника
+            📚 Курсы автора
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -203,7 +203,7 @@ export default async function MentorPage({ params }: MentorPageProps) {
         </div>
       )}
 
-      {/* Отдельные уроки наставника */}
+      {/* Отдельные уроки автор */}
       {lessonsCount > 0 && (
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">
@@ -291,7 +291,7 @@ export default async function MentorPage({ params }: MentorPageProps) {
             Пока нет материалов
           </h2>
           <p className="text-gray-600">
-            Наставник пока не добавил курсы или уроки
+            Автор пока не добавил курсы или уроки
           </p>
         </div>
       )}

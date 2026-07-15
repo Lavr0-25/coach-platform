@@ -30,7 +30,7 @@ export default async function CoursesCatalogPage() {
     console.error('Error loading courses:', error)
   }
 
-  // Считаем количество уроков и получаем первого наставника
+  // Считаем количество уроков и получаем первого автора
   const coursesWithCount = courses?.map(course => ({
     ...course,
     lessonsCount: course.lessons?.length || 0,
@@ -102,7 +102,7 @@ export default async function CoursesCatalogPage() {
                     </p>
                   )}
 
-                  {/* Наставник */}
+                  {/* Автор */}
                   {course.coach && (
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">

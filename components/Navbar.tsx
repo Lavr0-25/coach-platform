@@ -127,7 +127,7 @@ export default function Navbar() {
         .from('coaches')
         .upsert({
           user_id: user.id,
-          display_name: profile?.display_name || user.email?.split('@')[0] || 'Наставник',
+          display_name: profile?.display_name || user.email?.split('@')[0] || 'Автор',
           role: 'mentor',
         }, {
           onConflict: 'user_id'
@@ -137,11 +137,11 @@ export default function Navbar() {
       
       setIsMentor(true)
       setProfile(prev => ({ ...prev, role: 'mentor' }))
-      alert('🎉 Теперь вы наставник! Теперь вы можете создавать уроки.')
+      alert('🎉 Теперь вы автор! Теперь вы можете создавать уроки.')
       router.refresh()
     } catch (error: any) {
       console.error('Error becoming mentor:', error)
-      alert('Ошибка: ' + (error.message || 'Не удалось стать наставником'))
+      alert('Ошибка: ' + (error.message || 'Не удалось стать автором'))
     }
   }
 
@@ -188,7 +188,7 @@ export default function Navbar() {
                Каталог уроков
             </Link>
             <Link href="/mentors" className="text-gray-700 hover:text-purple-600 transition-colors font-medium">
-              🏫 Наставники
+               Авторы
             </Link>
             
             {user && isMentor && (
@@ -212,7 +212,7 @@ export default function Navbar() {
                     onClick={handleBecomeMentor}
                     className="hidden md:inline-flex gradient-btn px-4 py-2 text-white rounded-full font-medium text-sm shadow-lg shadow-purple-500/30"
                   >
-                     Стать наставником
+                     Стать авторомом
                   </button>
                 )}
 
