@@ -171,34 +171,37 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-50">
+    <nav className="bg-white/80 backdrop-blur-sm border-b border-purple-200/50 fixed top-0 left-0 right-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="text-2xl font-bold text-blue-600 hover:text-blue-700 transition-colors">
+          {/* Логотип с градиентом */}
+          <Link href="/" className="text-2xl font-bold gradient-text hover:opacity-80 transition-opacity">
             CoachPlatform
           </Link>
 
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/courses" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+          {/* Навигация */}
+          <div className="hidden md:flex items-center gap-6">
+            <Link href="/courses" className="text-gray-700 hover:text-purple-600 transition-colors font-medium">
                Каталог курсов
             </Link>
-            <Link href="/catalog" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+            <Link href="/catalog" className="text-gray-700 hover:text-purple-600 transition-colors font-medium">
                Каталог уроков
             </Link>
-            <Link href="/mentors" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+            <Link href="/mentors" className="text-gray-700 hover:text-purple-600 transition-colors font-medium">
               🏫 Наставники
             </Link>
             
             {user && isMentor && (
-              <Link href="/favorites" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+              <Link href="/favorites" className="text-gray-700 hover:text-purple-600 transition-colors font-medium">
                  Избранное
               </Link>
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          {/* Правая часть */}
+          <div className="flex items-center gap-3">
             {!isLoaded ? (
-              <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+              <div className="w-10 h-10 bg-purple-100 rounded-full animate-pulse" />
             ) : user ? (
               <>
                 <MessagesBell />
@@ -207,7 +210,7 @@ export default function Navbar() {
                 {!isMentor && (
                   <button
                     onClick={handleBecomeMentor}
-                    className="hidden md:inline-flex px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors text-sm"
+                    className="hidden md:inline-flex gradient-btn px-4 py-2 text-white rounded-full font-medium text-sm shadow-lg shadow-purple-500/30"
                   >
                      Стать наставником
                   </button>
@@ -217,9 +220,9 @@ export default function Navbar() {
                   <div className="relative">
                     <button
                       onClick={() => setShowProfileMenu(!showProfileMenu)}
-                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-purple-50 transition-colors"
                     >
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                      <div className="w-9 h-9 gradient-icon rounded-full flex items-center justify-center text-white font-semibold text-sm">
                         {getInitials(profile?.display_name)}
                       </div>
                       <span className="hidden md:block text-gray-700 font-medium max-w-[150px] truncate">
@@ -241,10 +244,10 @@ export default function Navbar() {
                           className="fixed inset-0 z-10"
                           onClick={() => setShowProfileMenu(false)}
                         />
-                        <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border z-20">
-                          <div className="p-4 border-b">
+                        <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-purple-100 z-20 overflow-hidden">
+                          <div className="p-4 border-b border-purple-100 bg-gradient-to-br from-purple-50 to-blue-50">
                             <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
+                              <div className="w-12 h-12 gradient-icon rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-lg">
                                 {getInitials(profile?.display_name)}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -255,7 +258,7 @@ export default function Navbar() {
                                   {user.email}
                                 </p>
                                 {isAdmin && (
-                                  <span className="inline-block mt-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-medium">
+                                  <span className="inline-block mt-1 text-xs bg-gradient-to-r from-pink-500 to-purple-600 text-white px-2 py-0.5 rounded-full font-medium">
                                      Администратор
                                   </span>
                                 )}
@@ -267,7 +270,7 @@ export default function Navbar() {
                             {isAdmin && (
                               <Link
                                 href="/admin"
-                                className="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors border-b"
+                                className="flex items-center gap-3 px-4 py-2.5 text-purple-600 hover:bg-purple-50 transition-colors border-b border-purple-100"
                                 onClick={() => setShowProfileMenu(false)}
                               >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -280,10 +283,10 @@ export default function Navbar() {
 
                             <Link
                               href="/dashboard/mentor"
-                              className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                              className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
                               onClick={() => setShowProfileMenu(false)}
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                               </svg>
                               Личный кабинет
@@ -291,10 +294,10 @@ export default function Navbar() {
 
                             <Link
                               href="/dashboard/mentor/profile"
-                              className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                              className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
                               onClick={() => setShowProfileMenu(false)}
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                               </svg>
@@ -303,25 +306,25 @@ export default function Navbar() {
 
                             <Link
                               href="/dashboard/mentor/courses"
-                              className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                              className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
                               onClick={() => setShowProfileMenu(false)}
                             >
-                              <span className="text-xl"></span>
+                              <span className="text-xl">📚</span>
                               Мои курсы
                             </Link>
 
                             <Link
                               href="/dashboard/mentor/lessons"
-                              className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                              className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
                               onClick={() => setShowProfileMenu(false)}
                             >
-                              <span className="text-xl"></span>
+                              <span className="text-xl">📝</span>
                               Мои уроки
                             </Link>
 
                             <Link
                               href="/favorites"
-                              className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                              className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
                               onClick={() => setShowProfileMenu(false)}
                             >
                               <span className="text-xl">⭐</span>
@@ -333,19 +336,19 @@ export default function Navbar() {
                                 setShowProfileMenu(false)
                                 setShowFeedbackModal(true)
                               }}
-                              className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                               </svg>
                               Обратная связь
                             </button>
 
-                            <hr className="my-2" />
+                            <hr className="my-2 border-purple-100" />
 
                             <button
                               onClick={handleSignOut}
-                              className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
+                              className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-colors"
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -360,23 +363,23 @@ export default function Navbar() {
                 ) : (
                   <Link
                     href="/dashboard/mentor"
-                    className="px-4 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                    className="px-4 py-2 text-gray-700 hover:text-purple-600 font-medium transition-colors"
                   >
                     Кабинет
                   </Link>
                 )}
               </>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <Link
                   href="/login"
-                  className="px-4 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                  className="px-4 py-2 text-gray-700 hover:text-purple-600 font-medium transition-colors"
                 >
                   Войти
                 </Link>
                 <Link
                   href="/register"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  className="gradient-btn px-4 py-2 text-white rounded-full font-medium text-sm shadow-lg shadow-purple-500/30"
                 >
                   Регистрация
                 </Link>
