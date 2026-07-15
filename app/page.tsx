@@ -17,6 +17,7 @@ interface Lesson {
     display_name: string | null
     avatar_url: string | null
   } | null
+  comments_count?: number
 }
 
 interface Coach {
@@ -32,7 +33,9 @@ interface Subscription {
   coach: any | null
 }
 
-type FilterType = 'all' | 'new' | 'popular' | 'free'
+type FilterType = 'all' | 'new' | 'popular' | 'free' | 'subscriptions'
+
+const LESSONS_PER_PAGE = 9
 
 export default function Home() {
   const supabase = createClient()
@@ -46,22 +49,15 @@ export default function Home() {
   const [coachSearchQuery, setCoachSearchQuery] = useState('')
   const [subscribing, setSubscribing] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(true)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
 
+  // Загрузка данных
   useEffect(() => {
     const loadData = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
-
-        const { data: lessonsData } = await supabase
-          .from('lessons')
-          .select(`
-            *,
-            coach:coaches!lessons_coach_id_fkey(display_name, avatar_url)
-          `)
-          .order('created_at', { ascending: false })
-
-        if (lessonsData) setLessons(lessonsData)
 
         const { data: coachesData } = await supabase
           .from('coaches')
@@ -85,8 +81,6 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Error loading data:', error)
-      } finally {
-        setLoading(false)
       }
     }
 
@@ -98,6 +92,106 @@ export default function Home() {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // Загрузка уроков при изменении фильтра
+  useEffect(() => {
+    const loadLessons = async () => {
+      setLoading(true)
+      setPage(1)
+      setHasMore(true)
+
+      try {
+        let query = supabase
+          .from('lessons')
+          .select(`
+            *,
+            coach:coaches!lessons_coach_id_fkey(display_name, avatar_url)
+          `)
+
+        // Применяем фильтры
+        switch (activeFilter) {
+          case 'new':
+            query = query.order('created_at', { ascending: false })
+            break
+          case 'popular':
+            // Для популярных нужно загрузить все и отсортировать по комментариям
+            query = query.order('created_at', { ascending: false })
+            break
+          case 'free':
+            query = query.eq('is_free', true).order('created_at', { ascending: false })
+            break
+          case 'subscriptions':
+            if (subscriptions.length > 0) {
+              const coachIds = subscriptions.map(s => s.coach_id)
+              query = query.in('coach_id', coachIds).order('created_at', { ascending: false })
+            } else {
+              setLessons([])
+              setLoading(false)
+              return
+            }
+            break
+          default:
+            // "Все" - без порядка (случайный)
+            break
+        }
+
+        const { data, error } = await query
+
+        if (error) throw error
+
+        if (data) {
+          let processedLessons = data as Lesson[]
+
+          // Для "Популярных" считаем количество комментариев
+          if (activeFilter === 'popular') {
+            const lessonsWithCounts = await Promise.all(
+              processedLessons.map(async (lesson) => {
+                const { count } = await supabase
+                  .from('comments')
+                  .select('*', { count: 'exact', head: true })
+                  .eq('lesson_id', lesson.id)
+                
+                return { ...lesson, comments_count: count || 0 }
+              })
+            )
+            
+            processedLessons = lessonsWithCounts.sort((a, b) => 
+              (b.comments_count || 0) - (a.comments_count || 0)
+            )
+          }
+
+          // Для "Все" перемешиваем
+          if (activeFilter === 'all') {
+            processedLessons = processedLessons.sort(() => Math.random() - 0.5)
+          }
+
+          setLessons(processedLessons.slice(0, LESSONS_PER_PAGE))
+          setHasMore(processedLessons.length > LESSONS_PER_PAGE)
+        }
+      } catch (error) {
+        console.error('Error loading lessons:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadLessons()
+  }, [activeFilter, subscriptions])
+
+  // Загрузка следующей страницы
+  const loadMore = () => {
+    const nextPage = page + 1
+    const startIndex = (nextPage - 1) * LESSONS_PER_PAGE
+    const endIndex = nextPage * LESSONS_PER_PAGE
+    
+    // Для "Все" нужно загрузить больше данных
+    if (activeFilter === 'all' && lessons.length < endIndex) {
+      // Уже загружены все
+      return
+    }
+    
+    setPage(nextPage)
+  }
 
   const handleSubscribe = async (coachId: string) => {
     if (!user) {
@@ -167,22 +261,6 @@ export default function Home() {
       )
     }
 
-    switch (activeFilter) {
-      case 'new':
-        const monthAgo = new Date()
-        monthAgo.setMonth(monthAgo.getMonth() - 1)
-        filtered = filtered.filter(l => new Date(l.created_at) >= monthAgo)
-        break
-      case 'popular':
-        filtered = [...filtered].sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        ).slice(0, 9)
-        break
-      case 'free':
-        filtered = filtered.filter(l => l.is_free)
-        break
-    }
-
     return filtered
   }
 
@@ -194,7 +272,7 @@ export default function Home() {
     )
   })
 
-  const filteredLessons = getFilteredLessons()
+  const displayedLessons = getFilteredLessons()
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -214,6 +292,7 @@ export default function Home() {
     { id: 'new', label: 'Новые' },
     { id: 'popular', label: 'Популярные' },
     { id: 'free', label: 'Бесплатные' },
+    ...(user ? [{ id: 'subscriptions' as FilterType, label: 'Подписки' }] : []),
   ]
 
   return (
@@ -249,11 +328,11 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 pt-28 pb-8">
+      <div className="container mx-auto px-4 pt-16 pb-8">
         <div className="flex gap-8">
           {/* Боковая панель */}
           <aside className="hidden lg:block w-72 flex-shrink-0">
-            <div className="sticky top-32 mt-17">
+            <div className="sticky top-32">
               <div className="style-card p-5">
                 {/* Поиск по наставникам */}
                 <div className="mb-4 relative">
@@ -425,7 +504,7 @@ export default function Home() {
           {/* Основной контент */}
           <main className="flex-1 min-w-0">
             {/* Фильтры */}
-            <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
               {filters.map((filter) => (
                 <button
                   key={filter.id}
@@ -454,90 +533,117 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-            ) : filteredLessons.length === 0 ? (
+            ) : displayedLessons.length === 0 ? (
               <div className="text-center py-16">
-                <div className="text-6xl mb-4"></div>
+                <div className="text-6xl mb-4">📚</div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  {searchQuery ? 'Ничего не найдено' : 'Уроки не найдены'}
+                  {activeFilter === 'subscriptions' 
+                    ? 'Нет уроков от ваших подписок' 
+                    : searchQuery 
+                      ? 'Ничего не найдено' 
+                      : 'Уроки не найдены'}
                 </h2>
                 <p className="text-gray-600">
-                  {searchQuery 
-                    ? 'Попробуйте изменить запрос' 
-                    : 'Пока нет доступных уроков'}
+                  {activeFilter === 'subscriptions'
+                    ? 'Подпишитесь на наставников, чтобы видеть их уроки'
+                    : searchQuery 
+                      ? 'Попробуйте изменить запрос' 
+                      : 'Пока нет доступных уроков'}
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredLessons.map((lesson) => (
-                  <Link
-                    key={lesson.id}
-                    href={`/lesson/${lesson.id}`}
-                    className="group style-card overflow-hidden"
-                  >
-                    {/* Превью */}
-                    <div className="aspect-video bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100 relative overflow-hidden">
-                      {lesson.cover_url ? (
-                        <img
-                          src={lesson.cover_url}
-                          alt={lesson.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <div className="w-16 h-16 gradient-icon rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
-                            📚
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {displayedLessons.map((lesson) => (
+                    <Link
+                      key={lesson.id}
+                      href={`/lesson/${lesson.id}`}
+                      className="group style-card overflow-hidden"
+                    >
+                      {/* Превью */}
+                      <div className="aspect-video bg-gradient-to-br from-purple-100 via-indigo-50 to-blue-100 relative overflow-hidden">
+                        {lesson.cover_url ? (
+                          <img
+                            src={lesson.cover_url}
+                            alt={lesson.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <div className="w-16 h-16 gradient-icon rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
+                              📚
+                            </div>
+                          </div>
+                        )}
+                        
+                        {lesson.is_free && (
+                          <div className="absolute top-3 left-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                            Бесплатно
+                          </div>
+                        )}
+                        
+                        {!lesson.is_free && lesson.price > 0 && (
+                          <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full">
+                            {lesson.price} ₽
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Контент */}
+                      <div className="p-5">
+                        <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-purple-600 transition-colors text-base">
+                          {lesson.title}
+                        </h3>
+                        
+                        {lesson.description && (
+                          <p className="text-sm text-gray-600 line-clamp-2 mb-4">
+                            {lesson.description}
+                          </p>
+                        )}
+
+                        <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-purple-100">
+                          <div className="flex items-center gap-2">
+                            {lesson.coach?.avatar_url ? (
+                              <img
+                                src={lesson.coach.avatar_url}
+                                alt={lesson.coach.display_name || ''}
+                                className="w-6 h-6 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-6 h-6 gradient-icon rounded-full flex items-center justify-center text-white text-[10px] font-bold">
+                                {lesson.coach?.display_name?.charAt(0).toUpperCase() || '?'}
+                              </div>
+                            )}
+                            <span className="truncate max-w-[120px] font-medium">
+                              {lesson.coach?.display_name || 'Наставник'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {activeFilter === 'popular' && lesson.comments_count !== undefined && (
+                              <span className="flex items-center gap-1">
+                                💬 {lesson.comments_count}
+                              </span>
+                            )}
+                            <span>{formatDate(lesson.created_at)}</span>
                           </div>
                         </div>
-                      )}
-                      
-                      {lesson.is_free && (
-                        <div className="absolute top-3 left-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                          Бесплатно
-                        </div>
-                      )}
-                      
-                      {!lesson.is_free && lesson.price > 0 && (
-                        <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full">
-                          {lesson.price} ₽
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Контент */}
-                    <div className="p-5">
-                      <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-purple-600 transition-colors text-base">
-                        {lesson.title}
-                      </h3>
-                      
-                      {lesson.description && (
-                        <p className="text-sm text-gray-600 line-clamp-2 mb-4">
-                          {lesson.description}
-                        </p>
-                      )}
-
-                      <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-purple-100">
-                        <div className="flex items-center gap-2">
-                          {lesson.coach?.avatar_url ? (
-                            <img
-                              src={lesson.coach.avatar_url}
-                              alt={lesson.coach.display_name || ''}
-                              className="w-6 h-6 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-6 h-6 gradient-icon rounded-full flex items-center justify-center text-white text-[10px] font-bold">
-                              {lesson.coach?.display_name?.charAt(0).toUpperCase() || '?'}
-                            </div>
-                          )}
-                          <span className="truncate max-w-[120px] font-medium">
-                            {lesson.coach?.display_name || 'Наставник'}
-                          </span>
-                        </div>
-                        <span>{formatDate(lesson.created_at)}</span>
                       </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Кнопка "Загрузить ещё" */}
+                {hasMore && (
+                  <div className="text-center mt-8">
+                    <button
+                      onClick={loadMore}
+                      className="gradient-btn px-8 py-3 text-white font-semibold rounded-full"
+                    >
+                      Загрузить ещё
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </main>
         </div>
