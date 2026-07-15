@@ -367,7 +367,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 pt-24 pb-8">
+      <div className="container mx-auto px-4 pt-18 pb-8">
         <div className="flex gap-8">
           {/* Боковая панель */}
           <aside className="hidden lg:block w-72 flex-shrink-0">
