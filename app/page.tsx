@@ -254,7 +254,7 @@ export default function Home() {
         <div className="flex gap-6">
           {/* Боковая панель с подписками */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
-            <div className="sticky top-32 mt-16">
+            <div className="sticky top-32 mt-18">
               <div className="bg-white rounded-xl p-4 shadow-sm border">
                 {/* Поиск по наставникам */}
                 <div className="mb-3 relative">
