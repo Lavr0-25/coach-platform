@@ -255,7 +255,6 @@ export default function Home() {
           {/* Боковая панель с подписками */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
             <div className="sticky top-32">
-              {/* Подписки - убран заголовок */}
               <div className="bg-white rounded-xl p-4 shadow-sm border">
                 {/* Поиск по наставникам */}
                 <div className="mb-3 relative">
@@ -360,16 +359,6 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Заголовок - убран счётчик */}
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {activeFilter === 'all' && 'Все уроки'}
-                {activeFilter === 'new' && 'Новые уроки'}
-                {activeFilter === 'popular' && 'Популярные уроки'}
-                {activeFilter === 'free' && 'Бесплатные уроки'}
-              </h1>
-            </div>
-
             {/* Сетка уроков */}
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -385,7 +374,7 @@ export default function Home() {
               </div>
             ) : filteredLessons.length === 0 ? (
               <div className="text-center py-16">
-                <div className="text-6xl mb-4"></div>
+                <div className="text-6xl mb-4">📚</div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">
                   {searchQuery ? 'Ничего не найдено' : 'Уроки не найдены'}
                 </h2>
