@@ -124,8 +124,23 @@ export default function Home() {
             break
           case 'subscriptions':
             if (subscriptions.length > 0) {
-              const coachIds = subscriptions.map(s => s.coach_id)
-              query = query.in('coach_id', coachIds).order('created_at', { ascending: false })
+              // Получаем user_id подписанных наставников
+              const subscribedUserIds = subscriptions.map(s => s.coach_id)
+              
+              // Находим coaches.id для этих user_id
+              const { data: coachesData } = await supabase
+                .from('coaches')
+                .select('id')
+                .in('user_id', subscribedUserIds)
+              
+              if (coachesData && coachesData.length > 0) {
+                const coachIds = coachesData.map(c => c.id)
+                query = query.in('coach_id', coachIds).order('created_at', { ascending: false })
+              } else {
+                setLessons([])
+                setLoading(false)
+                return
+              }
             } else {
               setLessons([])
               setLoading(false)
