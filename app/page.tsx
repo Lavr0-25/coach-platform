@@ -13,11 +13,12 @@ interface Lesson {
   price: number
   created_at: string
   coach_id: string | null
+  rating?: number
+  reviews_count?: number
   coach?: {
     display_name: string | null
     avatar_url: string | null
   } | null
-  comments_count?: number
 }
 
 interface Coach {
@@ -77,7 +78,9 @@ export default function Home() {
             .eq('user_id', user.id)
             .order('subscribed_at', { ascending: false })
 
-          if (subsData) setSubscriptions(subsData as any)
+          if (subsData) {
+            setSubscriptions(subsData as any)
+          }
         }
       } catch (error) {
         console.error('Error loading data:', error)
@@ -114,10 +117,10 @@ export default function Home() {
             query = query.order('created_at', { ascending: false })
             break
           case 'popular':
-            // Для популярных нужно загрузить все и отсортировать по комментариям
             query = query.order('created_at', { ascending: false })
             break
           case 'free':
+            // Исправление: проверяем is_free === true
             query = query.eq('is_free', true).order('created_at', { ascending: false })
             break
           case 'subscriptions':
@@ -131,7 +134,6 @@ export default function Home() {
             }
             break
           default:
-            // "Все" - без порядка (случайный)
             break
         }
 
@@ -142,22 +144,35 @@ export default function Home() {
         if (data) {
           let processedLessons = data as Lesson[]
 
-          // Для "Популярных" считаем количество комментариев
+          // Для "Популярных" считаем количество отзывов
           if (activeFilter === 'popular') {
-            const lessonsWithCounts = await Promise.all(
+            const lessonsWithReviews = await Promise.all(
               processedLessons.map(async (lesson) => {
-                const { count } = await supabase
-                  .from('comments')
-                  .select('*', { count: 'exact', head: true })
+                const { data: reviews, error: reviewsError } = await supabase
+                  .from('reviews')
+                  .select('rating')
                   .eq('lesson_id', lesson.id)
-                
-                return { ...lesson, comments_count: count || 0 }
+
+                const reviewsCount = reviews?.length || 0
+                const avgRating = reviews && reviews.length > 0
+                  ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+                  : 0
+
+                return { 
+                  ...lesson, 
+                  reviews_count: reviewsCount,
+                  rating: avgRating
+                }
               })
             )
             
-            processedLessons = lessonsWithCounts.sort((a, b) => 
-              (b.comments_count || 0) - (a.comments_count || 0)
-            )
+            processedLessons = lessonsWithReviews.sort((a, b) => {
+              // Сначала по количеству отзывов, потом по рейтингу
+              if (b.reviews_count !== a.reviews_count) {
+                return b.reviews_count - a.reviews_count
+              }
+              return (b.rating || 0) - (a.rating || 0)
+            })
           }
 
           // Для "Все" перемешиваем
@@ -181,12 +196,9 @@ export default function Home() {
   // Загрузка следующей страницы
   const loadMore = () => {
     const nextPage = page + 1
-    const startIndex = (nextPage - 1) * LESSONS_PER_PAGE
     const endIndex = nextPage * LESSONS_PER_PAGE
     
-    // Для "Все" нужно загрузить больше данных
-    if (activeFilter === 'all' && lessons.length < endIndex) {
-      // Уже загружены все
+    if (lessons.length < endIndex) {
       return
     }
     
@@ -535,7 +547,7 @@ export default function Home() {
               </div>
             ) : displayedLessons.length === 0 ? (
               <div className="text-center py-16">
-                <div className="text-6xl mb-4">📚</div>
+                <div className="text-6xl mb-4"></div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   {activeFilter === 'subscriptions' 
                     ? 'Нет уроков от ваших подписок' 
@@ -601,6 +613,30 @@ export default function Home() {
                           </p>
                         )}
 
+                        {/* Рейтинг и отзывы */}
+                        {lesson.reviews_count !== undefined && lesson.reviews_count > 0 && (
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="flex items-center gap-0.5">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <svg
+                                  key={star}
+                                  className={`w-4 h-4 ${
+                                    star <= Math.round(lesson.rating || 0)
+                                      ? 'text-yellow-400 fill-yellow-400'
+                                      : 'text-gray-300'
+                                  }`}
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {lesson.rating?.toFixed(1)} ({lesson.reviews_count} {lesson.reviews_count === 1 ? 'отзыв' : lesson.reviews_count < 5 ? 'отзыва' : 'отзывов'})
+                            </span>
+                          </div>
+                        )}
+
                         <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-purple-100">
                           <div className="flex items-center gap-2">
                             {lesson.coach?.avatar_url ? (
@@ -619,9 +655,9 @@ export default function Home() {
                             </span>
                           </div>
                           <div className="flex items-center gap-3">
-                            {activeFilter === 'popular' && lesson.comments_count !== undefined && (
-                              <span className="flex items-center gap-1">
-                                💬 {lesson.comments_count}
+                            {activeFilter === 'popular' && lesson.reviews_count !== undefined && (
+                              <span className="flex items-center gap-1 text-purple-600 font-medium">
+                                💬 {lesson.reviews_count}
                               </span>
                             )}
                             <span>{formatDate(lesson.created_at)}</span>
