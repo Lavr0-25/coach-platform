@@ -16,7 +16,7 @@ interface Lesson {
   coach?: {
     display_name: string | null
     avatar_url: string | null
-  }
+  } | null
 }
 
 interface Coach {
@@ -29,11 +29,7 @@ interface Coach {
 interface Subscription {
   coach_id: string
   subscribed_at: string
-  coach?: {
-    display_name: string | null
-    avatar_url: string | null
-    specialization: string | null
-  }
+  coach: any | null
 }
 
 type FilterType = 'all' | 'new' | 'popular' | 'free'
@@ -82,12 +78,16 @@ export default function Home() {
         if (user) {
           const { data: subsData } = await supabase
             .from('subscriptions')
-            .select('coach_id, subscribed_at, coach:coaches(display_name, avatar_url, specialization)')
+            .select(`
+              coach_id,
+              subscribed_at,
+              coach:coaches(display_name, avatar_url, specialization)
+            `)
             .eq('user_id', user.id)
             .order('subscribed_at', { ascending: false })
 
           if (subsData) {
-            setSubscriptions(subsData)
+            setSubscriptions(subsData as any)
           }
         }
       } catch (error) {
@@ -126,12 +126,16 @@ export default function Home() {
       // Обновляем список подписок
       const { data: subsData } = await supabase
         .from('subscriptions')
-        .select('coach_id, subscribed_at, coach:coaches(display_name, avatar_url, specialization)')
+        .select(`
+          coach_id,
+          subscribed_at,
+          coach:coaches(display_name, avatar_url, specialization)
+        `)
         .eq('user_id', user.id)
         .order('subscribed_at', { ascending: false })
 
       if (subsData) {
-        setSubscriptions(subsData)
+        setSubscriptions(subsData as any)
       }
     } catch (error) {
       console.error('Error subscribing:', error)
@@ -356,10 +360,10 @@ export default function Home() {
                     📚 Каталог уроков
                   </Link>
                   <Link href="/courses" className="block text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors">
-                    🎓 Курсы
+                     Курсы
                   </Link>
                   <Link href="/mentors" className="block text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors">
-                     Наставники
+                    🏫 Наставники
                   </Link>
                   {user && (
                     <Link href="/favorites" className="block text-sm text-gray-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors">
@@ -418,7 +422,7 @@ export default function Home() {
               </div>
             ) : filteredLessons.length === 0 ? (
               <div className="text-center py-16">
-                <div className="text-6xl mb-4"></div>
+                <div className="text-6xl mb-4">📚</div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">
                   {searchQuery ? 'Ничего не найдено' : 'Уроки не найдены'}
                 </h2>
@@ -446,7 +450,7 @@ export default function Home() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-4xl">
-                          📚
+                          
                         </div>
                       )}
                       
