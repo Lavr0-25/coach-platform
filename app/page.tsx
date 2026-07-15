@@ -255,10 +255,8 @@ export default function Home() {
           {/* Боковая панель с подписками */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
             <div className="sticky top-32">
-              {/* Подписки */}
+              {/* Подписки - убран заголовок */}
               <div className="bg-white rounded-xl p-4 shadow-sm border">
-                <h3 className="font-semibold text-gray-900 mb-3"> Подписки</h3>
-                
                 {/* Поиск по наставникам */}
                 <div className="mb-3 relative">
                   <input
@@ -362,7 +360,7 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Заголовок */}
+            {/* Заголовок - убран счётчик */}
             <div className="mb-6">
               <h1 className="text-2xl font-bold text-gray-900">
                 {activeFilter === 'all' && 'Все уроки'}
@@ -370,9 +368,6 @@ export default function Home() {
                 {activeFilter === 'popular' && 'Популярные уроки'}
                 {activeFilter === 'free' && 'Бесплатные уроки'}
               </h1>
-              <p className="text-gray-600 text-sm mt-1">
-                {filteredLessons.length} {filteredLessons.length === 1 ? 'урок' : filteredLessons.length < 5 ? 'урока' : 'уроков'}
-              </p>
             </div>
 
             {/* Сетка уроков */}
@@ -390,7 +385,7 @@ export default function Home() {
               </div>
             ) : filteredLessons.length === 0 ? (
               <div className="text-center py-16">
-                <div className="text-6xl mb-4">📚</div>
+                <div className="text-6xl mb-4"></div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">
                   {searchQuery ? 'Ничего не найдено' : 'Уроки не найдены'}
                 </h2>
