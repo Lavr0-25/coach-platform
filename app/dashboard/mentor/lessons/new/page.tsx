@@ -8,12 +8,36 @@ import FileUpload from '@/components/FileUpload'
 import CoverImageUploader from '@/components/CoverImageUploader'
 
 const CONTENT_TYPES = [
-  { value: 'youtube', label: '🎥 YouTube видео', hint: 'Вставьте ссылку на YouTube видео' },
-  { value: 'vk_video', label: '📹 VK Видео', hint: 'Вставьте ссылку на видео ВКонтакте' },
-  { value: 'yandex_disk', label: '📁 Яндекс.Диск', hint: 'Ссылка на папку Яндекс.Диска' },
-  { value: 'pdf', label: '📄 PDF файл', hint: 'Загрузите PDF файл или вставьте ссылку' },
-  { value: 'image', label: '🖼️ Изображение', hint: 'Загрузите изображение или вставьте ссылку' },
-  { value: 'presentation', label: '📊 Презентация', hint: 'Ссылка на презентацию' },
+  { 
+    value: 'video', 
+    label: '🎥 Видео', 
+    hint: 'Ссылка на видео (YouTube, VK Видео, RuTube, Дзен или другая площадка)',
+    placeholder: 'https://...'
+  },
+  { 
+    value: 'pdf', 
+    label: '📄 Документ PDF', 
+    hint: 'Загрузите PDF файл или вставьте ссылку',
+    placeholder: 'https://... или загрузите файл'
+  },
+  { 
+    value: 'image', 
+    label: '🖼️ Фото/Изображение', 
+    hint: 'Загрузите изображение или вставьте ссылку',
+    placeholder: 'https://... или загрузите файл'
+  },
+  { 
+    value: 'storage', 
+    label: '📁 Файловое хранилище', 
+    hint: 'Ссылка на Яндекс.Диск, Google Drive или другое хранилище',
+    placeholder: 'https://disk.yandex.ru/... или https://drive.google.com/...'
+  },
+  { 
+    value: 'other', 
+    label: '🔗 Другое', 
+    hint: 'Любая другая ссылка',
+    placeholder: 'https://...'
+  },
 ]
 
 export default function NewLessonPage() {
@@ -30,9 +54,8 @@ export default function NewLessonPage() {
   const [isFreePreview, setIsFreePreview] = useState(false)
   const [coverImage, setCoverImage] = useState('')
   
-  const [contentType, setContentType] = useState('youtube')
+  const [contentType, setContentType] = useState('video')
   const [contentUrl, setContentUrl] = useState('')
-  const [accessPassword, setAccessPassword] = useState('')
   const [contentTitle, setContentTitle] = useState('')
   
   const [uploadedFileUrl, setUploadedFileUrl] = useState('')
@@ -96,7 +119,7 @@ export default function NewLessonPage() {
           description: description.trim() || null,
           price: parseFloat(price) || 0,
           is_free_preview: isFreePreview,
-          cover_image: coverImage || null, // <-- Сохраняем обложку
+          cover_image: coverImage || null,
           order_index: 1,
         })
         .select()
@@ -110,7 +133,6 @@ export default function NewLessonPage() {
           lesson_id: lesson.id,
           content_type: contentType,
           content_url: finalUrl.trim(),
-          access_password: accessPassword.trim() || null,
           title: contentTitle.trim() || null,
           order_index: 1,
         })
@@ -190,25 +212,32 @@ export default function NewLessonPage() {
         {/* Контент урока */}
         <div className="style-card p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Контент урока</h2>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <label htmlFor="contentType" className="block text-sm font-semibold text-gray-700 mb-1">Тип контента *</label>
-              <select
-                id="contentType"
-                value={contentType}
-                onChange={(e) => {
-                  setContentType(e.target.value)
-                  if (e.target.value !== 'pdf' && e.target.value !== 'image') {
-                    setUploadedFileUrl('')
-                  }
-                }}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all bg-white"
-              >
-                {CONTENT_TYPES.map(type => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Тип контента *</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {CONTENT_TYPES.map((type) => (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() => {
+                      setContentType(type.value)
+                      if (type.value !== 'pdf' && type.value !== 'image') {
+                        setUploadedFileUrl('')
+                      }
+                    }}
+                    className={`p-4 border-2 rounded-xl text-left transition-all ${
+                      contentType === type.value
+                        ? 'border-purple-500 bg-purple-50 shadow-md'
+                        : 'border-purple-100 hover:border-purple-300 hover:bg-purple-50/30'
+                    }`}
+                  >
+                    <div className="text-2xl mb-2">{type.label.split(' ')[0]}</div>
+                    <div className="font-semibold text-gray-900 text-sm">{type.label.split(' ').slice(1).join(' ')}</div>
+                  </button>
                 ))}
-              </select>
-              <p className="text-sm text-gray-500 mt-1">{selectedContentType?.hint}</p>
+              </div>
+              <p className="text-sm text-gray-500 mt-3">{selectedContentType?.hint}</p>
             </div>
 
             {isFileType && (
@@ -236,23 +265,9 @@ export default function NewLessonPage() {
                 value={contentUrl}
                 onChange={(e) => setContentUrl(e.target.value)}
                 className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
-                placeholder={contentType === 'youtube' ? 'https://youtube.com/watch?v=...' : 'https://...'}
+                placeholder={selectedContentType?.placeholder}
               />
             </div>
-
-            {contentType === 'yandex_disk' && (
-              <div>
-                <label htmlFor="accessPassword" className="block text-sm font-semibold text-gray-700 mb-1">Пароль доступа к папке</label>
-                <input
-                  id="accessPassword"
-                  type="text"
-                  value={accessPassword}
-                  onChange={(e) => setAccessPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
-                  placeholder="Пароль от папки (если есть)"
-                />
-              </div>
-            )}
           </div>
         </div>
 

@@ -6,6 +6,39 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import CoverImageUploader from '@/components/CoverImageUploader'
 
+const CONTENT_TYPES = [
+  { 
+    value: 'video', 
+    label: '🎥 Видео', 
+    hint: 'Ссылка на видео (YouTube, VK Видео, RuTube, Дзен или другая площадка)',
+    placeholder: 'https://...'
+  },
+  { 
+    value: 'pdf', 
+    label: '📄 Документ PDF', 
+    hint: 'Загрузите PDF файл или вставьте ссылку',
+    placeholder: 'https://... или загрузите файл'
+  },
+  { 
+    value: 'image', 
+    label: '🖼️ Фото/Изображение', 
+    hint: 'Загрузите изображение или вставьте ссылку',
+    placeholder: 'https://... или загрузите файл'
+  },
+  { 
+    value: 'storage', 
+    label: '📁 Файловое хранилище', 
+    hint: 'Ссылка на Яндекс.Диск, Google Drive или другое хранилище',
+    placeholder: 'https://disk.yandex.ru/... или https://drive.google.com/...'
+  },
+  { 
+    value: 'other', 
+    label: '🔗 Другое', 
+    hint: 'Любая другая ссылка',
+    placeholder: 'https://...'
+  },
+]
+
 export default function EditLessonPage({ params }: { params: Promise<{ id: string }> }) {
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
   
@@ -42,7 +75,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   const [isFreePreview, setIsFreePreview] = useState(false)
   const [coverImage, setCoverImage] = useState('')
 
-  const [contentType, setContentType] = useState('youtube')
+  const [contentType, setContentType] = useState('video')
   const [contentUrl, setContentUrl] = useState('')
 
   useEffect(() => {
@@ -64,7 +97,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
         setDescription(lesson.description || '')
         setPrice(lesson.price?.toString() || '0')
         setIsFreePreview(lesson.is_free_preview || false)
-        setCoverImage(lesson.cover_image || '') // <-- Загружаем текущую обложку
+        setCoverImage(lesson.cover_image || '')
 
         const { data: content } = await supabase
           .from('lesson_content')
@@ -74,7 +107,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           .limit(1)
 
         if (content && content.length > 0) {
-          setContentType(content[0].content_type || 'youtube')
+          setContentType(content[0].content_type || 'video')
           setContentUrl(content[0].content_url || '')
         }
       }
@@ -111,7 +144,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           description: description.trim(),
           price: parseFloat(price) || 0,
           is_free_preview: isFreePreview,
-          cover_image: coverImage || null, // <-- Обновляем обложку
+          cover_image: coverImage || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', lessonId)
@@ -171,6 +204,8 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
       </div>
     )
   }
+
+  const selectedContentType = CONTENT_TYPES.find(t => t.value === contentType)
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl">
@@ -239,30 +274,27 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
         {/* Контент урока */}
         <div className="style-card p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Контент урока</h2>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Тип контента</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {['youtube', 'vk_video', 'yandex_disk'].map((type) => (
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Тип контента</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {CONTENT_TYPES.map((type) => (
                   <button
-                    key={type}
+                    key={type.value}
                     type="button"
-                    onClick={() => setContentType(type)}
-                    className={`p-4 border rounded-xl text-center transition-all ${
-                      contentType === type
-                        ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
-                        : 'border-purple-200 hover:border-purple-400 hover:bg-purple-50/30'
+                    onClick={() => setContentType(type.value)}
+                    className={`p-4 border-2 rounded-xl text-left transition-all ${
+                      contentType === type.value
+                        ? 'border-purple-500 bg-purple-50 shadow-md'
+                        : 'border-purple-100 hover:border-purple-300 hover:bg-purple-50/30'
                     }`}
                   >
-                    <div className="text-2xl mb-1">
-                      {type === 'youtube' ? '🎥' : type === 'vk_video' ? '📹' : '💾'}
-                    </div>
-                    <div className="text-sm font-semibold">
-                      {type === 'youtube' ? 'YouTube' : type === 'vk_video' ? 'VK Видео' : 'Яндекс.Диск'}
-                    </div>
+                    <div className="text-2xl mb-2">{type.label.split(' ')[0]}</div>
+                    <div className="font-semibold text-gray-900 text-sm">{type.label.split(' ').slice(1).join(' ')}</div>
                   </button>
                 ))}
               </div>
+              <p className="text-sm text-gray-500 mt-3">{selectedContentType?.hint}</p>
             </div>
 
             <div>
@@ -274,11 +306,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                 value={contentUrl}
                 onChange={(e) => setContentUrl(e.target.value)}
                 className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
-                placeholder={
-                  contentType === 'youtube' ? 'https://www.youtube.com/watch?v=...' :
-                  contentType === 'vk_video' ? 'https://vk.com/video-xxx_xxx' :
-                  'https://disk.yandex.ru/...'
-                }
+                placeholder={selectedContentType?.placeholder}
               />
             </div>
           </div>
