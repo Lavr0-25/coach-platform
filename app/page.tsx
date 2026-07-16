@@ -130,48 +130,49 @@ export default function Home() {
         let lessonsData: any[] = []
         let coursesData: any[] = []
 
+        // Получаем ID авторов, на которых подписан пользователь
+        let subscribedCoachIds: string[] = []
+        if (activeFilter === 'subscriptions' && subscriptions.length > 0) {
+          const subscribedUserIds = subscriptions.map(s => s.coach_id)
+          const { data: coachesData } = await supabase
+            .from('coaches')
+            .select('id')
+            .in('user_id', subscribedUserIds)
+          
+          if (coachesData && coachesData.length > 0) {
+            subscribedCoachIds = coachesData.map(c => c.id)
+          }
+        }
+
         // Загружаем уроки если нужно
         if (contentType === 'all' || contentType === 'lessons') {
-          let query = supabase
-            .from('lessons')
-            .select(`
-              *,
-              coach:coaches!lessons_coach_id_fkey(display_name, avatar_url)
-            `)
+          if (activeFilter === 'subscriptions' && subscribedCoachIds.length === 0) {
+            lessonsData = []
+          } else {
+            let query = supabase
+              .from('lessons')
+              .select(`
+                *,
+                coach:coaches!lessons_coach_id_fkey(display_name, avatar_url)
+              `)
 
-          // Применяем фильтры
-          switch (activeFilter) {
-            case 'new':
-              query = query.order('created_at', { ascending: false })
-              break
-            case 'popular':
-              query = query.order('created_at', { ascending: false })
-              break
-            case 'free':
-              break
-            case 'subscriptions':
-              if (subscriptions.length > 0) {
-                const subscribedUserIds = subscriptions.map(s => s.coach_id)
-                const { data: coachesData } = await supabase
-                  .from('coaches')
-                  .select('id')
-                  .in('user_id', subscribedUserIds)
-                
-                if (coachesData && coachesData.length > 0) {
-                  const coachIds = coachesData.map(c => c.id)
-                  query = query.in('coach_id', coachIds).order('created_at', { ascending: false })
-                } else {
-                  lessonsData = []
-                }
-              } else {
-                lessonsData = []
-              }
-              break
-            default:
-              break
-          }
+            // Применяем фильтры
+            switch (activeFilter) {
+              case 'new':
+                query = query.order('created_at', { ascending: false })
+                break
+              case 'popular':
+                query = query.order('created_at', { ascending: false })
+                break
+              case 'free':
+                break
+              case 'subscriptions':
+                query = query.in('coach_id', subscribedCoachIds).order('created_at', { ascending: false })
+                break
+              default:
+                break
+            }
 
-          if (activeFilter !== 'subscriptions' || lessonsData.length > 0) {
             const { data, error } = await query
             if (error) throw error
             if (data) {
@@ -182,46 +183,33 @@ export default function Home() {
 
         // Загружаем курсы если нужно
         if (contentType === 'all' || contentType === 'courses') {
-          let query = supabase
-            .from('courses')
-            .select(`
-              *,
-              coach:coaches!courses_coach_id_fkey(display_name, avatar_url)
-            `)
+          if (activeFilter === 'subscriptions' && subscribedCoachIds.length === 0) {
+            coursesData = []
+          } else {
+            let query = supabase
+              .from('courses')
+              .select(`
+                *,
+                coach:coaches!courses_coach_id_fkey(display_name, avatar_url)
+              `)
 
-          // Применяем фильтры
-          switch (activeFilter) {
-            case 'new':
-              query = query.order('created_at', { ascending: false })
-              break
-            case 'popular':
-              query = query.order('created_at', { ascending: false })
-              break
-            case 'free':
-              break
-            case 'subscriptions':
-              if (subscriptions.length > 0) {
-                const subscribedUserIds = subscriptions.map(s => s.coach_id)
-                const { data: coachesData } = await supabase
-                  .from('coaches')
-                  .select('id')
-                  .in('user_id', subscribedUserIds)
-                
-                if (coachesData && coachesData.length > 0) {
-                  const coachIds = coachesData.map(c => c.id)
-                  query = query.in('coach_id', coachIds).order('created_at', { ascending: false })
-                } else {
-                  coursesData = []
-                }
-              } else {
-                coursesData = []
-              }
-              break
-            default:
-              break
-          }
+            // Применяем фильтры
+            switch (activeFilter) {
+              case 'new':
+                query = query.order('created_at', { ascending: false })
+                break
+              case 'popular':
+                query = query.order('created_at', { ascending: false })
+                break
+              case 'free':
+                break
+              case 'subscriptions':
+                query = query.in('coach_id', subscribedCoachIds).order('created_at', { ascending: false })
+                break
+              default:
+                break
+            }
 
-          if (activeFilter !== 'subscriptions' || coursesData.length > 0) {
             const { data, error } = await query
             if (error) throw error
             if (data) {
@@ -276,8 +264,8 @@ export default function Home() {
           processedContent = processedContent.sort(() => Math.random() - 0.5)
         }
 
-        // Для "Бесплатных" сортируем по дате
-        if (activeFilter === 'free') {
+        // Для "Бесплатных" и "Подписок" сортируем по дате
+        if (activeFilter === 'free' || activeFilter === 'subscriptions') {
           processedContent = processedContent.sort((a, b) => 
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           )
@@ -759,7 +747,7 @@ export default function Home() {
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <div className="w-16 h-16 gradient-icon rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
-                              {item.type === 'lesson' ? '📚' : ''}
+                              {item.type === 'lesson' ? '📚' : '🎓'}
                             </div>
                           </div>
                         )}
@@ -844,7 +832,7 @@ export default function Home() {
                           <div className="flex items-center gap-3">
                             {activeFilter === 'popular' && item.reviews_count !== undefined && (
                               <span className="flex items-center gap-1 text-purple-600 font-medium">
-                                 {item.reviews_count}
+                                💬 {item.reviews_count}
                               </span>
                             )}
                             <span>{formatDate(item.created_at)}</span>
