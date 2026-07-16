@@ -50,7 +50,7 @@ function FileDisplayCard({
 }) {
   const getFileIcon = () => {
     if (fileType === 'pdf') return '📄'
-    if (fileType === 'image') return '🖼️'
+    if (fileType === 'image') return '️'
     if (fileType === 'storage') return '📁'
     if (fileType === 'other') return '🔗'
     if (fileType === 'video') return '🎬'
@@ -73,25 +73,14 @@ function FileDisplayCard({
     const isVKVideo = embedUrl.includes('video_ext.php')
     
     return (
-      <div className="style-card p-5 sm:p-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">
-              🎬
-            </span>
-            {isYouTube ? 'YouTube видео' : isVKVideo ? 'VK Видео' : 'Видео'}
-          </h3>
-        </div>
-        
-        <div className="aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-lg">
-          <iframe
-            src={embedUrl}
-            className="w-full h-full"
-            allowFullScreen
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            title="Lesson video"
-          />
-        </div>
+      <div className="aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-lg">
+        <iframe
+          src={embedUrl}
+          className="w-full h-full"
+          allowFullScreen
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          title="Lesson video"
+        />
       </div>
     )
   }
@@ -319,84 +308,63 @@ export default async function LessonPage({ params }: LessonPageProps) {
         </div>
       </div>
 
-      {/* Контент урока */}
+      {/* Контент урока - без заголовка и лишней рамки */}
       {content && content.length > 0 && (
-        <div className="style-card p-6 sm:p-8 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </span>
-            Материалы урока
-          </h2>
-          
-          <div className="space-y-6">
-            {content.map((item) => {
-              // Для видео - показываем встроенный плеер прямо в карточке
-              if (item.content_type === 'video' || item.content_type === 'youtube' || item.content_type === 'vk_video') {
-                return (
+        <div className="space-y-6 mb-6">
+          {content.map((item) => {
+            // Для видео - показываем встроенный плеер
+            if (item.content_type === 'video' || item.content_type === 'youtube' || item.content_type === 'vk_video') {
+              return (
+                <FileDisplayCard
+                  key={item.id}
+                  fileUrl={item.content_url}
+                  fileType="video"
+                />
+              )
+            }
+            
+            // Для PDF
+            if (item.content_type === 'pdf') {
+              return (
+                <div key={item.id} className="space-y-4">
                   <FileDisplayCard
-                    key={item.id}
                     fileUrl={item.content_url}
-                    fileType="video"
+                    fileType="pdf"
                   />
-                )
-              }
-              
-              // Для PDF
-              if (item.content_type === 'pdf') {
-                return (
-                  <div key={item.id} className="space-y-4">
-                    <FileDisplayCard
-                      fileUrl={item.content_url}
-                      fileType="pdf"
+                  
+                  <div className="border border-purple-100 rounded-xl overflow-hidden shadow-sm bg-white">
+                    <iframe
+                      src={item.content_url}
+                      className="w-full h-96"
+                      title="PDF Preview"
                     />
-                    
-                    <div className="border border-purple-100 rounded-xl overflow-hidden shadow-sm bg-white">
-                      <iframe
-                        src={item.content_url}
-                        className="w-full h-96"
-                        title="PDF Preview"
-                      />
-                    </div>
                   </div>
-                )
-              }
-              
-              // Для изображений
-              if (item.content_type === 'image') {
-                return (
-                  <div key={item.id} className="space-y-4">
-                    <FileDisplayCard
-                      fileUrl={item.content_url}
-                      fileType="image"
-                    />
-                    
-                    <div className="border border-purple-100 rounded-xl overflow-hidden shadow-sm bg-white p-2">
-                      <img
-                        src={item.content_url}
-                        alt="Lesson content"
-                        className="w-full h-auto max-h-[600px] object-contain rounded-lg"
-                      />
-                    </div>
-                  </div>
-                )
-              }
-              
-              // Для файлового хранилища и других ссылок
-              if (item.content_type === 'storage' || item.content_type === 'other') {
-                return (
+                </div>
+              )
+            }
+            
+            // Для изображений
+            if (item.content_type === 'image') {
+              return (
+                <div key={item.id} className="space-y-4">
                   <FileDisplayCard
-                    key={item.id}
                     fileUrl={item.content_url}
-                    fileType={item.content_type}
+                    fileType="image"
                   />
-                )
-              }
-              
-              // Для всего остального
+                  
+                  <div className="border border-purple-100 rounded-xl overflow-hidden shadow-sm bg-white p-2">
+                    <img
+                      src={item.content_url}
+                      alt="Lesson content"
+                      className="w-full h-auto max-h-[600px] object-contain rounded-lg"
+                    />
+                  </div>
+                </div>
+              )
+            }
+            
+            // Для файлового хранилища и других ссылок
+            if (item.content_type === 'storage' || item.content_type === 'other') {
               return (
                 <FileDisplayCard
                   key={item.id}
@@ -404,8 +372,17 @@ export default async function LessonPage({ params }: LessonPageProps) {
                   fileType={item.content_type}
                 />
               )
-            })}
-          </div>
+            }
+            
+            // Для всего остального
+            return (
+              <FileDisplayCard
+                key={item.id}
+                fileUrl={item.content_url}
+                fileType={item.content_type}
+              />
+            )
+          })}
         </div>
       )}
 
