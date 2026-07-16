@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import FileUpload from '@/components/FileUpload'
-import CoverImageUploader from '@/components/CoverImageUploader'
+import FileUploader from '@/components/FileUploader'
 
 const CONTENT_TYPES = [
   { 
@@ -59,6 +58,7 @@ export default function NewLessonPage() {
   const [contentTitle, setContentTitle] = useState('')
   
   const [uploadedFileUrl, setUploadedFileUrl] = useState('')
+  const [uploadedFileName, setUploadedFileName] = useState('')
 
   useEffect(() => {
     const getCoachId = async () => {
@@ -172,10 +172,14 @@ export default function NewLessonPage() {
 
         {/* Обложка */}
         <div className="style-card p-6 sm:p-8">
-          <CoverImageUploader
-            currentImage={coverImage}
-            onImageUpload={setCoverImage}
-            entityType="lesson"
+          <FileUploader
+            currentFile={coverImage}
+            onFileUpload={(url) => setCoverImage(url)}
+            entityType="lesson_cover"
+            acceptedTypes={['image/*']}
+            maxSizeMB={5}
+            label="Обложка урока"
+            placeholder="Нажмите, перетащите или вставьте скриншот"
           />
         </div>
 
@@ -224,6 +228,7 @@ export default function NewLessonPage() {
                       setContentType(type.value)
                       if (type.value !== 'pdf' && type.value !== 'image') {
                         setUploadedFileUrl('')
+                        setUploadedFileName('')
                       }
                     }}
                     className={`p-4 border-2 rounded-xl text-left transition-all ${
@@ -242,14 +247,17 @@ export default function NewLessonPage() {
 
             {isFileType && (
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {contentType === 'pdf' ? '📄 Загрузите PDF файл' : '🖼️ Загрузите изображение'}
-                </label>
-                <FileUpload
-                  onFileUpload={(url) => setUploadedFileUrl(url)}
-                  existingFileUrl={uploadedFileUrl}
+                <FileUploader
+                  currentFile={uploadedFileUrl}
+                  onFileUpload={(url, name) => {
+                    setUploadedFileUrl(url)
+                    setUploadedFileName(name)
+                  }}
+                  entityType="lesson_content"
                   acceptedTypes={contentType === 'pdf' ? ['application/pdf'] : ['image/*']}
                   maxSizeMB={10}
+                  label={contentType === 'pdf' ? '📄 Загрузите PDF файл' : '🖼️ Загрузите изображение'}
+                  placeholder={contentType === 'pdf' ? 'Загрузите PDF или вставьте ссылку' : 'Загрузите изображение или вставьте ссылку'}
                 />
               </div>
             )}
@@ -267,6 +275,11 @@ export default function NewLessonPage() {
                 className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
                 placeholder={selectedContentType?.placeholder}
               />
+              {isFileType && (
+                <p className="text-sm text-gray-500 mt-1">
+                  💡 Можете загрузить файл выше ИЛИ вставить ссылку (файл имеет приоритет)
+                </p>
+              )}
             </div>
           </div>
         </div>
