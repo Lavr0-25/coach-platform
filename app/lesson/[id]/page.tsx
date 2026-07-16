@@ -195,7 +195,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-5xl">
-      {/* Кнопка назад (теперь ведёт на главную, так как каталог объединён) */}
+      {/* Кнопка назад */}
       <div className="mb-6">
         <Link href="/" className="text-purple-600 hover:text-purple-700 font-medium inline-flex items-center gap-2 transition-colors group">
           <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,8 +205,27 @@ export default async function LessonPage({ params }: LessonPageProps) {
         </Link>
       </div>
 
-      {/* Заголовок урока */}
+      {/* Заголовок урока с обложкой */}
       <div className="style-card p-6 sm:p-8 mb-6">
+        {/* Обложка урока */}
+        {lesson.cover_image ? (
+          <div className="mb-6">
+            <div className="aspect-video rounded-xl overflow-hidden shadow-lg">
+              <img
+                src={lesson.cover_image}
+                alt={lesson.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6">
+            <div className="aspect-video gradient-icon rounded-xl flex items-center justify-center">
+              <div className="text-8xl opacity-50">📚</div>
+            </div>
+          </div>
+        )}
+
         <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-4 leading-tight">
           {lesson.title}
         </h1>
