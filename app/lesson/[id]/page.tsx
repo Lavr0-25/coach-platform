@@ -49,30 +49,56 @@ function FileDisplayCard({
   fileType: string
 }) {
   const getFileIcon = () => {
-    if (fileType === 'pdf') return ''
+    if (fileType === 'pdf') return '📄'
     if (fileType === 'image') return '🖼️'
-    if (fileType === 'yandex_disk') return ''
-    if (fileType === 'presentation') return '📊'
-    if (fileType === 'vk_video') return '🎬'
-    if (fileType === 'storage') return ''
+    if (fileType === 'storage') return '📁'
     if (fileType === 'other') return '🔗'
+    if (fileType === 'video') return '🎬'
     return '📎'
   }
 
   const getFileLabel = () => {
     if (fileType === 'pdf') return 'PDF документ'
     if (fileType === 'image') return 'Изображение'
-    if (fileType === 'yandex_disk') return 'Яндекс.Диск'
-    if (fileType === 'presentation') return 'Презентация'
-    if (fileType === 'vk_video') return 'VK Видео'
     if (fileType === 'storage') return 'Файловое хранилище'
     if (fileType === 'other') return 'Внешняя ссылка'
+    if (fileType === 'video') return 'Видео'
     return 'Файл'
   }
 
-  // Определяем, какие кнопки показывать
+  // Если это видео, сразу показываем встроенный плеер
+  if (fileType === 'video') {
+    const embedUrl = getEmbedUrl(fileUrl, 'video')
+    const isYouTube = embedUrl.includes('youtube.com/embed')
+    const isVKVideo = embedUrl.includes('video_ext.php')
+    
+    return (
+      <div className="style-card p-5 sm:p-6">
+        <div className="mb-4">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">
+              🎬
+            </span>
+            {isYouTube ? 'YouTube видео' : isVKVideo ? 'VK Видео' : 'Видео'}
+          </h3>
+        </div>
+        
+        <div className="aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-lg">
+          <iframe
+            src={embedUrl}
+            className="w-full h-full"
+            allowFullScreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            title="Lesson video"
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // Для остальных типов - карточка с кнопками
   const showDownloadButton = fileType === 'pdf' || fileType === 'image'
-  const showViewButton = fileType === 'pdf' || fileType === 'image' || fileType === 'video'
+  const showViewButton = fileType === 'pdf' || fileType === 'image'
   const showLinkButton = fileType === 'storage' || fileType === 'other'
 
   return (
@@ -90,7 +116,6 @@ function FileDisplayCard({
           </h3>
           
           <div className="flex flex-col sm:flex-row gap-3 mt-4 w-full">
-            {/* Кнопка "Посмотреть" - для видео, PDF и изображений */}
             {showViewButton && (
               <a
                 href={fileUrl}
@@ -102,11 +127,10 @@ function FileDisplayCard({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
-                {fileType === 'video' ? 'Смотреть видео' : 'Посмотреть'}
+                Посмотреть
               </a>
             )}
             
-            {/* Кнопка "Скачать" - только для PDF и изображений */}
             {showDownloadButton && (
               <a
                 href={fileUrl}
@@ -120,7 +144,6 @@ function FileDisplayCard({
               </a>
             )}
 
-            {/* Кнопка "Перейти по ссылке" - для хранилищ и других ссылок */}
             {showLinkButton && (
               <a
                 href={fileUrl}
@@ -144,7 +167,7 @@ function FileDisplayCard({
 function getEmbedUrl(url: string, contentType: string): string {
   if (!url) return ''
   
-  if (contentType === 'youtube') {
+  if (contentType === 'youtube' || contentType === 'video') {
     if (url.includes('youtube.com/embed/')) return url
     if (url.includes('watch?v=')) {
       const videoId = url.split('watch?v=')[1]?.split('&')[0]
@@ -311,24 +334,8 @@ export default async function LessonPage({ params }: LessonPageProps) {
           
           <div className="space-y-6">
             {content.map((item) => {
-              // Для видео - встраиваем плеер
-              if (item.content_type === 'youtube' || item.content_type === 'vk_video' || item.content_type === 'video') {
-                const embedUrl = getEmbedUrl(item.content_url, item.content_type)
-                if (embedUrl.includes('video_ext.php') || embedUrl.includes('youtube.com/embed')) {
-                  return (
-                    <div key={item.id} className="aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-lg">
-                      <iframe
-                        src={embedUrl}
-                        className="w-full h-full"
-                        allowFullScreen
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        title="Video content"
-                      />
-                    </div>
-                  )
-                }
-                
-                // Если это просто ссылка на видео - показываем карточку с кнопкой
+              // Для видео - показываем встроенный плеер прямо в карточке
+              if (item.content_type === 'video' || item.content_type === 'youtube' || item.content_type === 'vk_video') {
                 return (
                   <FileDisplayCard
                     key={item.id}
@@ -389,7 +396,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 )
               }
               
-              // Для всего остального - показываем как файл
+              // Для всего остального
               return (
                 <FileDisplayCard
                   key={item.id}
