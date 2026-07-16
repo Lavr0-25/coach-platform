@@ -8,7 +8,7 @@ interface Lesson {
   id: string
   title: string
   description: string | null
-  cover_url: string | null
+  cover_image: string | null  // ← ИСПРАВЛЕНО: было cover_url
   is_free: boolean
   price: number
   created_at: string
@@ -26,7 +26,7 @@ interface Course {
   id: string
   title: string
   description: string | null
-  cover_url: string | null
+  cover_image: string | null  // ← ИСПРАВЛЕНО: было cover_url
   is_free: boolean
   price: number
   created_at: string
@@ -738,9 +738,9 @@ export default function Home() {
                     >
                       {/* Превью */}
                       <div className="aspect-video bg-gradient-to-br from-purple-100 via-indigo-50 to-blue-100 relative overflow-hidden">
-                        {item.cover_url ? (
+                        {item.cover_image ? (  // ← ИСПРАВЛЕНО: было cover_url
                           <img
-                            src={item.cover_url}
+                            src={item.cover_image}  // ← ИСПРАВЛЕНО: было cover_url
                             alt={item.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
