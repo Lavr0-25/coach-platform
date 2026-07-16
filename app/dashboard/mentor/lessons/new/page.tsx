@@ -21,7 +21,7 @@ const CONTENT_TYPES = [
   },
   { 
     value: 'image', 
-    label: '🖼️ Фото/Изображение', 
+    label: '️ Фото/Изображение', 
     hint: 'Загрузите изображение или вставьте ссылку',
     placeholder: 'https://... или загрузите файл'
   },
@@ -59,13 +59,6 @@ export default function NewLessonPage() {
   
   const [uploadedFileUrl, setUploadedFileUrl] = useState('')
   const [uploadedFileName, setUploadedFileName] = useState('')
-
-  // Отладка
-  useEffect(() => {
-    console.log('contentType:', contentType)
-    console.log('isFileType:', contentType === 'pdf' || contentType === 'image')
-    console.log('uploadedFileUrl:', uploadedFileUrl)
-  }, [contentType, uploadedFileUrl])
 
   useEffect(() => {
     const getCoachId = async () => {
@@ -106,10 +99,11 @@ export default function NewLessonPage() {
       return
     }
 
-    const finalUrl = isFileType ? (uploadedFileUrl || contentUrl) : contentUrl
+    // Для файловых типов проверяем загруженный файл
+    const finalUrl = isFileType ? uploadedFileUrl : contentUrl
 
     if (!finalUrl.trim()) {
-      setError(isFileType ? 'Загрузите файл или вставьте ссылку' : 'Введите ссылку на контент')
+      setError(isFileType ? 'Загрузите файл' : 'Введите ссылку на контент')
       return
     }
 
@@ -233,10 +227,10 @@ export default function NewLessonPage() {
                     type="button"
                     onClick={() => {
                       setContentType(type.value)
-                      if (type.value !== 'pdf' && type.value !== 'image') {
-                        setUploadedFileUrl('')
-                        setUploadedFileName('')
-                      }
+                      // Сбрасываем URL и файл при смене типа
+                      setContentUrl('')
+                      setUploadedFileUrl('')
+                      setUploadedFileName('')
                     }}
                     className={`p-4 border-2 rounded-xl text-left transition-all ${
                       contentType === type.value
@@ -252,8 +246,9 @@ export default function NewLessonPage() {
               <p className="text-sm text-gray-500 mt-3">{selectedContentType?.hint}</p>
             </div>
 
+            {/* Для файловых типов (PDF и Image) - показываем загрузчик */}
             {isFileType && (
-              <div className="style-card p-6 sm:p-8">
+              <div>
                 <FileUploader
                   currentFile={uploadedFileUrl}
                   onFileUpload={(url, name) => {
@@ -264,30 +259,44 @@ export default function NewLessonPage() {
                   acceptedTypes={contentType === 'pdf' ? ['application/pdf'] : ['image/*']}
                   maxSizeMB={10}
                   label={contentType === 'pdf' ? '📄 Загрузите PDF файл' : '🖼️ Загрузите изображение'}
-                  placeholder={contentType === 'pdf' ? 'Загрузите PDF или вставьте ссылку' : 'Загрузите изображение или вставьте ссылку'}
+                  placeholder={contentType === 'pdf' ? 'Загрузите PDF файл (drag-and-drop или Ctrl+V)' : 'Загрузите изображение (drag-and-drop или Ctrl+V)'}
                 />
               </div>
             )}
 
-            <div>
-              <label htmlFor="contentUrl" className="block text-sm font-semibold text-gray-700 mb-1">
-                {isFileType ? 'Ссылка на контент (альтернатива файлу)' : 'Ссылка на контент *'}
-              </label>
-              <input
-                id="contentUrl"
-                type="url"
-                required={!isFileType && !uploadedFileUrl}
-                value={contentUrl}
-                onChange={(e) => setContentUrl(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
-                placeholder={selectedContentType?.placeholder}
-              />
-              {isFileType && (
-                <p className="text-sm text-gray-500 mt-1">
-                  💡 Можете загрузить файл выше ИЛИ вставить ссылку (файл имеет приоритет)
-                </p>
-              )}
-            </div>
+            {/* Для остальных типов (video, storage, other) - показываем поле для ссылки */}
+            {!isFileType && (
+              <div>
+                <label htmlFor="contentUrl" className="block text-sm font-semibold text-gray-700 mb-1">
+                  Ссылка на контент *
+                </label>
+                <input
+                  id="contentUrl"
+                  type="url"
+                  required
+                  value={contentUrl}
+                  onChange={(e) => setContentUrl(e.target.value)}
+                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                  placeholder={selectedContentType?.placeholder}
+                />
+              </div>
+            )}
+
+            {contentTitle && (
+              <div>
+                <label htmlFor="contentTitle" className="block text-sm font-semibold text-gray-700 mb-1">
+                  Заголовок контента (необязательно)
+                </label>
+                <input
+                  id="contentTitle"
+                  type="text"
+                  value={contentTitle}
+                  onChange={(e) => setContentTitle(e.target.value)}
+                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                  placeholder="Например: Видеоурок №1"
+                />
+              </div>
+            )}
           </div>
         </div>
 
