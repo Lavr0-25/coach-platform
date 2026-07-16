@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import MentorDashboardClient from './MentorDashboardClient'
+import AvatarUploader from '@/components/AvatarUploader'
 
 export default async function MentorDashboard() {
   const supabase = await createClient()
@@ -11,40 +12,40 @@ export default async function MentorDashboard() {
 
   const { data: coach } = await supabase
     .from('coaches')
-    .select('id, display_name, role')
+    .select('id, display_name, role, avatar_url')
     .eq('user_id', user.id)
     .single()
 
   if (!coach || (coach.role !== 'mentor' && coach.role !== 'admin')) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow-sm border p-8 max-w-md text-center">
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center p-4">
+        <div className="style-card p-8 max-w-md text-center w-full">
+          <div className="w-20 h-20 gradient-icon rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl font-bold gradient-text mb-3">
             Требуется активация
           </h1>
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-600 mb-8">
             {!coach 
-              ? 'У вас ещё нет записи в системе наставников. Нажмите кнопку ниже, чтобы стать наставником.'
-              : 'Ваша учётная запись ещё не активирована как наставник.'}
+              ? 'У вас ещё нет записи в системе авторов. Нажмите кнопку ниже, чтобы стать автором.'
+              : 'Ваша учётная запись ещё не активирована как автор.'}
           </p>
-          <div className="flex gap-3 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
               href="/"
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors inline-block"
+              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all text-center"
             >
-              Стать наставником
+              Стать автором
             </a>
-            <a
-              href="/catalog"
-              className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors inline-block"
+            <Link
+              href="/"
+              className="bg-white text-gray-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all text-center"
             >
-              Перейти в каталог
-            </a>
+              На главную
+            </Link>
           </div>
         </div>
       </div>
@@ -55,10 +56,10 @@ export default async function MentorDashboard() {
 
   const { data: myLessons } = await supabase
     .from('lessons')
-    .select('id, title, created_at')
-    .eq('coach_id', coachData?.id)
+    .select('id, title, created_at, price, is_free_preview')
+    .eq('coach_id', coachData.id)
     .order('created_at', { ascending: false })
-    .limit(2)
+    .limit(5)
 
   const { data: favorites } = await supabase
     .from('favorites')
@@ -127,45 +128,59 @@ export default async function MentorDashboard() {
     .limit(20)
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Приветствие */}
-        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Добро пожаловать{coachData?.display_name ? `, ${coachData.display_name}` : ''}! 👋
-          </h1>
-          <p className="text-gray-600 mb-4">
-            Управляйте своими уроками и учитесь у других наставников
-          </p>
-        </div>
-
-        {/* Ссылка на статистику */}
-        <Link
-          href="/mentor/analytics"
-          className="block bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6 mb-6 hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-1">
-                📊 Моя статистика
-              </h3>
-              <p className="text-gray-600">
-                Просмотры, конверсия, рейтинг и активность
-              </p>
+    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-6xl">
+      {/* Приветствие и Аватар */}
+      <div className="style-card p-6 sm:p-8 mb-6">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+          <AvatarUploader
+            currentAvatar={coachData.avatar_url}
+            displayName={coachData.display_name}
+            coachId={coachData.id}
+            onAvatarUpload={() => {}}
+          />
+          
+          <div className="flex-1 text-center sm:text-left">
+            <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-2">
+              Добро пожаловать{coachData.display_name ? `, ${coachData.display_name}` : ''}! 👋
+            </h1>
+            <p className="text-gray-600 mb-4">
+              Управляйте своими уроками, следите за прогрессом и учитесь у других авторов
+            </p>
+            
+            <div className="flex flex-wrap justify-center sm:justify-start gap-3">
+              <Link
+                href="/dashboard/mentor/lessons/new"
+                className="gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Создать урок
+              </Link>
+              
+              <Link
+                href="/mentor/analytics"
+                className="bg-white text-purple-700 border border-purple-200 px-5 py-2.5 rounded-xl font-semibold hover:bg-purple-50 transition-all flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Статистика
+              </Link>
             </div>
-            <div className="text-4xl">📈</div>
           </div>
-        </Link>
-
-        {/* Клиентский компонент с 2 вкладками */}
-        <MentorDashboardClient
-          myLessons={myLessons || []}
-          favorites={favorites || []}
-          inProgress={inProgress || []}
-          completed={completed || []}
-          purchases={purchases || []}
-        />
+        </div>
       </div>
+
+      {/* Клиентский компонент с вкладками */}
+      <MentorDashboardClient
+        coachId={coachData.id}
+        myLessons={myLessons || []}
+        favorites={favorites || []}
+        inProgress={inProgress || []}
+        completed={completed || []}
+        purchases={purchases || []}
+      />
     </main>
   )
 }
