@@ -2,19 +2,25 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import MentorDashboardClient from './MentorDashboardClient'
-import AvatarUploader from '@/components/AvatarUploader'
 
 export default async function MentorDashboard() {
   const supabase = await createClient()
   
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  
+  if (userError || !user) {
+    redirect('/login')
+  }
 
-  const { data: coach } = await supabase
+  const { data: coach, error: coachError } = await supabase
     .from('coaches')
     .select('id, display_name, role, avatar_url')
     .eq('user_id', user.id)
     .single()
+
+  if (coachError) {
+    console.error('Error fetching coach:', coachError)
+  }
 
   if (!coach || (coach.role !== 'mentor' && coach.role !== 'admin')) {
     return (
@@ -54,90 +60,141 @@ export default async function MentorDashboard() {
 
   const coachData = coach
 
-  const { data: myLessons } = await supabase
-    .from('lessons')
-    .select('id, title, created_at, price, is_free_preview')
-    .eq('coach_id', coachData.id)
-    .order('created_at', { ascending: false })
-    .limit(5)
+  // Безопасные запросы с обработкой ошибок
+  let myLessons: any[] = []
+  let favorites: any[] = []
+  let inProgress: any[] = []
+  let completed: any[] = []
+  let purchases: any[] = []
 
-  const { data: favorites } = await supabase
-    .from('favorites')
-    .select(`
-      id,
-      group_name,
-      lessons (
-        id,
-        title,
-        description
-      )
-    `)
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(20)
+  try {
+    const { data: lessonsData } = await supabase
+      .from('lessons')
+      .select('id, title, created_at, price, is_free_preview')
+      .eq('coach_id', coachData.id)
+      .order('created_at', { ascending: false })
+      .limit(5)
+    
+    if (lessonsData) myLessons = lessonsData
+  } catch (error) {
+    console.error('Error fetching lessons:', error)
+  }
 
-  const { data: inProgress } = await supabase
-    .from('learning_progress')
-    .select(`
-      id,
-      progress_percentage,
-      last_watched_at,
-      lessons (
+  try {
+    const { data: favoritesData } = await supabase
+      .from('favorites')
+      .select(`
         id,
-        title,
-        description
-      )
-    `)
-    .eq('user_id', user.id)
-    .eq('status', 'in_progress')
-    .order('last_watched_at', { ascending: false })
-    .limit(20)
+        group_name,
+        lessons (
+          id,
+          title,
+          description
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    
+    if (favoritesData) favorites = favoritesData
+  } catch (error) {
+    console.error('Error fetching favorites:', error)
+  }
 
-  const { data: completed } = await supabase
-    .from('learning_progress')
-    .select(`
-      id,
-      progress_percentage,
-      last_watched_at,
-      lessons (
+  try {
+    const { data: inProgressData } = await supabase
+      .from('learning_progress')
+      .select(`
         id,
-        title,
-        description
-      )
-    `)
-    .eq('user_id', user.id)
-    .eq('status', 'completed')
-    .order('last_watched_at', { ascending: false })
-    .limit(20)
+        progress_percentage,
+        last_watched_at,
+        lessons (
+          id,
+          title,
+          description
+        )
+      `)
+      .eq('user_id', user.id)
+      .eq('status', 'in_progress')
+      .order('last_watched_at', { ascending: false })
+      .limit(20)
+    
+    if (inProgressData) inProgress = inProgressData
+  } catch (error) {
+    console.error('Error fetching in progress:', error)
+  }
 
-  const { data: purchases } = await supabase
-    .from('purchases')
-    .select(`
-      id,
-      purchased_at,
-      amount,
-      lessons (
+  try {
+    const { data: completedData } = await supabase
+      .from('learning_progress')
+      .select(`
         id,
-        title,
-        description
-      )
-    `)
-    .eq('user_id', user.id)
-    .eq('payment_status', 'completed')
-    .order('purchased_at', { ascending: false })
-    .limit(20)
+        progress_percentage,
+        last_watched_at,
+        lessons (
+          id,
+          title,
+          description
+        )
+      `)
+      .eq('user_id', user.id)
+      .eq('status', 'completed')
+      .order('last_watched_at', { ascending: false })
+      .limit(20)
+    
+    if (completedData) completed = completedData
+  } catch (error) {
+    console.error('Error fetching completed:', error)
+  }
+
+  try {
+    const { data: purchasesData } = await supabase
+      .from('purchases')
+      .select(`
+        id,
+        purchased_at,
+        amount,
+        lessons (
+          id,
+          title,
+          description
+        )
+      `)
+      .eq('user_id', user.id)
+      .eq('payment_status', 'completed')
+      .order('purchased_at', { ascending: false })
+      .limit(20)
+    
+    if (purchasesData) purchases = purchasesData
+  } catch (error) {
+    console.error('Error fetching purchases:', error)
+  }
+
+  const getInitials = (name?: string | null) => {
+    if (!name) return 'A'
+    const parts = name.split(' ')
+    return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
+  }
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-6xl">
       {/* Приветствие и Аватар */}
       <div className="style-card p-6 sm:p-8 mb-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-          <AvatarUploader
-            currentAvatar={coachData.avatar_url}
-            displayName={coachData.display_name}
-            coachId={coachData.id}
-            onAvatarUpload={() => {}}
-          />
+          {/* Аватар */}
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center flex-shrink-0">
+            {coachData.avatar_url ? (
+              <img 
+                src={coachData.avatar_url} 
+                alt="Avatar" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-2xl sm:text-3xl font-bold text-purple-600">
+                {getInitials(coachData.display_name)}
+              </span>
+            )}
+          </div>
           
           <div className="flex-1 text-center sm:text-left">
             <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-2">
@@ -175,11 +232,11 @@ export default async function MentorDashboard() {
       {/* Клиентский компонент с вкладками */}
       <MentorDashboardClient
         coachId={coachData.id}
-        myLessons={myLessons || []}
-        favorites={favorites || []}
-        inProgress={inProgress || []}
-        completed={completed || []}
-        purchases={purchases || []}
+        myLessons={myLessons}
+        favorites={favorites}
+        inProgress={inProgress}
+        completed={completed}
+        purchases={purchases}
       />
     </main>
   )
