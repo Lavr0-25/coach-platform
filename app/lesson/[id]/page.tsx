@@ -7,27 +7,31 @@ import dynamic from 'next/dynamic'
 const ReviewsSection = dynamic(
   () => import('@/components/ReviewsSection'),
   { 
-    loading: () => <div className="animate-pulse space-y-4">
-      <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-      <div className="h-24 bg-gray-200 rounded"></div>
-    </div>
+    loading: () => (
+      <div className="style-card p-6 animate-pulse space-y-4">
+        <div className="h-8 bg-purple-100 rounded w-1/4"></div>
+        <div className="h-24 bg-purple-100 rounded"></div>
+      </div>
+    )
   }
 )
 
 const LessonComments = dynamic(
   () => import('@/components/LessonComments'),
   { 
-    loading: () => <div className="animate-pulse space-y-4">
-      <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-      <div className="h-32 bg-gray-200 rounded"></div>
-    </div>
+    loading: () => (
+      <div className="style-card p-6 animate-pulse space-y-4">
+        <div className="h-8 bg-purple-100 rounded w-1/4"></div>
+        <div className="h-32 bg-purple-100 rounded"></div>
+      </div>
+    )
   }
 )
 
 const LessonProgress = dynamic(
   () => import('@/components/LessonProgress'),
   { 
-    loading: () => <div className="animate-pulse h-24 bg-gray-200 rounded-xl"></div>
+    loading: () => <div className="animate-pulse h-24 bg-purple-100 rounded-xl"></div>
   }
 )
 
@@ -49,7 +53,7 @@ function FileDisplayCard({
     if (fileType === 'image') return '🖼️'
     if (fileType === 'yandex_disk') return '💾'
     if (fileType === 'presentation') return '📊'
-    if (fileType === 'vk_video') return ''
+    if (fileType === 'vk_video') return '🎬'
     return '📎'
   }
 
@@ -63,25 +67,25 @@ function FileDisplayCard({
   }
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
-      <div className="flex items-start gap-4">
+    <div className="style-card p-5 sm:p-6">
+      <div className="flex flex-col sm:flex-row items-start gap-4">
         <div className="flex-shrink-0">
-          <div className="w-16 h-16 bg-white rounded-xl shadow-sm flex items-center justify-center text-4xl">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 gradient-icon rounded-xl flex items-center justify-center text-3xl sm:text-4xl shadow-lg">
             {getFileIcon()}
           </div>
         </div>
         
-        <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+        <div className="flex-1 min-w-0 w-full">
+          <h3 className="text-lg font-bold text-gray-900 mb-1">
             {getFileLabel()}
           </h3>
           
-          <div className="flex gap-3 mt-4">
+          <div className="flex flex-col sm:flex-row gap-3 mt-4 w-full">
             <a
               href={fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              className="gradient-btn text-white px-5 py-2.5 rounded-xl font-medium text-center flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -93,7 +97,7 @@ function FileDisplayCard({
             <a
               href={fileUrl}
               download
-              className="inline-flex items-center gap-2 bg-white text-gray-700 border-2 border-gray-300 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 hover:border-gray-400 transition-colors"
+              className="bg-white text-purple-700 border-2 border-purple-200 px-5 py-2.5 rounded-xl font-medium hover:bg-purple-50 hover:border-purple-300 transition-all text-center flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -190,63 +194,78 @@ export default async function LessonPage({ params }: LessonPageProps) {
   const isFree = lesson.price === 0 || lesson.is_free_preview
 
   return (
-    <main className="container mx-auto px-4 py-8 max-w-4xl">
+    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-5xl">
+      {/* Кнопка назад (теперь ведёт на главную, так как каталог объединён) */}
       <div className="mb-6">
-        <Link href="/catalog" className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-2">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <Link href="/" className="text-purple-600 hover:text-purple-700 font-medium inline-flex items-center gap-2 transition-colors group">
+          <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Назад к каталогу
+          На главную
         </Link>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+      {/* Заголовок урока */}
+      <div className="style-card p-6 sm:p-8 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-4 leading-tight">
           {lesson.title}
         </h1>
         
         {coach && (
-          <div className="mb-4">
+          <div className="mb-5">
             <Link 
               href={`/mentor/${coach.id}`}
-              className="text-gray-600 hover:text-blue-600 transition-colors inline-flex items-center gap-2"
+              className="inline-flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors group"
             >
-              👨‍🏫 <span className="font-medium">{coach.display_name}</span>
+              <div className="w-8 h-8 gradient-icon rounded-full flex items-center justify-center text-white text-sm font-bold">
+                {coach.display_name?.charAt(0).toUpperCase() || 'A'}
+              </div>
+              <span className="font-semibold">{coach.display_name}</span>
               {coach.specialization && (
-                <span className="text-gray-500">— {coach.specialization}</span>
+                <span className="text-gray-400">• {coach.specialization}</span>
               )}
             </Link>
           </div>
         )}
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           {isFree ? (
-            <span className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-lg">
-              🆓 Бесплатно
+            <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-md shadow-green-500/20">
+              Бесплатно
             </span>
           ) : (
-            <span className="bg-purple-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-lg">
-              💰 {lesson.price} ₽
+            <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-md shadow-purple-500/20">
+              {lesson.price} ₽
             </span>
           )}
-          <span className="text-sm text-gray-500">
-            📅 {new Date(lesson.created_at).toLocaleDateString('ru-RU')}
+          <span className="text-sm text-gray-500 flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            {new Date(lesson.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
           </span>
         </div>
       </div>
 
+      {/* Контент урока */}
       {content && content.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            🎬 Контент урока
+        <div className="style-card p-6 sm:p-8 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </span>
+            Материалы урока
           </h2>
           
-          <div className="space-y-4">
+          <div className="space-y-6">
             {content.map((item) => {
               if (item.content_type === 'youtube') {
                 const embedUrl = getEmbedUrl(item.content_url, 'youtube')
                 return (
-                  <div key={item.id} className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                  <div key={item.id} className="aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-lg">
                     <iframe
                       src={embedUrl}
                       className="w-full h-full"
@@ -262,7 +281,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 const embedUrl = getEmbedUrl(item.content_url, 'vk_video')
                 if (embedUrl.includes('video_ext.php')) {
                   return (
-                    <div key={item.id} className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                    <div key={item.id} className="aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-lg">
                       <iframe
                         src={embedUrl}
                         className="w-full h-full"
@@ -291,7 +310,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                       fileType="pdf"
                     />
                     
-                    <div className="border rounded-lg overflow-hidden">
+                    <div className="border border-purple-100 rounded-xl overflow-hidden shadow-sm bg-white">
                       <iframe
                         src={item.content_url}
                         className="w-full h-96"
@@ -310,11 +329,11 @@ export default async function LessonPage({ params }: LessonPageProps) {
                       fileType="image"
                     />
                     
-                    <div className="border rounded-lg overflow-hidden bg-gray-50">
+                    <div className="border border-purple-100 rounded-xl overflow-hidden shadow-sm bg-white p-2">
                       <img
                         src={item.content_url}
                         alt="Lesson content"
-                        className="w-full h-auto max-h-[600px] object-contain mx-auto"
+                        className="w-full h-auto max-h-[600px] object-contain rounded-lg"
                       />
                     </div>
                   </div>
@@ -343,45 +362,54 @@ export default async function LessonPage({ params }: LessonPageProps) {
         </div>
       )}
 
+      {/* Пустой контент */}
       {(!content || content.length === 0) && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">⚠️</span>
+        <div className="style-card p-6 mb-6 border-l-4 border-l-amber-400 bg-gradient-to-r from-amber-50 to-orange-50">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-2xl flex-shrink-0">
+              ⚠️
+            </div>
             <div>
-              <h3 className="font-semibold text-yellow-900 mb-1">
-                Контент не добавлен
+              <h3 className="font-bold text-gray-900 mb-1">
+                Материалы пока не добавлены
               </h3>
-              <p className="text-yellow-800">
-                У этого урока пока нет видео или файлов.
+              <p className="text-gray-600">
+                Автор ещё не загрузил видео или файлы для этого урока. Загляните позже!
               </p>
             </div>
           </div>
         </div>
       )}
 
+      {/* Описание */}
       {lesson.description && (
-        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-             Описание
+        <div className="style-card p-6 sm:p-8 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </span>
+            Описание
           </h2>
-          <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+          <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-base sm:text-lg">
             {lesson.description}
           </div>
         </div>
       )}
 
       {/* Прогресс урока */}
-      <div className="mb-6">
+      <div className="mb-6 sm:mb-8">
         <LessonProgress lessonId={id} />
       </div>
 
       {/* Отзывы */}
-      <div className="mb-6">
+      <div className="mb-6 sm:mb-8">
         <ReviewsSection lessonId={id} />
       </div>
 
       {/* Комментарии */}
-      <div className="mb-6">
+      <div className="mb-6 sm:mb-8">
         <LessonComments lessonId={id} />
       </div>
     </main>
