@@ -9,7 +9,7 @@ import FileUploader from '@/components/FileUploader'
 const CONTENT_TYPES = [
   { 
     value: 'video', 
-    label: ' Видео', 
+    label: '🎥 Видео', 
     hint: 'Ссылка на видео (YouTube, VK Видео, RuTube, Дзен или другая площадка)',
     placeholder: 'https://...'
   },
@@ -27,7 +27,7 @@ const CONTENT_TYPES = [
   },
   { 
     value: 'storage', 
-    label: ' Файловое хранилище', 
+    label: '📁 Файловое хранилище', 
     hint: 'Ссылка на Яндекс.Диск, Google Drive или другое хранилище',
     placeholder: 'https://disk.yandex.ru/... или https://drive.google.com/...'
   },
@@ -59,6 +59,13 @@ export default function NewLessonPage() {
   
   const [uploadedFileUrl, setUploadedFileUrl] = useState('')
   const [uploadedFileName, setUploadedFileName] = useState('')
+
+  // Отладка
+  useEffect(() => {
+    console.log('contentType:', contentType)
+    console.log('isFileType:', contentType === 'pdf' || contentType === 'image')
+    console.log('uploadedFileUrl:', uploadedFileUrl)
+  }, [contentType, uploadedFileUrl])
 
   useEffect(() => {
     const getCoachId = async () => {
