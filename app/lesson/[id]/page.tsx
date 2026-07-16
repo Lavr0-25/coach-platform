@@ -49,11 +49,13 @@ function FileDisplayCard({
   fileType: string
 }) {
   const getFileIcon = () => {
-    if (fileType === 'pdf') return '📄'
+    if (fileType === 'pdf') return ''
     if (fileType === 'image') return '🖼️'
-    if (fileType === 'yandex_disk') return '💾'
+    if (fileType === 'yandex_disk') return ''
     if (fileType === 'presentation') return '📊'
     if (fileType === 'vk_video') return '🎬'
+    if (fileType === 'storage') return ''
+    if (fileType === 'other') return '🔗'
     return '📎'
   }
 
@@ -63,8 +65,15 @@ function FileDisplayCard({
     if (fileType === 'yandex_disk') return 'Яндекс.Диск'
     if (fileType === 'presentation') return 'Презентация'
     if (fileType === 'vk_video') return 'VK Видео'
+    if (fileType === 'storage') return 'Файловое хранилище'
+    if (fileType === 'other') return 'Внешняя ссылка'
     return 'Файл'
   }
+
+  // Определяем, какие кнопки показывать
+  const showDownloadButton = fileType === 'pdf' || fileType === 'image'
+  const showViewButton = fileType === 'pdf' || fileType === 'image' || fileType === 'video'
+  const showLinkButton = fileType === 'storage' || fileType === 'other'
 
   return (
     <div className="style-card p-5 sm:p-6">
@@ -81,29 +90,50 @@ function FileDisplayCard({
           </h3>
           
           <div className="flex flex-col sm:flex-row gap-3 mt-4 w-full">
-            <a
-              href={fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="gradient-btn text-white px-5 py-2.5 rounded-xl font-medium text-center flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              Посмотреть
-            </a>
+            {/* Кнопка "Посмотреть" - для видео, PDF и изображений */}
+            {showViewButton && (
+              <a
+                href={fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="gradient-btn text-white px-5 py-2.5 rounded-xl font-medium text-center flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                {fileType === 'video' ? 'Смотреть видео' : 'Посмотреть'}
+              </a>
+            )}
             
-            <a
-              href={fileUrl}
-              download
-              className="bg-white text-purple-700 border-2 border-purple-200 px-5 py-2.5 rounded-xl font-medium hover:bg-purple-50 hover:border-purple-300 transition-all text-center flex items-center justify-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Скачать
-            </a>
+            {/* Кнопка "Скачать" - только для PDF и изображений */}
+            {showDownloadButton && (
+              <a
+                href={fileUrl}
+                download
+                className="bg-white text-purple-700 border-2 border-purple-200 px-5 py-2.5 rounded-xl font-medium hover:bg-purple-50 hover:border-purple-300 transition-all text-center flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Скачать
+              </a>
+            )}
+
+            {/* Кнопка "Перейти по ссылке" - для хранилищ и других ссылок */}
+            {showLinkButton && (
+              <a
+                href={fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="gradient-btn text-white px-5 py-2.5 rounded-xl font-medium text-center flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                Перейти по ссылке
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -281,46 +311,34 @@ export default async function LessonPage({ params }: LessonPageProps) {
           
           <div className="space-y-6">
             {content.map((item) => {
-              if (item.content_type === 'youtube') {
-                const embedUrl = getEmbedUrl(item.content_url, 'youtube')
-                return (
-                  <div key={item.id} className="aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-lg">
-                    <iframe
-                      src={embedUrl}
-                      className="w-full h-full"
-                      allowFullScreen
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      title="YouTube video"
-                    />
-                  </div>
-                )
-              }
-              
-              if (item.content_type === 'vk_video') {
-                const embedUrl = getEmbedUrl(item.content_url, 'vk_video')
-                if (embedUrl.includes('video_ext.php')) {
+              // Для видео - встраиваем плеер
+              if (item.content_type === 'youtube' || item.content_type === 'vk_video' || item.content_type === 'video') {
+                const embedUrl = getEmbedUrl(item.content_url, item.content_type)
+                if (embedUrl.includes('video_ext.php') || embedUrl.includes('youtube.com/embed')) {
                   return (
                     <div key={item.id} className="aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-lg">
                       <iframe
                         src={embedUrl}
                         className="w-full h-full"
                         allowFullScreen
-                        allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-                        title="VK video"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        title="Video content"
                       />
                     </div>
                   )
                 }
                 
+                // Если это просто ссылка на видео - показываем карточку с кнопкой
                 return (
                   <FileDisplayCard
                     key={item.id}
                     fileUrl={item.content_url}
-                    fileType="vk_video"
+                    fileType="video"
                   />
                 )
               }
               
+              // Для PDF
               if (item.content_type === 'pdf') {
                 return (
                   <div key={item.id} className="space-y-4">
@@ -340,6 +358,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 )
               }
               
+              // Для изображений
               if (item.content_type === 'image') {
                 return (
                   <div key={item.id} className="space-y-4">
@@ -359,7 +378,8 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 )
               }
               
-              if (item.content_type === 'yandex_disk' || item.content_type === 'presentation') {
+              // Для файлового хранилища и других ссылок
+              if (item.content_type === 'storage' || item.content_type === 'other') {
                 return (
                   <FileDisplayCard
                     key={item.id}
@@ -369,6 +389,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
                 )
               }
               
+              // Для всего остального - показываем как файл
               return (
                 <FileDisplayCard
                   key={item.id}
