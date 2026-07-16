@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import CoverImageUploader from '@/components/CoverImageUploader'
+import FileUploader from '@/components/FileUploader'
 
 const CONTENT_TYPES = [
   { 
@@ -77,6 +77,10 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
 
   const [contentType, setContentType] = useState('video')
   const [contentUrl, setContentUrl] = useState('')
+  const [contentTitle, setContentTitle] = useState('')
+  
+  const [uploadedFileUrl, setUploadedFileUrl] = useState('')
+  const [uploadedFileName, setUploadedFileName] = useState('')
 
   useEffect(() => {
     loadLesson()
@@ -107,8 +111,19 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           .limit(1)
 
         if (content && content.length > 0) {
-          setContentType(content[0].content_type || 'video')
+          // Маппинг старых типов на новые, если в базе остались старые значения
+          let type = content[0].content_type || 'video'
+          if (['youtube', 'vk_video', 'vkvideo', 'vk'].includes(type)) type = 'video'
+          if (['yandex_disk', 'presentation', 'yandexdisk', 'googledrive'].includes(type)) type = 'storage'
+          
+          setContentType(type)
           setContentUrl(content[0].content_url || '')
+          
+          // Если это файловый тип и URL есть, считаем его загруженным файлом для превью
+          if (type === 'pdf' || type === 'image') {
+            setUploadedFileUrl(content[0].content_url || '')
+            setUploadedFileName(content[0].content_url ? decodeURIComponent(content[0].content_url.split('/').pop() || '') : '')
+          }
         }
       }
     } catch (error: any) {
@@ -118,6 +133,8 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
       setLoading(false)
     }
   }
+
+  const isFileType = contentType === 'pdf' || contentType === 'image'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -129,8 +146,11 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
       return
     }
 
-    if (!contentUrl.trim()) {
-      setError('Добавьте ссылку на контент')
+    // Для файловых типов проверяем uploadedFileUrl, для остальных - contentUrl
+    const finalUrl = isFileType ? uploadedFileUrl : contentUrl
+
+    if (!finalUrl.trim()) {
+      setError(isFileType ? 'Загрузите файл' : 'Введите ссылку на контент')
       return
     }
 
@@ -164,7 +184,8 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           .from('lesson_content')
           .update({
             content_type: contentType,
-            content_url: contentUrl.trim(),
+            content_url: finalUrl.trim(),
+            title: contentTitle.trim() || null,
           })
           .eq('id', existingContent.id)
         contentError = error
@@ -174,7 +195,8 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           .insert({
             lesson_id: lessonId,
             content_type: contentType,
-            content_url: contentUrl.trim(),
+            content_url: finalUrl.trim(),
+            title: contentTitle.trim() || null,
             order_index: 0,
           })
         contentError = error
@@ -233,11 +255,15 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Обложка */}
         <div className="style-card p-6 sm:p-8">
-          <CoverImageUploader
-            currentImage={coverImage}
-            onImageUpload={setCoverImage}
+          <FileUploader
+            currentFile={coverImage}
+            onFileUpload={(url) => setCoverImage(url)}
             entityId={lessonId}
-            entityType="lesson"
+            entityType="lesson_cover"
+            acceptedTypes={['image/*']}
+            maxSizeMB={5}
+            label="Обложка урока"
+            placeholder="Нажмите, перетащите или вставьте скриншот"
           />
         </div>
 
@@ -282,7 +308,12 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                   <button
                     key={type.value}
                     type="button"
-                    onClick={() => setContentType(type.value)}
+                    onClick={() => {
+                      setContentType(type.value)
+                      setContentUrl('')
+                      setUploadedFileUrl('')
+                      setUploadedFileName('')
+                    }}
                     className={`p-4 border-2 rounded-xl text-left transition-all ${
                       contentType === type.value
                         ? 'border-purple-500 bg-purple-50 shadow-md'
@@ -297,16 +328,53 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
               <p className="text-sm text-gray-500 mt-3">{selectedContentType?.hint}</p>
             </div>
 
+            {/* Для файловых типов (PDF и Image) - показываем загрузчик */}
+            {isFileType && (
+              <div>
+                <FileUploader
+                  currentFile={uploadedFileUrl}
+                  onFileUpload={(url, name) => {
+                    setUploadedFileUrl(url)
+                    setUploadedFileName(name)
+                  }}
+                  entityType="lesson_content"
+                  acceptedTypes={contentType === 'pdf' ? ['application/pdf'] : ['image/*']}
+                  maxSizeMB={10}
+                  label={contentType === 'pdf' ? '📄 Загрузите PDF файл' : '🖼️ Загрузите изображение'}
+                  placeholder={contentType === 'pdf' ? 'Загрузите PDF файл (drag-and-drop или Ctrl+V)' : 'Загрузите изображение (drag-and-drop или Ctrl+V)'}
+                />
+              </div>
+            )}
+
+            {/* Для остальных типов (video, storage, other) - показываем поле для ссылки */}
+            {!isFileType && (
+              <div>
+                <label htmlFor="contentUrl" className="block text-sm font-semibold text-gray-700 mb-1">
+                  Ссылка на контент *
+                </label>
+                <input
+                  id="contentUrl"
+                  type="url"
+                  required
+                  value={contentUrl}
+                  onChange={(e) => setContentUrl(e.target.value)}
+                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                  placeholder={selectedContentType?.placeholder}
+                />
+              </div>
+            )}
+
             <div>
-              <label htmlFor="contentUrl" className="block text-sm font-semibold text-gray-700 mb-1">Ссылка на контент *</label>
+              <label htmlFor="contentTitle" className="block text-sm font-semibold text-gray-700 mb-1">
+                Заголовок контента (необязательно)
+              </label>
               <input
-                id="contentUrl"
-                type="url"
-                required
-                value={contentUrl}
-                onChange={(e) => setContentUrl(e.target.value)}
+                id="contentTitle"
+                type="text"
+                value={contentTitle}
+                onChange={(e) => setContentTitle(e.target.value)}
                 className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
-                placeholder={selectedContentType?.placeholder}
+                placeholder="Например: Видеоурок №1"
               />
             </div>
           </div>
