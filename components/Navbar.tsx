@@ -127,7 +127,7 @@ export default function Navbar() {
         .from('coaches')
         .upsert({
           user_id: user.id,
-          display_name: profile?.display_name || user.email?.split('@')[0] || 'Автор',
+          display_name: profile?.display_name || user.email?.split('@')[0] || 'Наставник',
           role: 'mentor',
         }, {
           onConflict: 'user_id'
@@ -181,14 +181,8 @@ export default function Navbar() {
 
           {/* Навигация */}
           <div className="hidden md:flex items-center gap-6">
-            <Link href="/courses" className="text-gray-700 hover:text-purple-600 transition-colors font-medium">
-               Каталог курсов
-            </Link>
-            <Link href="/catalog" className="text-gray-700 hover:text-purple-600 transition-colors font-medium">
-               Каталог уроков
-            </Link>
             <Link href="/mentors" className="text-gray-700 hover:text-purple-600 transition-colors font-medium">
-               Авторы
+              👥 Авторы
             </Link>
             
             {user && isMentor && (
@@ -212,7 +206,7 @@ export default function Navbar() {
                     onClick={handleBecomeMentor}
                     className="hidden md:inline-flex gradient-btn px-4 py-2 text-white rounded-full font-medium text-sm shadow-lg shadow-purple-500/30"
                   >
-                     Стать авторомом
+                     Стать автором
                   </button>
                 )}
 
