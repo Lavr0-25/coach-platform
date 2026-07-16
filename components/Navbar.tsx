@@ -127,7 +127,7 @@ export default function Navbar() {
         .from('coaches')
         .upsert({
           user_id: user.id,
-          display_name: profile?.display_name || user.email?.split('@')[0] || 'Наставник',
+          display_name: profile?.display_name || user.email?.split('@')[0] || 'Автор',
           role: 'mentor',
         }, {
           onConflict: 'user_id'
@@ -179,20 +179,9 @@ export default function Navbar() {
             CoachPlatform
           </Link>
 
-          {/* Навигация */}
-          <div className="hidden md:flex items-center gap-6">
-            <Link href="/mentors" className="text-gray-700 hover:text-purple-600 transition-colors font-medium">
-              👥 Авторы
-            </Link>
-            
-            {user && isMentor && (
-              <Link href="/favorites" className="text-gray-700 hover:text-purple-600 transition-colors font-medium">
-                 Избранное
-              </Link>
-            )}
-          </div>
+          {/* Навигация убрана - остались только иконки */}
 
-          {/* Правая часть */}
+          {/* Правая часть с иконками */}
           <div className="flex items-center gap-3">
             {!isLoaded ? (
               <div className="w-10 h-10 bg-purple-100 rounded-full animate-pulse" />
