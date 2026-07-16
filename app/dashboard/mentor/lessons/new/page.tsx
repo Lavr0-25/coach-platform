@@ -5,8 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import FileUpload from '@/components/FileUpload'
+import CoverImageUploader from '@/components/CoverImageUploader'
 
-// Типы контента
 const CONTENT_TYPES = [
   { value: 'youtube', label: '🎥 YouTube видео', hint: 'Вставьте ссылку на YouTube видео' },
   { value: 'vk_video', label: '📹 VK Видео', hint: 'Вставьте ссылку на видео ВКонтакте' },
@@ -24,21 +24,18 @@ export default function NewLessonPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   
-  // Данные урока
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('0')
   const [isFreePreview, setIsFreePreview] = useState(false)
+  const [coverImage, setCoverImage] = useState('')
   
-  // Данные контента
   const [contentType, setContentType] = useState('youtube')
   const [contentUrl, setContentUrl] = useState('')
   const [accessPassword, setAccessPassword] = useState('')
   const [contentTitle, setContentTitle] = useState('')
   
-  // Загруженный файл
   const [uploadedFileUrl, setUploadedFileUrl] = useState('')
-  const [uploadedFileName, setUploadedFileName] = useState('')
 
   useEffect(() => {
     const getCoachId = async () => {
@@ -57,23 +54,20 @@ export default function NewLessonPage() {
       if (coach) {
         setCoachId(coach.id)
       } else {
-        setError('Ваш профиль наставника не найден. Обратитесь к администратору.')
+        setError('Ваш профиль автора не найден. Обратитесь к администратору.')
       }
     }
-
     getCoachId()
   }, [])
 
-  // Определяем, нужен ли файл или ссылка
   const isFileType = contentType === 'pdf' || contentType === 'image'
-  const needsLink = !isFileType // Для youtube, vk_video, yandex_disk, presentation нужна ссылка
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
     if (!coachId) {
-      setError('Ошибка: профиль наставника не найден')
+      setError('Ошибка: профиль автора не найден')
       return
     }
 
@@ -82,32 +76,27 @@ export default function NewLessonPage() {
       return
     }
 
-    // Проверяем, что есть либо загруженный файл, либо ссылка
-    const finalUrl = isFileType 
-      ? (uploadedFileUrl || contentUrl) 
-      : contentUrl
+    const finalUrl = isFileType ? (uploadedFileUrl || contentUrl) : contentUrl
 
     if (!finalUrl.trim()) {
-      setError(isFileType 
-        ? 'Загрузите файл или вставьте ссылку' 
-        : 'Введите ссылку на контент')
+      setError(isFileType ? 'Загрузите файл или вставьте ссылку' : 'Введите ссылку на контент')
       return
     }
 
     setLoading(true)
 
     try {
-      // 1. Создаём урок
       const { data: lesson, error: lessonError } = await supabase
         .from('lessons')
         .insert({
           course_id: null,
           module_id: null,
-          coach_id: coachId, // ← ВАЖНО: привязываем к наставнику!
+          coach_id: coachId,
           title: title.trim(),
           description: description.trim() || null,
           price: parseFloat(price) || 0,
           is_free_preview: isFreePreview,
+          cover_image: coverImage || null, // <-- Сохраняем обложку
           order_index: 1,
         })
         .select()
@@ -115,7 +104,6 @@ export default function NewLessonPage() {
 
       if (lessonError) throw lessonError
 
-      // 2. Создаём контент урока
       const { error: contentError } = await supabase
         .from('lesson_content')
         .insert({
@@ -142,63 +130,57 @@ export default function NewLessonPage() {
   const selectedContentType = CONTENT_TYPES.find(t => t.value === contentType)
 
   return (
-    <main className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Хлебные крошки */}
-      <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-        <Link href="/dashboard/mentor" className="hover:text-blue-600">
-          Кабинет наставника
-        </Link>
+    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl">
+      <div className="flex items-center gap-2 text-sm text-gray-600 mb-6 flex-wrap">
+        <Link href="/dashboard/mentor" className="hover:text-purple-600 transition-colors">Кабинет автора</Link>
         <span>/</span>
-        <Link href="/dashboard/mentor/lessons" className="hover:text-blue-600">
-          Мои уроки
-        </Link>
+        <Link href="/dashboard/mentor/lessons" className="hover:text-purple-600 transition-colors">Мои уроки</Link>
         <span>/</span>
-        <span className="text-gray-900">Новый урок</span>
+        <span className="text-gray-900 font-medium">Новый урок</span>
       </div>
 
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">
-        Создание нового урока
-      </h1>
+      <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-8">Создание нового урока</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
             {error}
           </div>
         )}
 
+        {/* Обложка */}
+        <div className="style-card p-6 sm:p-8">
+          <CoverImageUploader
+            currentImage={coverImage}
+            onImageUpload={setCoverImage}
+            entityType="lesson"
+          />
+        </div>
+
         {/* Основная информация */}
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Основная информация
-          </h2>
-          
+        <div className="style-card p-6 sm:p-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Основная информация</h2>
           <div className="space-y-4">
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                Название урока *
-              </label>
+              <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-1">Название урока *</label>
               <input
                 id="title"
                 type="text"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Например: Введение в психологию"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                placeholder="Например: Введение в профессию"
               />
             </div>
-
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                Описание
-              </label>
+              <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-1">Описание</label>
               <textarea
                 id="description"
                 rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
                 placeholder="Краткое описание урока..."
               />
             </div>
@@ -206,51 +188,36 @@ export default function NewLessonPage() {
         </div>
 
         {/* Контент урока */}
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Контент урока
-          </h2>
-          
+        <div className="style-card p-6 sm:p-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Контент урока</h2>
           <div className="space-y-4">
             <div>
-              <label htmlFor="contentType" className="block text-sm font-medium text-gray-700 mb-1">
-                Тип контента *
-              </label>
+              <label htmlFor="contentType" className="block text-sm font-semibold text-gray-700 mb-1">Тип контента *</label>
               <select
                 id="contentType"
                 value={contentType}
                 onChange={(e) => {
                   setContentType(e.target.value)
-                  // Сбрасываем загруженный файл при смене типа
                   if (e.target.value !== 'pdf' && e.target.value !== 'image') {
                     setUploadedFileUrl('')
-                    setUploadedFileName('')
                   }
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all bg-white"
               >
                 {CONTENT_TYPES.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
+                  <option key={type.value} value={type.value}>{type.label}</option>
                 ))}
               </select>
-              <p className="text-sm text-gray-500 mt-1">
-                {selectedContentType?.hint}
-              </p>
+              <p className="text-sm text-gray-500 mt-1">{selectedContentType?.hint}</p>
             </div>
 
-            {/* Загрузка файла для PDF и изображений */}
             {isFileType && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   {contentType === 'pdf' ? '📄 Загрузите PDF файл' : '🖼️ Загрузите изображение'}
                 </label>
                 <FileUpload
-                  onFileUpload={(url, fileName) => {
-                    setUploadedFileUrl(url)
-                    setUploadedFileName(fileName)
-                  }}
+                  onFileUpload={(url) => setUploadedFileUrl(url)}
                   existingFileUrl={uploadedFileUrl}
                   acceptedTypes={contentType === 'pdf' ? ['application/pdf'] : ['image/*']}
                   maxSizeMB={10}
@@ -258,11 +225,9 @@ export default function NewLessonPage() {
               </div>
             )}
 
-            {/* Ссылка на контент */}
             <div>
-              <label htmlFor="contentUrl" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="contentUrl" className="block text-sm font-semibold text-gray-700 mb-1">
                 {isFileType ? 'Ссылка на контент (альтернатива файлу)' : 'Ссылка на контент *'}
-                {!isFileType && ' *'}
               </label>
               <input
                 id="contentUrl"
@@ -270,69 +235,33 @@ export default function NewLessonPage() {
                 required={!isFileType && !uploadedFileUrl}
                 value={contentUrl}
                 onChange={(e) => setContentUrl(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder={
-                  contentType === 'youtube' 
-                    ? 'https://youtube.com/watch?v=...' 
-                    : contentType === 'vk_video'
-                    ? 'https://vk.com/video-xxx_xxx'
-                    : 'https://...'
-                }
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                placeholder={contentType === 'youtube' ? 'https://youtube.com/watch?v=...' : 'https://...'}
               />
-              {isFileType && (
-                <p className="text-sm text-gray-500 mt-1">
-                  💡 Можете загрузить файл выше ИЛИ вставить ссылку (файл имеет приоритет)
-                </p>
-              )}
             </div>
 
-            {/* Пароль для Яндекс.Диска */}
             {contentType === 'yandex_disk' && (
               <div>
-                <label htmlFor="accessPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Пароль доступа к папке
-                </label>
+                <label htmlFor="accessPassword" className="block text-sm font-semibold text-gray-700 mb-1">Пароль доступа к папке</label>
                 <input
                   id="accessPassword"
                   type="text"
                   value={accessPassword}
                   onChange={(e) => setAccessPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Пароль от папки Яндекс.Диска (если есть)"
+                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                  placeholder="Пароль от папки (если есть)"
                 />
-                <p className="text-sm text-gray-500 mt-1">
-                  Если папка защищена паролем, укажите его здесь
-                </p>
               </div>
             )}
-
-            <div>
-              <label htmlFor="contentTitle" className="block text-sm font-medium text-gray-700 mb-1">
-                Заголовок контента (необязательно)
-              </label>
-              <input
-                id="contentTitle"
-                type="text"
-                value={contentTitle}
-                onChange={(e) => setContentTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Например: Видеоурок №1"
-              />
-            </div>
           </div>
         </div>
 
         {/* Цена и доступ */}
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Цена и доступ
-          </h2>
-          
+        <div className="style-card p-6 sm:p-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Цена и доступ</h2>
           <div className="space-y-4">
             <div>
-              <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                Цена урока (руб.)
-              </label>
+              <label htmlFor="price" className="block text-sm font-semibold text-gray-700 mb-1">Цена урока (руб.)</label>
               <input
                 id="price"
                 type="number"
@@ -340,12 +269,10 @@ export default function NewLessonPage() {
                 step="0.01"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
                 placeholder="0.00"
               />
-              <p className="text-sm text-gray-500 mt-1">
-                Оставьте 0, если урок бесплатный
-              </p>
+              <p className="text-sm text-gray-500 mt-1">Оставьте 0, если урок бесплатный</p>
             </div>
 
             <div className="flex items-start">
@@ -355,34 +282,30 @@ export default function NewLessonPage() {
                   type="checkbox"
                   checked={isFreePreview}
                   onChange={(e) => setIsFreePreview(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                 />
               </div>
               <div className="ml-3 text-sm">
-                <label htmlFor="isFreePreview" className="font-medium text-gray-700">
-                  Бесплатный превью
-                </label>
-                <p className="text-gray-500">
-                  Этот урок будет доступен для просмотра без покупки
-                </p>
+                <label htmlFor="isFreePreview" className="font-semibold text-gray-700">Бесплатный превью</label>
+                <p className="text-gray-500">Этот урок будет доступен для просмотра без покупки</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Кнопки */}
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 pt-4">
           <button
             type="submit"
             disabled={loading}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 transition-all text-center"
           >
             {loading ? 'Создание...' : 'Создать урок'}
           </button>
           
           <Link
             href="/dashboard/mentor/lessons"
-            className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            className="bg-white text-gray-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all text-center"
           >
             Отмена
           </Link>
