@@ -9,7 +9,7 @@ import FileUploader from '@/components/FileUploader'
 const CONTENT_TYPES = [
   { 
     value: 'video', 
-    label: '🎥 Видео', 
+    label: ' Видео', 
     hint: 'Ссылка на видео (YouTube, VK Видео, RuTube, Дзен или другая площадка)',
     placeholder: 'https://...'
   },
@@ -27,7 +27,7 @@ const CONTENT_TYPES = [
   },
   { 
     value: 'storage', 
-    label: '📁 Файловое хранилище', 
+    label: ' Файловое хранилище', 
     hint: 'Ссылка на Яндекс.Диск, Google Drive или другое хранилище',
     placeholder: 'https://disk.yandex.ru/... или https://drive.google.com/...'
   },
@@ -246,7 +246,7 @@ export default function NewLessonPage() {
             </div>
 
             {isFileType && (
-              <div>
+              <div className="style-card p-6 sm:p-8">
                 <FileUploader
                   currentFile={uploadedFileUrl}
                   onFileUpload={(url, name) => {
