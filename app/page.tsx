@@ -13,6 +13,7 @@ interface Lesson {
   price: number
   created_at: string
   coach_id: string | null
+  type: 'lesson'
   rating?: number
   reviews_count?: number
   coach?: {
@@ -20,6 +21,26 @@ interface Lesson {
     avatar_url: string | null
   } | null
 }
+
+interface Course {
+  id: string
+  title: string
+  description: string | null
+  cover_url: string | null
+  is_free: boolean
+  price: number
+  created_at: string
+  coach_id: string | null
+  type: 'course'
+  rating?: number
+  reviews_count?: number
+  coach?: {
+    display_name: string | null
+    avatar_url: string | null
+  } | null
+}
+
+type ContentItem = Lesson | Course
 
 interface Coach {
   user_id: string
@@ -35,17 +56,19 @@ interface Subscription {
 }
 
 type FilterType = 'all' | 'new' | 'popular' | 'free' | 'subscriptions'
+type ContentType = 'all' | 'lessons' | 'courses'
 
-const LESSONS_PER_PAGE = 9
+const ITEMS_PER_PAGE = 9
 
 export default function Home() {
   const supabase = createClient()
   const [user, setUser] = useState<any>(null)
-  const [lessons, setLessons] = useState<Lesson[]>([])
+  const [content, setContent] = useState<ContentItem[]>([])
   const [allCoaches, setAllCoaches] = useState<Coach[]>([])
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
+  const [contentType, setContentType] = useState<ContentType>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [coachSearchQuery, setCoachSearchQuery] = useState('')
   const [subscribing, setSubscribing] = useState<string | null>(null)
@@ -96,136 +119,188 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Загрузка уроков при изменении фильтра
+  // Загрузка контента при изменении фильтров
   useEffect(() => {
-    const loadLessons = async () => {
+    const loadContent = async () => {
       setLoading(true)
       setPage(1)
       setHasMore(true)
 
       try {
-        let query = supabase
-          .from('lessons')
-          .select(`
-            *,
-            coach:coaches!lessons_coach_id_fkey(display_name, avatar_url)
-          `)
+        let lessonsData: any[] = []
+        let coursesData: any[] = []
 
-        // Применяем фильтры
-        switch (activeFilter) {
-          case 'new':
-            query = query.order('created_at', { ascending: false })
-            break
-          case 'popular':
-            query = query.order('created_at', { ascending: false })
-            break
-          case 'free':
-            // Бесплатные фильтруем на клиенте
-            break
-          case 'subscriptions':
-            if (subscriptions.length > 0) {
-              // Получаем user_id подписанных наставников
-              const subscribedUserIds = subscriptions.map(s => s.coach_id)
-              
-              // Находим coaches.id для этих user_id
-              const { data: coachesData } = await supabase
-                .from('coaches')
-                .select('id')
-                .in('user_id', subscribedUserIds)
-              
-              if (coachesData && coachesData.length > 0) {
-                const coachIds = coachesData.map(c => c.id)
-                query = query.in('coach_id', coachIds).order('created_at', { ascending: false })
-              } else {
-                setLessons([])
-                setLoading(false)
-                return
-              }
-            } else {
-              setLessons([])
-              setLoading(false)
-              return
-            }
-            break
-          default:
-            break
-        }
+        // Загружаем уроки если нужно
+        if (contentType === 'all' || contentType === 'lessons') {
+          let query = supabase
+            .from('lessons')
+            .select(`
+              *,
+              coach:coaches!lessons_coach_id_fkey(display_name, avatar_url)
+            `)
 
-        const { data, error } = await query
-
-        if (error) throw error
-
-        if (data) {
-          let processedLessons = data as Lesson[]
-
-          // Фильтр бесплатных на клиенте
-          if (activeFilter === 'free') {
-            processedLessons = processedLessons.filter(lesson => 
-              lesson.price === 0 || lesson.is_free === true
-            )
-          }
-
-          // Для "Популярных" считаем количество отзывов
-          if (activeFilter === 'popular') {
-            const lessonsWithReviews = await Promise.all(
-              processedLessons.map(async (lesson) => {
-                const { data: reviews, error: reviewsError } = await supabase
-                  .from('reviews')
-                  .select('rating')
-                  .eq('lesson_id', lesson.id)
-
-                const reviewsCount = reviews?.length || 0
-                const avgRating = reviews && reviews.length > 0
-                  ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-                  : 0
-
-                return { 
-                  ...lesson, 
-                  reviews_count: reviewsCount,
-                  rating: avgRating
+          // Применяем фильтры
+          switch (activeFilter) {
+            case 'new':
+              query = query.order('created_at', { ascending: false })
+              break
+            case 'popular':
+              query = query.order('created_at', { ascending: false })
+              break
+            case 'free':
+              break
+            case 'subscriptions':
+              if (subscriptions.length > 0) {
+                const subscribedUserIds = subscriptions.map(s => s.coach_id)
+                const { data: coachesData } = await supabase
+                  .from('coaches')
+                  .select('id')
+                  .in('user_id', subscribedUserIds)
+                
+                if (coachesData && coachesData.length > 0) {
+                  const coachIds = coachesData.map(c => c.id)
+                  query = query.in('coach_id', coachIds).order('created_at', { ascending: false })
+                } else {
+                  lessonsData = []
                 }
-              })
-            )
-            
-            processedLessons = lessonsWithReviews.sort((a, b) => {
-              if (b.reviews_count !== a.reviews_count) {
-                return b.reviews_count - a.reviews_count
+              } else {
+                lessonsData = []
               }
-              return (b.rating || 0) - (a.rating || 0)
-            })
+              break
+            default:
+              break
           }
 
-          // Для "Все" перемешиваем
-          if (activeFilter === 'all') {
-            processedLessons = processedLessons.sort(() => Math.random() - 0.5)
+          if (activeFilter !== 'subscriptions' || lessonsData.length > 0) {
+            const { data, error } = await query
+            if (error) throw error
+            if (data) {
+              lessonsData = data.map(item => ({ ...item, type: 'lesson' }))
+            }
           }
-
-          // Для "Бесплатных" сортируем по дате
-          if (activeFilter === 'free') {
-            processedLessons = processedLessons.sort((a, b) => 
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            )
-          }
-
-          setLessons(processedLessons.slice(0, LESSONS_PER_PAGE))
-          setHasMore(processedLessons.length > LESSONS_PER_PAGE)
         }
+
+        // Загружаем курсы если нужно
+        if (contentType === 'all' || contentType === 'courses') {
+          let query = supabase
+            .from('courses')
+            .select(`
+              *,
+              coach:coaches!courses_coach_id_fkey(display_name, avatar_url)
+            `)
+
+          // Применяем фильтры
+          switch (activeFilter) {
+            case 'new':
+              query = query.order('created_at', { ascending: false })
+              break
+            case 'popular':
+              query = query.order('created_at', { ascending: false })
+              break
+            case 'free':
+              break
+            case 'subscriptions':
+              if (subscriptions.length > 0) {
+                const subscribedUserIds = subscriptions.map(s => s.coach_id)
+                const { data: coachesData } = await supabase
+                  .from('coaches')
+                  .select('id')
+                  .in('user_id', subscribedUserIds)
+                
+                if (coachesData && coachesData.length > 0) {
+                  const coachIds = coachesData.map(c => c.id)
+                  query = query.in('coach_id', coachIds).order('created_at', { ascending: false })
+                } else {
+                  coursesData = []
+                }
+              } else {
+                coursesData = []
+              }
+              break
+            default:
+              break
+          }
+
+          if (activeFilter !== 'subscriptions' || coursesData.length > 0) {
+            const { data, error } = await query
+            if (error) throw error
+            if (data) {
+              coursesData = data.map(item => ({ ...item, type: 'course' }))
+            }
+          }
+        }
+
+        // Объединяем результаты
+        let processedContent = [...lessonsData, ...coursesData]
+
+        // Фильтр бесплатных на клиенте
+        if (activeFilter === 'free') {
+          processedContent = processedContent.filter(item => 
+            item.price === 0 || item.is_free === true
+          )
+        }
+
+        // Для "Популярных" считаем количество отзывов
+        if (activeFilter === 'popular') {
+          const contentWithReviews = await Promise.all(
+            processedContent.map(async (item) => {
+              const table = item.type === 'lesson' ? 'reviews' : 'course_reviews'
+              const { data: reviews } = await supabase
+                .from(table)
+                .select('rating')
+                .eq(item.type === 'lesson' ? 'lesson_id' : 'course_id', item.id)
+
+              const reviewsCount = reviews?.length || 0
+              const avgRating = reviews && reviews.length > 0
+                ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+                : 0
+
+              return { 
+                ...item, 
+                reviews_count: reviewsCount,
+                rating: avgRating
+              }
+            })
+          )
+          
+          processedContent = contentWithReviews.sort((a, b) => {
+            if (b.reviews_count !== a.reviews_count) {
+              return b.reviews_count - a.reviews_count
+            }
+            return (b.rating || 0) - (a.rating || 0)
+          })
+        }
+
+        // Для "Все" перемешиваем
+        if (activeFilter === 'all') {
+          processedContent = processedContent.sort(() => Math.random() - 0.5)
+        }
+
+        // Для "Бесплатных" сортируем по дате
+        if (activeFilter === 'free') {
+          processedContent = processedContent.sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )
+        }
+
+        setContent(processedContent.slice(0, ITEMS_PER_PAGE))
+        setHasMore(processedContent.length > ITEMS_PER_PAGE)
       } catch (error) {
-        console.error('Error loading lessons:', error)
+        console.error('Error loading content:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    loadLessons()
-  }, [activeFilter, subscriptions])
+    loadContent()
+  }, [activeFilter, contentType, subscriptions])
 
   // Загрузка следующей страницы
   const loadMore = () => {
     const nextPage = page + 1
-    const endIndex = nextPage * LESSONS_PER_PAGE
+    const endIndex = nextPage * ITEMS_PER_PAGE
     
-    if (lessons.length < endIndex) {
+    if (content.length < endIndex) {
       return
     }
     
@@ -247,7 +322,7 @@ export default function Home() {
 
       if (error) {
         if (error.code === '23505') {
-          alert('Вы уже подписаны на этого наставника')
+          alert('Вы уже подписаны на этого автора')
         } else throw error
         return
       }
@@ -272,7 +347,7 @@ export default function Home() {
   }
 
   const handleUnsubscribe = async (coachId: string) => {
-    if (!confirm('Отписаться от этого наставника?')) return
+    if (!confirm('Отписаться от этого автора?')) return
 
     try {
       const { error } = await supabase
@@ -289,14 +364,14 @@ export default function Home() {
     }
   }
 
-  const getFilteredLessons = () => {
-    let filtered = lessons
+  const getFilteredContent = () => {
+    let filtered = content
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(l => 
-        l.title.toLowerCase().includes(query) ||
-        l.description?.toLowerCase().includes(query)
+      filtered = filtered.filter(item => 
+        item.title.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query)
       )
     }
 
@@ -311,7 +386,7 @@ export default function Home() {
     )
   })
 
-  const displayedLessons = getFilteredLessons()
+  const displayedContent = getFilteredContent()
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -334,6 +409,12 @@ export default function Home() {
     ...(user ? [{ id: 'subscriptions' as FilterType, label: 'Подписки' }] : []),
   ]
 
+  const contentTypes: { id: ContentType; label: string }[] = [
+    { id: 'all', label: 'Все' },
+    { id: 'lessons', label: 'Уроки' },
+    { id: 'courses', label: 'Курсы' },
+  ]
+
   return (
     <div className="min-h-screen">
       {/* Шапка с поиском */}
@@ -344,7 +425,7 @@ export default function Home() {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Поиск уроков..."
+                  placeholder="Поиск уроков и курсов..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full px-4 py-2.5 pl-10 bg-purple-50/50 border border-purple-200 rounded-full focus:bg-white focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300 transition-all text-sm"
@@ -373,11 +454,11 @@ export default function Home() {
           <aside className="hidden lg:block w-72 flex-shrink-0">
             <div className="sticky top-32">
               <div className="style-card p-5">
-                {/* Поиск по наставникам */}
+                {/* Поиск по авторам */}
                 <div className="mb-4 relative">
                   <input
                     type="text"
-                    placeholder="Поиск наставников..."
+                    placeholder="Поиск авторов..."
                     value={coachSearchQuery}
                     onChange={(e) => setCoachSearchQuery(e.target.value)}
                     className="w-full px-3 py-2 pl-9 text-sm bg-purple-50/50 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300"
@@ -393,7 +474,7 @@ export default function Home() {
                     {coachSearchQuery ? (
                       filteredCoaches.length === 0 ? (
                         <p className="text-sm text-gray-500 text-center py-3">
-                          Наставники не найдены
+                          Авторы не найдены
                         </p>
                       ) : (
                         filteredCoaches.map((coach) => {
@@ -416,7 +497,7 @@ export default function Home() {
                               )}
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-gray-900 truncate">
-                                  {coach.display_name || 'Наставник'}
+                                  {coach.display_name || 'Автор'}
                                 </p>
                                 {coach.specialization && (
                                   <p className="text-xs text-gray-500 truncate">
@@ -477,7 +558,7 @@ export default function Home() {
                                   )}
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold text-gray-900 truncate">
-                                      {sub.coach?.display_name || 'Наставник'}
+                                      {sub.coach?.display_name || 'Автор'}
                                     </p>
                                     {sub.coach?.specialization && (
                                       <p className="text-xs text-gray-500 truncate">
@@ -520,7 +601,7 @@ export default function Home() {
                       href="/mentors"
                       className="block text-center text-sm text-purple-600 hover:text-purple-700 font-semibold mt-4"
                     >
-                      Все наставники →
+                      Все авторы →
                     </Link>
                   </div>
                 ) : (
@@ -542,6 +623,23 @@ export default function Home() {
 
           {/* Основной контент */}
           <main className="flex-1 min-w-0">
+            {/* Фильтры типов контента */}
+            <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+              {contentTypes.map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => setContentType(type.id)}
+                  className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                    contentType === type.id
+                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg shadow-purple-500/30'
+                      : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
+                  }`}
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
+
             {/* Фильтры */}
             <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
               {filters.map((filter) => (
@@ -559,7 +657,7 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Сетка уроков */}
+            {/* Сетка контента */}
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {[...Array(6)].map((_, i) => (
@@ -572,58 +670,69 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-            ) : displayedLessons.length === 0 ? (
+            ) : displayedContent.length === 0 ? (
               <div className="text-center py-16">
                 <div className="text-6xl mb-4"></div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   {activeFilter === 'subscriptions' 
-                    ? 'Нет уроков от ваших подписок' 
+                    ? 'Нет контента от ваших подписок' 
                     : searchQuery 
                       ? 'Ничего не найдено' 
-                      : 'Уроки не найдены'}
+                      : 'Контент не найден'}
                 </h2>
                 <p className="text-gray-600">
                   {activeFilter === 'subscriptions'
-                    ? 'Подпишитесь на наставников, чтобы видеть их уроки'
+                    ? 'Подпишитесь на авторов, чтобы видеть их контент'
                     : searchQuery 
                       ? 'Попробуйте изменить запрос' 
-                      : 'Пока нет доступных уроков'}
+                      : 'Пока нет доступного контента'}
                 </p>
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {displayedLessons.map((lesson) => (
+                  {displayedContent.map((item) => (
                     <Link
-                      key={lesson.id}
-                      href={`/lesson/${lesson.id}`}
+                      key={`${item.type}-${item.id}`}
+                      href={`/${item.type === 'lesson' ? 'lesson' : 'course'}/${item.id}`}
                       className="group style-card overflow-hidden"
                     >
                       {/* Превью */}
                       <div className="aspect-video bg-gradient-to-br from-purple-100 via-indigo-50 to-blue-100 relative overflow-hidden">
-                        {lesson.cover_url ? (
+                        {item.cover_url ? (
                           <img
-                            src={lesson.cover_url}
-                            alt={lesson.title}
+                            src={item.cover_url}
+                            alt={item.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <div className="w-16 h-16 gradient-icon rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
-                              📚
+                              {item.type === 'lesson' ? '📚' : '🎓'}
                             </div>
                           </div>
                         )}
                         
-                        {lesson.is_free && (
-                          <div className="absolute top-3 left-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                        {/* Тип контента */}
+                        <div className="absolute top-3 left-3">
+                          <span className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-lg ${
+                            item.type === 'lesson'
+                              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                              : 'bg-gradient-to-r from-pink-600 to-purple-600 text-white'
+                          }`}>
+                            {item.type === 'lesson' ? 'Урок' : 'Курс'}
+                          </span>
+                        </div>
+                        
+                        {item.is_free && (
+                          <div className="absolute top-3 right-16 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
                             Бесплатно
                           </div>
                         )}
                         
-                        {!lesson.is_free && lesson.price > 0 && (
+                        {!item.is_free && item.price > 0 && (
                           <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full">
-                            {lesson.price} ₽
+                            {item.price} ₽
                           </div>
                         )}
                       </div>
@@ -631,24 +740,24 @@ export default function Home() {
                       {/* Контент */}
                       <div className="p-5">
                         <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-purple-600 transition-colors text-base">
-                          {lesson.title}
+                          {item.title}
                         </h3>
                         
-                        {lesson.description && (
+                        {item.description && (
                           <p className="text-sm text-gray-600 line-clamp-2 mb-4">
-                            {lesson.description}
+                            {item.description}
                           </p>
                         )}
 
                         {/* Рейтинг и отзывы */}
-                        {lesson.reviews_count !== undefined && lesson.reviews_count > 0 && (
+                        {item.reviews_count !== undefined && item.reviews_count > 0 && (
                           <div className="flex items-center gap-2 mb-3">
                             <div className="flex items-center gap-0.5">
                               {[1, 2, 3, 4, 5].map((star) => (
                                 <svg
                                   key={star}
                                   className={`w-4 h-4 ${
-                                    star <= Math.round(lesson.rating || 0)
+                                    star <= Math.round(item.rating || 0)
                                       ? 'text-yellow-400 fill-yellow-400'
                                       : 'text-gray-300'
                                   }`}
@@ -659,35 +768,35 @@ export default function Home() {
                               ))}
                             </div>
                             <span className="text-xs text-gray-500">
-                              {lesson.rating?.toFixed(1)} ({lesson.reviews_count} {lesson.reviews_count === 1 ? 'отзыв' : lesson.reviews_count < 5 ? 'отзыва' : 'отзывов'})
+                              {item.rating?.toFixed(1)} ({item.reviews_count} {item.reviews_count === 1 ? 'отзыв' : item.reviews_count < 5 ? 'отзыва' : 'отзывов'})
                             </span>
                           </div>
                         )}
 
                         <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-purple-100">
                           <div className="flex items-center gap-2">
-                            {lesson.coach?.avatar_url ? (
+                            {item.coach?.avatar_url ? (
                               <img
-                                src={lesson.coach.avatar_url}
-                                alt={lesson.coach.display_name || ''}
+                                src={item.coach.avatar_url}
+                                alt={item.coach.display_name || ''}
                                 className="w-6 h-6 rounded-full object-cover"
                               />
                             ) : (
                               <div className="w-6 h-6 gradient-icon rounded-full flex items-center justify-center text-white text-[10px] font-bold">
-                                {lesson.coach?.display_name?.charAt(0).toUpperCase() || '?'}
+                                {item.coach?.display_name?.charAt(0).toUpperCase() || '?'}
                               </div>
                             )}
                             <span className="truncate max-w-[120px] font-medium">
-                              {lesson.coach?.display_name || 'Наставник'}
+                              {item.coach?.display_name || 'Автор'}
                             </span>
                           </div>
                           <div className="flex items-center gap-3">
-                            {activeFilter === 'popular' && lesson.reviews_count !== undefined && (
+                            {activeFilter === 'popular' && item.reviews_count !== undefined && (
                               <span className="flex items-center gap-1 text-purple-600 font-medium">
-                                💬 {lesson.reviews_count}
+                                💬 {item.reviews_count}
                               </span>
                             )}
-                            <span>{formatDate(lesson.created_at)}</span>
+                            <span>{formatDate(item.created_at)}</span>
                           </div>
                         </div>
                       </div>
