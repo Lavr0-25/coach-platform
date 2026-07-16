@@ -401,20 +401,6 @@ export default function Home() {
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
   }
 
-  const filters: { id: FilterType; label: string }[] = [
-    { id: 'all', label: 'Все' },
-    { id: 'new', label: 'Новые' },
-    { id: 'popular', label: 'Популярные' },
-    { id: 'free', label: 'Бесплатные' },
-    ...(user ? [{ id: 'subscriptions' as FilterType, label: 'Подписки' }] : []),
-  ]
-
-  const contentTypes: { id: ContentType; label: string }[] = [
-    { id: 'all', label: 'Все' },
-    { id: 'lessons', label: 'Уроки' },
-    { id: 'courses', label: 'Курсы' },
-  ]
-
   return (
     <div className="min-h-screen">
       {/* Шапка с поиском */}
@@ -623,38 +609,103 @@ export default function Home() {
 
           {/* Основной контент */}
           <main className="flex-1 min-w-0">
-            {/* Фильтры типов контента */}
-            <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-              {contentTypes.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => setContentType(type.id)}
-                  className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
-                    contentType === type.id
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg shadow-purple-500/30'
-                      : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
-                  }`}
-                >
-                  {type.label}
-                </button>
-              ))}
-            </div>
+            {/* Все фильтры в одной строке */}
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 flex-wrap">
+              {/* Типы контента */}
+              <button
+                onClick={() => setContentType('lessons')}
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                  contentType === 'lessons'
+                    ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
+                    : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
+                }`}
+              >
+                Уроки
+              </button>
+              
+              <button
+                onClick={() => setContentType('courses')}
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                  contentType === 'courses'
+                    ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
+                    : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
+                }`}
+              >
+                Курсы
+              </button>
+              
+              <button
+                onClick={() => {
+                  setContentType('all')
+                  setActiveFilter('all')
+                }}
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                  contentType === 'all' && activeFilter === 'all'
+                    ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
+                    : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
+                }`}
+              >
+                Все
+              </button>
 
-            {/* Фильтры */}
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-              {filters.map((filter) => (
+              {/* Остальные фильтры */}
+              <button
+                onClick={() => {
+                  setContentType('all')
+                  setActiveFilter('new')
+                }}
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                  activeFilter === 'new'
+                    ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
+                    : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
+                }`}
+              >
+                Новые
+              </button>
+              
+              <button
+                onClick={() => {
+                  setContentType('all')
+                  setActiveFilter('popular')
+                }}
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                  activeFilter === 'popular'
+                    ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
+                    : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
+                }`}
+              >
+                Популярные
+              </button>
+              
+              <button
+                onClick={() => {
+                  setContentType('all')
+                  setActiveFilter('free')
+                }}
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                  activeFilter === 'free'
+                    ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
+                    : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
+                }`}
+              >
+                Бесплатные
+              </button>
+              
+              {user && (
                 <button
-                  key={filter.id}
-                  onClick={() => setActiveFilter(filter.id)}
+                  onClick={() => {
+                    setContentType('all')
+                    setActiveFilter('subscriptions')
+                  }}
                   className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
-                    activeFilter === filter.id
+                    activeFilter === 'subscriptions'
                       ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
                       : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
                   }`}
                 >
-                  {filter.label}
+                  Подписки
                 </button>
-              ))}
+              )}
             </div>
 
             {/* Сетка контента */}
@@ -708,7 +759,7 @@ export default function Home() {
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <div className="w-16 h-16 gradient-icon rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
-                              {item.type === 'lesson' ? '📚' : '🎓'}
+                              {item.type === 'lesson' ? '📚' : ''}
                             </div>
                           </div>
                         )}
@@ -793,7 +844,7 @@ export default function Home() {
                           <div className="flex items-center gap-3">
                             {activeFilter === 'popular' && item.reviews_count !== undefined && (
                               <span className="flex items-center gap-1 text-purple-600 font-medium">
-                                💬 {item.reviews_count}
+                                 {item.reviews_count}
                               </span>
                             )}
                             <span>{formatDate(item.created_at)}</span>
