@@ -68,14 +68,68 @@ export default async function MentorDashboard() {
   let purchases: any[] = []
 
   try {
+    // Загружаем уроки с информацией о курсах
     const { data: lessonsData } = await supabase
       .from('lessons')
-      .select('id, title, created_at, price, is_free_preview')
+      .select(`
+        id, 
+        title, 
+        created_at, 
+        price, 
+        is_free_preview,
+        course_id,
+        module_id
+      `)
       .eq('coach_id', coachData.id)
       .order('created_at', { ascending: false })
-      .limit(5)
+      .limit(10)
     
-    if (lessonsData) myLessons = lessonsData
+    if (lessonsData) {
+      // Для каждого урока находим курсы, в которые он входит
+      const lessonsWithCourses = await Promise.all(
+        lessonsData.map(async (lesson) => {
+          // Если урок привязан к модулю, находим курс через модуль
+          if (lesson.module_id) {
+            const { data: moduleData } = await supabase
+              .from('modules')
+              .select('course_id, courses(title)')
+              .eq('id', lesson.module_id)
+              .single()
+            
+            if (moduleData && moduleData.courses) {
+              return {
+                ...lesson,
+                courses: [moduleData.courses]
+              }
+            }
+          }
+          
+          // Если урок привязан напрямую к курсу
+          if (lesson.course_id) {
+            const { data: courseData } = await supabase
+              .from('courses')
+              .select('id, title')
+              .eq('id', lesson.course_id)
+              .single()
+            
+            if (courseData) {
+              return {
+                ...lesson,
+                courses: [courseData]
+              }
+            }
+          }
+          
+          // Урок не входит ни в какой курс
+          return {
+            ...lesson,
+            courses: []
+          }
+        })
+      )
+      
+      myLessons = lessonsWithCourses
+    }
   } catch (error) {
     console.error('Error fetching lessons:', error)
   }
@@ -177,7 +231,7 @@ export default async function MentorDashboard() {
   }
 
   return (
-    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-6xl pt-32 sm:pt-40">
+    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-6xl pt-24 sm:pt-28">
       {/* Приветствие и Аватар */}
       <div className="style-card p-6 sm:p-8 mb-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
