@@ -177,7 +177,7 @@ export default async function MentorDashboard() {
   }
 
   return (
-    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-6xl">
+    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-6xl pt-32 sm:pt-40">
       {/* Приветствие и Аватар */}
       <div className="style-card p-6 sm:p-8 mb-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
