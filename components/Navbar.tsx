@@ -17,6 +17,7 @@ interface Profile {
 export default function Navbar() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [coachId, setCoachId] = useState<string | null>(null) // ← ДОБАВЛЕНО
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
@@ -42,6 +43,7 @@ export default function Navbar() {
           console.error('Auth error:', userError)
           setUser(null)
           setProfile(null)
+          setCoachId(null) // ← ДОБАВЛЕНО
           setIsMentor(false)
           setIsAdmin(false)
           setIsLoaded(true)
@@ -54,7 +56,7 @@ export default function Navbar() {
           try {
             const { data: coachData, error: coachError } = await supabase
               .from('coaches')
-              .select('display_name, role')
+              .select('id, display_name, role') // ← ДОБАВЛЕНО 'id'
               .eq('user_id', user.id)
               .single()
 
@@ -66,10 +68,12 @@ export default function Navbar() {
 
             if (coachData) {
               setProfile(coachData)
+              setCoachId(coachData.id) // ← ДОБАВЛЕНО
               setIsMentor(coachData.role === 'mentor' || coachData.role === 'admin')
               setIsAdmin(coachData.role === 'admin')
             } else {
               setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
+              setCoachId(null) // ← ДОБАВЛЕНО
               setIsMentor(false)
               setIsAdmin(false)
             }
@@ -77,11 +81,13 @@ export default function Navbar() {
             if (!mounted) return
             console.error('Coach load error:', err)
             setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
+            setCoachId(null) // ← ДОБАВЛЕНО
             setIsMentor(false)
             setIsAdmin(false)
           }
         } else {
           setProfile(null)
+          setCoachId(null) // ← ДОБАВЛЕНО
           setIsMentor(false)
           setIsAdmin(false)
         }
@@ -92,6 +98,7 @@ export default function Navbar() {
         console.error('Navbar load error:', error)
         setUser(null)
         setProfile(null)
+        setCoachId(null) // ← ДОБАВЛЕНО
         setIsMentor(false)
         setIsAdmin(false)
         setIsLoaded(true)
@@ -107,6 +114,7 @@ export default function Navbar() {
         loadUser()
       } else {
         setProfile(null)
+        setCoachId(null) // ← ДОБАВЛЕНО
         setIsMentor(false)
         setIsAdmin(false)
         setIsLoaded(true)
@@ -137,7 +145,7 @@ export default function Navbar() {
       
       setIsMentor(true)
       setProfile(prev => ({ ...prev, role: 'mentor' }))
-      alert('🎉 Теперь вы автор! Теперь вы можете создавать уроки.')
+      alert(' Теперь вы автор! Теперь вы можете создавать уроки.')
       router.refresh()
     } catch (error: any) {
       console.error('Error becoming mentor:', error)
@@ -150,6 +158,7 @@ export default function Navbar() {
       await supabase.auth.signOut()
       setUser(null)
       setProfile(null)
+      setCoachId(null)
       setIsMentor(false)
       setIsAdmin(false)
       setIsLoaded(true)
@@ -274,6 +283,20 @@ export default function Navbar() {
                               </svg>
                               Личный кабинет
                             </Link>
+
+                            {/* ← ДОБАВЛЕНА ССЫЛКА НА ПРОФИЛЬ */}
+                            {coachId && (
+                              <Link
+                                href={`/mentor/${coachId}`}
+                                className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
+                                onClick={() => setShowProfileMenu(false)}
+                              >
+                                <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                Мой профиль
+                              </Link>
+                            )}
 
                             <Link
                               href="/dashboard/mentor/profile"
