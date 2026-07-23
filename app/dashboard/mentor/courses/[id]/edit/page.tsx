@@ -34,10 +34,10 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
 
   if (!resolvedParams) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Загрузка...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Загрузка...</p>
         </div>
       </div>
     )
@@ -73,7 +73,6 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
   const loadData = async () => {
     try {
-      // Загружаем курс
       const { data: course, error: courseError } = await supabase
         .from('courses')
         .select('*')
@@ -90,7 +89,6 @@ function EditCourseForm({ courseId }: { courseId: string }) {
         setCoverImageUrl(course.cover_image_url || '')
       }
 
-      // Загружаем уроки курса
       const { data: lessons } = await supabase
         .from('lessons')
         .select('*')
@@ -99,7 +97,6 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
       setCourseLessons(lessons || [])
 
-      // Загружаем доступные уроки (без курса)
       const { data: available } = await supabase
         .from('lessons')
         .select('*')
@@ -165,7 +162,6 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
       if (error) throw error
 
-      // Обновляем списки
       const lesson = availableLessons.find(l => l.id === lessonId)
       if (lesson) {
         setCourseLessons([...courseLessons, { ...lesson, course_id: courseId, order_index: nextOrder }])
@@ -195,7 +191,6 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
       if (error) throw error
 
-      // Обновляем списки
       const lesson = courseLessons.find(l => l.id === lessonId)
       if (lesson) {
         setAvailableLessons([...availableLessons, lesson])
@@ -218,7 +213,6 @@ function EditCourseForm({ courseId }: { courseId: string }) {
     const [movedLesson] = newLessons.splice(currentIndex, 1)
     newLessons.splice(newIndex, 0, movedLesson)
 
-    // Обновляем order_index
     const updatedLessons = newLessons.map((lesson, index) => ({
       ...lesson,
       order_index: index + 1,
@@ -226,14 +220,11 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
     setCourseLessons(updatedLessons)
 
-    // Сохраняем в БД — обновляем каждый урок отдельно
     try {
       for (const lesson of updatedLessons) {
         const { error } = await supabase
           .from('lessons')
-          .update({
-            order_index: lesson.order_index,
-          })
+          .update({ order_index: lesson.order_index })
           .eq('id', lesson.id)
 
         if (error) throw error
@@ -241,57 +232,59 @@ function EditCourseForm({ courseId }: { courseId: string }) {
     } catch (error: any) {
       console.error('Error reordering lessons:', error)
       alert('Ошибка при изменении порядка')
-      // Откатываем изменения
       loadData()
     }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Загрузка курса...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Загрузка курса...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <main className="container mx-auto px-4 py-8 max-w-6xl">
+    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-6xl pt-24 sm:pt-28">
       {/* Хлебные крошки */}
       <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-        <Link href="/dashboard/mentor" className="hover:text-blue-600">
+        <Link href="/dashboard/mentor" className="hover:text-purple-600 transition-colors">
           Кабинет наставника
         </Link>
         <span>/</span>
-        <Link href="/dashboard/mentor/courses" className="hover:text-blue-600">
+        <Link href="/dashboard/mentor/courses" className="hover:text-purple-600 transition-colors">
           Мои курсы
         </Link>
         <span>/</span>
-        <span className="text-gray-900">Редактировать курс</span>
+        <span className="text-gray-900 font-medium">Редактировать курс</span>
       </div>
 
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Редактировать курс
-        </h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-1">
+            Редактировать курс
+          </h1>
+          <p className="text-gray-600">Управление программой и материалами</p>
+        </div>
         
         <div className="flex gap-3">
           <Link
-            href={`/course/${courseId}`}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+            href={`/course/${courseId}?view=preview`}
+            className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-all inline-flex items-center gap-2"
             target="_blank"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
-            <span>Как видят студенты</span>
+            <span className="hidden sm:inline">Как видят студенты</span>
           </Link>
           <Link
             href="/dashboard/mentor/courses"
-            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            className="bg-white text-gray-700 border border-purple-200 px-5 py-2.5 rounded-xl font-semibold hover:bg-purple-50 transition-all"
           >
             Назад
           </Link>
@@ -300,12 +293,14 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
       {/* Уведомления */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 flex items-center gap-2">
+          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           {error}
         </div>
       )}
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-6 flex items-center gap-2">
+          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           {success}
         </div>
       )}
@@ -313,14 +308,19 @@ function EditCourseForm({ courseId }: { courseId: string }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Левая колонка: Информация о курсе */}
         <div className="lg:col-span-2 space-y-6">
-          <form onSubmit={handleSaveCourse} className="bg-white rounded-xl shadow-sm border p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <form onSubmit={handleSaveCourse} className="style-card p-6 sm:p-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </span>
               Информация о курсе
             </h2>
             
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
                   Название курса *
                 </label>
                 <input
@@ -329,25 +329,27 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  placeholder="Например: Телесная психология: основы"
                 />
               </div>
 
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-2">
                   Описание курса
                 </label>
                 <textarea
                   id="description"
-                  rows={6}
+                  rows={5}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none transition-all"
+                  placeholder="Опишите, чему научатся студенты..."
                 />
               </div>
 
               <div>
-                <label htmlFor="coverImageUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="coverImageUrl" className="block text-sm font-semibold text-gray-700 mb-2">
                   URL обложки
                 </label>
                 <input
@@ -355,57 +357,53 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                   type="url"
                   value={coverImageUrl}
                   onChange={(e) => setCoverImageUrl(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   placeholder="https://example.com/image.jpg"
                 />
                 
                 {coverImageUrl && (
-                  <div className="mt-4 aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                    <img 
-                      src={coverImageUrl} 
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="mt-4 aspect-video bg-gray-100 rounded-xl overflow-hidden border border-purple-200">
+                    <img src={coverImageUrl} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="price" className="block text-sm font-semibold text-gray-700 mb-2">
                     Цена (руб.)
                   </label>
                   <input
                     id="price"
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="100"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   />
                 </div>
 
-                <div className="flex items-end">
-                  <div className="flex items-center h-10">
+                <div className="flex items-end pb-1">
+                  <label className="flex items-center gap-3 cursor-pointer group">
                     <input
                       id="isPublished"
                       type="checkbox"
                       checked={isPublished}
                       onChange={(e) => setIsPublished(e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="w-5 h-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
                     />
-                    <label htmlFor="isPublished" className="ml-2 text-sm text-gray-700">
-                      Опубликован
-                    </label>
-                  </div>
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-purple-700 transition-colors">
+                      {isPublished ? 'Опубликован' : 'Черновик'}
+                    </span>
+                  </label>
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                className="w-full sm:w-auto gradient-btn text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'Сохранение...' : 'Сохранить изменения'}
               </button>
@@ -413,14 +411,19 @@ function EditCourseForm({ courseId }: { courseId: string }) {
           </form>
 
           {/* Уроки курса */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
-                📚 Уроки курса ({courseLessons.length})
+          <div className="style-card p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </span>
+                Уроки курса ({courseLessons.length})
               </h2>
               <button
-                onClick={() => setShowAddLesson(!showAddLesson)}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+                onClick={() => setShowAddLesson(true)}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-all inline-flex items-center justify-center gap-2"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -434,27 +437,27 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                 {courseLessons.map((lesson, index) => (
                   <div
                     key={lesson.id}
-                    className="bg-gray-50 rounded-lg p-4 flex items-center gap-4"
+                    className="flex items-center gap-4 p-4 bg-purple-50/30 rounded-xl border border-purple-100 hover:bg-purple-50 transition-colors group"
                   >
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">
+                    <div className="w-8 h-8 flex-shrink-0 gradient-icon rounded-lg flex items-center justify-center text-white text-sm font-bold">
                       {index + 1}
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900 truncate">
+                      <h3 className="font-semibold text-gray-900 truncate">
                         {lesson.title}
                       </h3>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-xs text-gray-500 mt-0.5">
                         {lesson.price === 0 ? 'Бесплатно' : `${lesson.price} ₽`}
                         {lesson.is_free_preview && ' • Превью'}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleMoveLesson(lesson.id, 'up')}
                         disabled={index === 0}
-                        className="p-2 text-gray-600 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         title="Вверх"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -464,7 +467,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                       <button
                         onClick={() => handleMoveLesson(lesson.id, 'down')}
                         disabled={index === courseLessons.length - 1}
-                        className="p-2 text-gray-600 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-100 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                         title="Вниз"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -473,7 +476,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                       </button>
                       <button
                         onClick={() => handleRemoveLesson(lesson.id)}
-                        className="p-2 text-gray-600 hover:text-red-600"
+                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Удалить из курса"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -485,53 +488,50 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 bg-gray-50 rounded-lg">
-                <div className="text-4xl mb-2">📭</div>
-                <p className="text-gray-600">
-                  В курсе пока нет уроков
-                </p>
+              <div className="text-center py-12 bg-purple-50/30 rounded-xl border border-dashed border-purple-200">
+                <div className="text-5xl mb-3">📭</div>
+                <p className="text-gray-600 font-medium">В курсе пока нет уроков</p>
+                <p className="text-sm text-gray-500 mt-1">Добавьте уроки, чтобы сформировать программу</p>
               </div>
             )}
 
             {/* Модальное окно добавления урока */}
             {showAddLesson && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
-                  <div className="p-6 border-b">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-semibold text-gray-900">
-                        Добавить урок в курс
-                      </h3>
-                      <button
-                        onClick={() => setShowAddLesson(false)}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="style-card max-w-2xl w-full max-h-[80vh] flex flex-col">
+                  <div className="p-6 border-b border-purple-100 flex items-center justify-between flex-shrink-0">
+                    <h3 className="text-xl font-bold text-gray-900">
+                      Добавить урок в курс
+                    </h3>
+                    <button
+                      onClick={() => setShowAddLesson(false)}
+                      className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </div>
 
-                  <div className="p-6 overflow-y-auto max-h-[60vh]">
+                  <div className="p-6 overflow-y-auto flex-1">
                     {availableLessons.length > 0 ? (
                       <div className="space-y-3">
                         {availableLessons.map(lesson => (
                           <div
                             key={lesson.id}
-                            className="bg-gray-50 rounded-lg p-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                            className="bg-purple-50/30 rounded-xl p-4 flex items-center justify-between border border-purple-100 hover:bg-purple-50 transition-colors"
                           >
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-gray-900 truncate">
+                            <div className="flex-1 min-w-0 pr-4">
+                              <h4 className="font-semibold text-gray-900 truncate">
                                 {lesson.title}
                               </h4>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-gray-500 mt-0.5">
                                 {lesson.price === 0 ? 'Бесплатно' : `${lesson.price} ₽`}
                               </p>
                             </div>
                             <button
                               onClick={() => handleAddLesson(lesson.id)}
-                              className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors ml-4"
+                              className="gradient-btn text-white px-4 py-2 rounded-lg font-medium shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transition-all flex-shrink-0"
                             >
                               Добавить
                             </button>
@@ -540,15 +540,14 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        <div className="text-4xl mb-2">📭</div>
-                        <p className="text-gray-600 mb-4">
-                          Нет доступных уроков
-                        </p>
+                        <div className="text-5xl mb-3">📭</div>
+                        <p className="text-gray-600 font-medium mb-4">Нет доступных уроков</p>
                         <Link
                           href="/dashboard/mentor/lessons/new"
-                          className="text-blue-600 hover:text-blue-700 font-medium"
+                          className="text-purple-600 hover:text-purple-700 font-semibold inline-flex items-center gap-1"
                         >
-                          Создать новый урок →
+                          Создать новый урок
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                         </Link>
                       </div>
                     )}
@@ -561,32 +560,35 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
         {/* Правая колонка: Статистика */}
         <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">
-              📊 Статистика курса
+          <div className="style-card p-6">
+            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Статистика курса
             </h3>
             
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Уроков:</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Уроков:</span>
                 <span className="font-bold text-gray-900">{courseLessons.length}</span>
               </div>
               
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Статус:</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Статус:</span>
                 {isPublished ? (
-                  <span className="bg-green-100 text-green-800 text-sm font-medium px-2 py-1 rounded">
+                  <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
                     Опубликован
                   </span>
                 ) : (
-                  <span className="bg-yellow-100 text-yellow-800 text-sm font-medium px-2 py-1 rounded">
+                  <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-1 rounded-full">
                     Черновик
                   </span>
                 )}
               </div>
               
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Цена:</span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Цена:</span>
                 <span className="font-bold text-gray-900">
                   {price === '0' ? 'Бесплатно' : `${price} ₽`}
                 </span>
@@ -594,14 +596,16 @@ function EditCourseForm({ courseId }: { courseId: string }) {
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-            <h3 className="font-semibold text-blue-900 mb-2">
-              💡 Совет
-            </h3>
-            <p className="text-sm text-blue-800">
-              Добавьте минимум 3 урока в курс, чтобы он выглядел полноценным. 
-              Опубликуйте курс, когда он будет готов к показу студентам.
-            </p>
+          <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-5">
+            <div className="flex items-start gap-3">
+              <div className="text-2xl">💡</div>
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-1">Совет</h4>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Добавьте минимум 3 урока в курс, чтобы он выглядел полноценным. Опубликуйте курс, когда он будет готов к показу студентам.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
