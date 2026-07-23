@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 
-// Ленивая загрузка тяжёлых компонентов
 const ReviewsSection = dynamic(
   () => import('@/components/CourseReviews'),
   { 
@@ -32,22 +31,16 @@ interface CoursePageProps {
   params: Promise<{
     id: string
   }>
-  searchParams: Promise<{
-    view?: string
-  }>
 }
 
-export default async function CoursePage({ params, searchParams }: CoursePageProps) {
+export default async function CoursePage({ params }: CoursePageProps) {
   const { id } = await params
-  const { view } = await searchParams
-  
   const supabase = await createClient()
 
-  // Получаем текущего пользователя
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Отслеживаем просмотр курса (только если не режим предпросмотра)
-  if (user && view !== 'preview') {
+  // Отслеживаем просмотр курса
+  if (user) {
     await supabase
       .from('analytics_events')
       .insert({
@@ -79,12 +72,12 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
   }
 
   const coach = Array.isArray(course.coaches) ? course.coaches[0] : course.coaches
-
-  // Проверяем, является ли текущий пользователь владельцем курса
   const isOwner = user?.id === coach?.user_id
 
-  // Получаем уроки курса напрямую (без модулей)
-  const { data: directLessons, error: lessonsError } = await supabase
+  // === ЗАГРУЗКА УРОКОВ: пробуем несколько способов ===
+  
+  // Способ 1: Уроки напрямую через course_id
+  const { data: directLessons } = await supabase
     .from('lessons')
     .select(`
       id,
@@ -104,19 +97,59 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
     .eq('course_id', id)
     .order('order_index', { ascending: true })
 
-  if (lessonsError) {
-    console.error('Lessons error:', lessonsError)
+  // Способ 2: Уроки через модули
+  const { data: modules } = await supabase
+    .from('modules')
+    .select(`
+      id,
+      title,
+      order_index,
+      lessons (
+        id,
+        title,
+        description,
+        price,
+        is_free_preview,
+        order_index,
+        duration,
+        lesson_content (
+          id,
+          content_type,
+          content_url,
+          order_index
+        )
+      )
+    `)
+    .eq('course_id', id)
+    .order('order_index', { ascending: true })
+
+  // Собираем все уроки из модулей (если есть)
+  const lessonsFromModules: any[] = []
+  if (modules && modules.length > 0) {
+    modules.forEach(module => {
+      if (module.lessons) {
+        module.lessons.forEach((lesson: any) => {
+          if (!lessonsFromModules.find(l => l.id === lesson.id)) {
+            lessonsFromModules.push(lesson)
+          }
+        })
+      }
+    })
+    // Сортируем
+    lessonsFromModules.sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
   }
 
-  // Подсчитываем общее количество уроков и длительность
-  const totalLessons = directLessons?.length || 0
-  const totalDuration = directLessons?.reduce((sum, l) => sum + (l.duration || 0), 0) || 0
+  // Используем уроки из модулей, если они есть, иначе напрямую
+  const allLessons = lessonsFromModules.length > 0 ? lessonsFromModules : (directLessons || [])
+
+  const totalLessons = allLessons.length
+  const totalDuration = allLessons.reduce((sum, l) => sum + (l.duration || 0), 0)
 
   const isFree = course.price === 0 || course.is_free_preview
 
-  // Проверяем, куплен ли курс пользователем (только если не владелец и не режим предпросмотра)
+  // Проверяем покупку
   let isPurchased = false
-  if (user && !isOwner && view !== 'preview') {
+  if (user && !isOwner) {
     const { data: purchase } = await supabase
       .from('purchases')
       .select('id')
@@ -124,7 +157,6 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
       .eq('course_id', id)
       .eq('payment_status', 'completed')
       .single()
-    
     isPurchased = !!purchase
   }
 
@@ -153,15 +185,14 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
       storage: '',
       other: '',
     }
-    return icons[contentType || ''] || '📄'
+    return icons[contentType || ''] || ''
   }
 
-  // Получаем первый урок для кнопки "Начать обучение"
-  const firstLessonId = directLessons?.[0]?.id
+  const firstLessonId = allLessons[0]?.id
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-5xl pt-24 sm:pt-28">
-      {/* Верхняя панель с кнопками */}
+      {/* Верхняя панель */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <Link href="/" className="text-purple-600 hover:text-purple-700 font-medium inline-flex items-center gap-2 transition-colors group">
           <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,55 +201,26 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
           На главную
         </Link>
 
-        {/* Кнопки для владельца курса */}
+        {/* Кнопка редактирования только для владельца */}
         {isOwner && (
-          <div className="flex gap-2">
-            {view === 'preview' ? (
-              <Link
-                href={`/course/${id}`}
-                className="bg-white text-purple-700 border border-purple-200 px-5 py-2.5 rounded-xl font-semibold hover:bg-purple-50 transition-all inline-flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Выйти из предпросмотра
-              </Link>
-            ) : (
-              <Link
-                href={`/course/${id}?view=preview`}
-                className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-all inline-flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                Как видит студент
-              </Link>
-            )}
-            <Link
-              href={`/dashboard/mentor/courses/${id}/edit`}
-              className="bg-white text-purple-700 border border-purple-200 px-5 py-2.5 rounded-xl font-semibold hover:bg-purple-50 transition-all inline-flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Редактировать
-            </Link>
-          </div>
+          <Link
+            href={`/dashboard/mentor/courses/${id}/edit`}
+            className="bg-white text-purple-700 border border-purple-200 px-5 py-2.5 rounded-xl font-semibold hover:bg-purple-50 transition-all inline-flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Редактировать
+          </Link>
         )}
       </div>
 
-      {/* Заголовок курса с обложкой */}
+      {/* Заголовок курса */}
       <div className="style-card p-6 sm:p-8 mb-6">
-        {/* Обложка курса */}
         {course.cover_image ? (
           <div className="mb-6">
             <div className="aspect-video rounded-xl overflow-hidden shadow-lg">
-              <img
-                src={course.cover_image}
-                alt={course.title}
-                className="w-full h-full object-cover"
-              />
+              <img src={course.cover_image} alt={course.title} className="w-full h-full object-cover" />
             </div>
           </div>
         ) : (
@@ -235,10 +237,7 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
         
         {coach && (
           <div className="mb-5">
-            <Link 
-              href={`/mentor/${coach.id}`}
-              className="inline-flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors group"
-            >
+            <Link href={`/mentor/${coach.id}`} className="inline-flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors group">
               {coach.avatar_url ? (
                 <img src={coach.avatar_url} alt={coach.display_name} className="w-8 h-8 rounded-full object-cover" />
               ) : (
@@ -254,7 +253,7 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
           </div>
         )}
 
-        {/* Статистика курса */}
+        {/* Статистика */}
         <div className="flex flex-wrap items-center gap-3 mb-5">
           {isFree ? (
             <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-md shadow-green-500/20">
@@ -290,22 +289,8 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
           </span>
         </div>
 
-        {/* Индикатор режима предпросмотра */}
-        {view === 'preview' && (
-          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-xl mb-4">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              <span className="font-semibold">Режим предпросмотра</span>
-            </div>
-            <p className="text-sm mt-1">Вы видите курс так, как его видят студенты</p>
-          </div>
-        )}
-
-        {/* Кнопки действий (только если не владелец и не режим предпросмотра) */}
-        {!isOwner && view !== 'preview' && (
+        {/* Кнопки действий для студентов */}
+        {!isOwner && (
           <div className="flex flex-wrap gap-3">
             {isPurchased || isFree ? (
               <Link
@@ -341,7 +326,7 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
       </div>
 
       {/* Программа курса */}
-      {directLessons && directLessons.length > 0 && (
+      {allLessons.length > 0 ? (
         <div className="style-card p-6 sm:p-8 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
@@ -353,7 +338,7 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
           </h2>
           
           <div className="space-y-3">
-            {directLessons.map((lesson: any, index: number) => {
+            {allLessons.map((lesson: any, index: number) => {
               const hasContent = lesson.lesson_content && lesson.lesson_content.length > 0
               const contentType = hasContent ? lesson.lesson_content[0].content_type : null
               const icon = getContentTypeIcon(contentType)
@@ -399,10 +384,7 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
             })}
           </div>
         </div>
-      )}
-
-      {/* Если уроков нет */}
-      {(!directLessons || directLessons.length === 0) && (
+      ) : (
         <div className="style-card p-12 text-center mb-6">
           <div className="text-6xl mb-4">📭</div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">
