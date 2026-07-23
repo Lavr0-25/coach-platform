@@ -32,17 +32,22 @@ interface CoursePageProps {
   params: Promise<{
     id: string
   }>
+  searchParams: Promise<{
+    view?: string
+  }>
 }
 
-export default async function CoursePage({ params }: CoursePageProps) {
+export default async function CoursePage({ params, searchParams }: CoursePageProps) {
   const { id } = await params
+  const { view } = await searchParams
   
   const supabase = await createClient()
 
-  // Отслеживаем просмотр курса
+  // Получаем текущего пользователя
   const { data: { user } } = await supabase.auth.getUser()
-  
-  if (user) {
+
+  // Отслеживаем просмотр курса (только если не режим предпросмотра)
+  if (user && view !== 'preview') {
     await supabase
       .from('analytics_events')
       .insert({
@@ -60,6 +65,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
       *,
       coaches (
         id,
+        user_id,
         display_name,
         specialization,
         avatar_url
@@ -73,6 +79,9 @@ export default async function CoursePage({ params }: CoursePageProps) {
   }
 
   const coach = Array.isArray(course.coaches) ? course.coaches[0] : course.coaches
+
+  // Проверяем, является ли текущий пользователь владельцем курса
+  const isOwner = user?.id === coach?.user_id
 
   // Получаем модули курса с уроками
   const { data: modules, error: modulesError } = await supabase
@@ -143,7 +152,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
     ? sortedModules.reduce((sum, m) => sum + (m.lessons?.length || 0), 0)
     : directLessons.length
   
-  
   const totalDuration = sortedModules.length > 0
     ? sortedModules.reduce((sum, m) => 
         sum + (m.lessons?.reduce((s: number, l: any) => s + (l.duration || 0), 0) || 0), 0
@@ -152,9 +160,9 @@ export default async function CoursePage({ params }: CoursePageProps) {
 
   const isFree = course.price === 0 || course.is_free_preview
 
-  // Проверяем, куплен ли курс пользователем
+  // Проверяем, куплен ли курс пользователем (только если не владелец и не режим предпросмотра)
   let isPurchased = false
-  if (user) {
+  if (user && !isOwner && view !== 'preview') {
     const { data: purchase } = await supabase
       .from('purchases')
       .select('id')
@@ -182,13 +190,13 @@ export default async function CoursePage({ params }: CoursePageProps) {
 
   const getContentTypeIcon = (contentType: string | null) => {
     const icons: Record<string, string> = {
-      video: '🎥',
+      video: '',
       youtube: '🎥',
       vk_video: '🎥',
       pdf: '📄',
-      image: '️',
+      image: '🖼️',
       storage: '📁',
-      other: '🔗',
+      other: '',
     }
     return icons[contentType || ''] || '📄'
   }
@@ -200,14 +208,51 @@ export default async function CoursePage({ params }: CoursePageProps) {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-5xl pt-24 sm:pt-28">
-      {/* Кнопка назад */}
-      <div className="mb-6">
+      {/* Верхняя панель с кнопками */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <Link href="/" className="text-purple-600 hover:text-purple-700 font-medium inline-flex items-center gap-2 transition-colors group">
           <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           На главную
         </Link>
+
+        {/* Кнопки для владельца курса */}
+        {isOwner && (
+          <div className="flex gap-2">
+            {view === 'preview' ? (
+              <Link
+                href={`/course/${id}`}
+                className="gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Режим редактирования
+              </Link>
+            ) : (
+              <Link
+                href={`/course/${id}?view=preview`}
+                className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-all inline-flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Как видит студент
+              </Link>
+            )}
+            <Link
+              href={`/dashboard/mentor/courses/${id}/edit`}
+              className="bg-white text-purple-700 border border-purple-200 px-5 py-2.5 rounded-xl font-semibold hover:bg-purple-50 transition-all inline-flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Редактировать
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Заголовок курса с обложкой */}
@@ -292,38 +337,54 @@ export default async function CoursePage({ params }: CoursePageProps) {
           </span>
         </div>
 
-        {/* Кнопки действий */}
-        <div className="flex flex-wrap gap-3">
-          {isPurchased || isFree ? (
-            <Link
-              href={firstLessonId ? `/lesson/${firstLessonId}` : '#'}
-              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
-            >
+        {/* Кнопки действий (только если не владелец и не режим предпросмотра) */}
+        {!isOwner && view !== 'preview' && (
+          <div className="flex flex-wrap gap-3">
+            {isPurchased || isFree ? (
+              <Link
+                href={firstLessonId ? `/lesson/${firstLessonId}` : '#'}
+                className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {isPurchased ? 'Продолжить обучение' : 'Начать обучение'}
+              </Link>
+            ) : (
+              <Link
+                href={`/checkout?course_id=${id}`}
+                className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Купить курс
+              </Link>
+            )}
+            
+            <button className="bg-white text-purple-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all inline-flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
-              {isPurchased ? 'Продолжить обучение' : 'Начать обучение'}
-            </Link>
-          ) : (
-            <Link
-              href={`/checkout?course_id=${id}`}
-              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
-            >
+              В избранное
+            </button>
+          </div>
+        )}
+
+        {/* Индикатор режима предпросмотра */}
+        {view === 'preview' && (
+          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-xl">
+            <div className="flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-              Купить курс
-            </Link>
-          )}
-          
-          <button className="bg-white text-purple-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all inline-flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-            В избранное
-          </button>
-        </div>
+              <span className="font-semibold">Режим предпросмотра</span>
+            </div>
+            <p className="text-sm mt-1">Вы видите курс так, как его видят студенты</p>
+          </div>
+        )}
       </div>
 
       {/* Программа курса с модулями */}
