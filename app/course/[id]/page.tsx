@@ -74,10 +74,8 @@ export default async function CoursePage({ params }: CoursePageProps) {
   const coach = Array.isArray(course.coaches) ? course.coaches[0] : course.coaches
   const isOwner = user?.id === coach?.user_id
 
-  // === ЗАГРУЗКА УРОКОВ: пробуем несколько способов ===
-  
-  // Способ 1: Уроки напрямую через course_id
-  const { data: directLessons } = await supabase
+  // Получаем уроки курса (БЕЗ поля duration, которого нет в таблице)
+  const { data: directLessons, error: lessonsError } = await supabase
     .from('lessons')
     .select(`
       id,
@@ -86,7 +84,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
       price,
       is_free_preview,
       order_index,
-      duration,
       lesson_content (
         id,
         content_type,
@@ -97,53 +94,11 @@ export default async function CoursePage({ params }: CoursePageProps) {
     .eq('course_id', id)
     .order('order_index', { ascending: true })
 
-  // Способ 2: Уроки через модули
-  const { data: modules } = await supabase
-    .from('modules')
-    .select(`
-      id,
-      title,
-      order_index,
-      lessons (
-        id,
-        title,
-        description,
-        price,
-        is_free_preview,
-        order_index,
-        duration,
-        lesson_content (
-          id,
-          content_type,
-          content_url,
-          order_index
-        )
-      )
-    `)
-    .eq('course_id', id)
-    .order('order_index', { ascending: true })
-
-  // Собираем все уроки из модулей (если есть)
-  const lessonsFromModules: any[] = []
-  if (modules && modules.length > 0) {
-    modules.forEach(module => {
-      if (module.lessons) {
-        module.lessons.forEach((lesson: any) => {
-          if (!lessonsFromModules.find(l => l.id === lesson.id)) {
-            lessonsFromModules.push(lesson)
-          }
-        })
-      }
-    })
-    // Сортируем
-    lessonsFromModules.sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+  if (lessonsError) {
+    console.error('Lessons error:', lessonsError)
   }
 
-  // Используем уроки из модулей, если они есть, иначе напрямую
-  const allLessons = lessonsFromModules.length > 0 ? lessonsFromModules : (directLessons || [])
-
-  const totalLessons = allLessons.length
-  const totalDuration = allLessons.reduce((sum, l) => sum + (l.duration || 0), 0)
+  const totalLessons = directLessons?.length || 0
 
   const isFree = course.price === 0 || course.is_free_preview
 
@@ -158,14 +113,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
       .eq('payment_status', 'completed')
       .single()
     isPurchased = !!purchase
-  }
-
-  const formatDuration = (minutes: number) => {
-    if (!minutes || minutes <= 0) return null
-    if (minutes < 60) return `${minutes} мин`
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return mins > 0 ? `${hours} ч ${mins} мин` : `${hours} ч`
   }
 
   const getLessonsWord = (count: number) => {
@@ -188,7 +135,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
     return icons[contentType || ''] || ''
   }
 
-  const firstLessonId = allLessons[0]?.id
+  const firstLessonId = directLessons?.[0]?.id
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-5xl pt-24 sm:pt-28">
@@ -201,7 +148,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
           На главную
         </Link>
 
-        {/* Кнопка редактирования только для владельца */}
         {isOwner && (
           <Link
             href={`/dashboard/mentor/courses/${id}/edit`}
@@ -272,15 +218,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
             {totalLessons} {getLessonsWord(totalLessons)}
           </span>
           
-          {totalDuration > 0 && (
-            <span className="text-sm text-gray-500 flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {formatDuration(totalDuration)}
-            </span>
-          )}
-          
           <span className="text-sm text-gray-500 flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -326,7 +263,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
       </div>
 
       {/* Программа курса */}
-      {allLessons.length > 0 ? (
+      {directLessons && directLessons.length > 0 ? (
         <div className="style-card p-6 sm:p-8 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
@@ -338,7 +275,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
           </h2>
           
           <div className="space-y-3">
-            {allLessons.map((lesson: any, index: number) => {
+            {directLessons.map((lesson: any, index: number) => {
               const hasContent = lesson.lesson_content && lesson.lesson_content.length > 0
               const contentType = hasContent ? lesson.lesson_content[0].content_type : null
               const icon = getContentTypeIcon(contentType)
@@ -368,11 +305,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
                     {lesson.is_free_preview && (
                       <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
                         Бесплатно
-                      </span>
-                    )}
-                    {lesson.duration > 0 && (
-                      <span className="text-xs text-gray-500">
-                        {formatDuration(lesson.duration)}
                       </span>
                     )}
                     <svg className="w-5 h-5 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
