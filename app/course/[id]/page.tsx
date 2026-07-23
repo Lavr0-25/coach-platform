@@ -1,7 +1,39 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import CourseReviews from '@/components/CourseReviews'
+import dynamic from 'next/dynamic'
+
+// Ленивая загрузка тяжёлых компонентов
+const ReviewsSection = dynamic(
+  () => import('@/components/CourseReviews'),
+  { 
+    loading: () => (
+      <div className="style-card p-6 animate-pulse space-y-4">
+        <div className="h-8 bg-purple-100 rounded w-1/4"></div>
+        <div className="h-24 bg-purple-100 rounded"></div>
+      </div>
+    )
+  }
+)
+
+const CourseComments = dynamic(
+  () => import('@/components/LessonComments'),
+  { 
+    loading: () => (
+      <div className="style-card p-6 animate-pulse space-y-4">
+        <div className="h-8 bg-purple-100 rounded w-1/4"></div>
+        <div className="h-32 bg-purple-100 rounded"></div>
+      </div>
+    )
+  }
+)
+
+const CourseProgress = dynamic(
+  () => import('@/components/LessonProgress'),
+  { 
+    loading: () => <div className="animate-pulse h-24 bg-purple-100 rounded-xl"></div>
+  }
+)
 
 interface CoursePageProps {
   params: Promise<{
@@ -11,8 +43,24 @@ interface CoursePageProps {
 
 export default async function CoursePage({ params }: CoursePageProps) {
   const { id } = await params
+  
   const supabase = await createClient()
 
+  // Отслеживаем просмотр курса
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (user) {
+    await supabase
+      .from('analytics_events')
+      .insert({
+        event_type: 'course_view',
+        user_id: user.id,
+        target_id: id,
+        target_type: 'course',
+      })
+  }
+
+  // Получаем данные курса
   const { data: course, error: courseError } = await supabase
     .from('courses')
     .select(`
@@ -21,7 +69,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
         id,
         display_name,
         specialization,
-        bio
+        avatar_url
       )
     `)
     .eq('id', id)
@@ -31,191 +79,324 @@ export default async function CoursePage({ params }: CoursePageProps) {
     notFound()
   }
 
-  // Получаем первого наставника (coaches может быть массивом)
   const coach = Array.isArray(course.coaches) ? course.coaches[0] : course.coaches
 
-  const { data: lessons } = await supabase
-    .from('lessons')
-    .select('*')
+  // Получаем модули курса с уроками
+  const { data: modules, error: modulesError } = await supabase
+    .from('modules')
+    .select(`
+      id,
+      title,
+      order_index,
+      lessons (
+        id,
+        title,
+        description,
+        price,
+        is_free_preview,
+        order_index,
+        duration,
+        lesson_content (
+          id,
+          content_type,
+          content_url,
+          order_index
+        )
+      )
+    `)
     .eq('course_id', id)
     .order('order_index', { ascending: true })
 
-  const lessonsCount = lessons?.length || 0
+  if (modulesError) {
+    console.error('Modules error:', modulesError)
+  }
+
+  // Сортируем уроки внутри модулей
+  const sortedModules = modules?.map(module => ({
+    ...module,
+    lessons: (module.lessons || []).sort((a: any, b: any) => a.order_index - b.order_index)
+  })) || []
+
+  // Подсчитываем общее количество уроков и длительность
+  const totalLessons = sortedModules.reduce((sum, m) => sum + (m.lessons?.length || 0), 0)
+  const totalDuration = sortedModules.reduce((sum, m) => 
+    sum + (m.lessons?.reduce((s: number, l: any) => s + (l.duration || 0), 0) || 0), 0
+  )
+
+  const isFree = course.price === 0 || course.is_free_preview
+
+  // Проверяем, куплен ли курс пользователем
+  let isPurchased = false
+  if (user) {
+    const { data: purchase } = await supabase
+      .from('purchases')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('course_id', id)
+      .eq('payment_status', 'completed')
+      .single()
+    
+    isPurchased = !!purchase
+  }
+
+  const formatDuration = (minutes: number) => {
+    if (minutes < 60) return `${minutes} мин`
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return mins > 0 ? `${hours} ч ${mins} мин` : `${hours} ч`
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-br from-blue-600 to-purple-700 text-white py-12">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <h1 className="text-4xl font-bold mb-4">{course.title}</h1>
-          
-          {coach && (
-            <Link
-              href={`/mentor/${coach.id}`}
-              className="inline-flex items-center gap-2 text-blue-100 hover:text-white"
-            >
-              👨‍ {coach.display_name}
-            </Link>
-          )}
-
-          <div className="flex items-center gap-6 mt-6">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">📚</span>
-              <span>{lessonsCount} {lessonsCount === 1 ? 'урок' : lessonsCount < 5 ? 'урока' : 'уроков'}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">💰</span>
-              <span className="text-2xl font-bold">
-                {course.price === 0 ? 'Бесплатно' : `${course.price} ₽`}
-              </span>
-            </div>
-          </div>
-        </div>
+    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-5xl pt-24 sm:pt-28">
+      {/* Кнопка назад */}
+      <div className="mb-6">
+        <Link href="/" className="text-purple-600 hover:text-purple-700 font-medium inline-flex items-center gap-2 transition-colors group">
+          <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          На главную
+        </Link>
       </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {course.description && (
-          <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-            <h2 className="text-2xl font-bold mb-4">📖 О курсе</h2>
-            <p className="text-gray-700 whitespace-pre-wrap">{course.description}</p>
+      {/* Заголовок курса с обложкой */}
+      <div className="style-card p-6 sm:p-8 mb-6">
+        {/* Обложка курса */}
+        {course.cover_image ? (
+          <div className="mb-6">
+            <div className="aspect-video rounded-xl overflow-hidden shadow-lg">
+              <img
+                src={course.cover_image}
+                alt={course.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6">
+            <div className="aspect-video gradient-icon rounded-xl flex items-center justify-center">
+              <div className="text-8xl opacity-50">🎓</div>
+            </div>
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-          <h2 className="text-2xl font-bold mb-6">📚 Программа курса</h2>
-          
-          {lessons && lessons.length > 0 ? (
-            <div className="space-y-4">
-              {lessons.map((lesson, index) => (
-                <Link
-                  key={lesson.id}
-                  href={`/lesson/${lesson.id}`}
-                  className="block bg-gray-50 rounded-lg p-4 hover:bg-gray-100"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-bold">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{lesson.title}</h3>
-                      <p className="text-sm text-gray-500">
-                        {lesson.price === 0 ? 'Бесплатно' : `${lesson.price} ₽`}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+        <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-4 leading-tight">
+          {course.title}
+        </h1>
+        
+        {coach && (
+          <div className="mb-5">
+            <Link 
+              href={`/mentor/${coach.id}`}
+              className="inline-flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors group"
+            >
+              {coach.avatar_url ? (
+                <img src={coach.avatar_url} alt={coach.display_name} className="w-8 h-8 rounded-full object-cover" />
+              ) : (
+                <div className="w-8 h-8 gradient-icon rounded-full flex items-center justify-center text-white text-sm font-bold">
+                  {coach.display_name?.charAt(0).toUpperCase() || 'A'}
+                </div>
+              )}
+              <span className="font-semibold">{coach.display_name}</span>
+              {coach.specialization && (
+                <span className="text-gray-400">• {coach.specialization}</span>
+              )}
+            </Link>
+          </div>
+        )}
+
+        {/* Статистика курса */}
+        <div className="flex flex-wrap items-center gap-3 mb-5">
+          {isFree ? (
+            <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-md shadow-green-500/20">
+              Бесплатно
+            </span>
           ) : (
-            <p className="text-gray-600 text-center py-8">Уроки будут добавлены скоро</p>
+            <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-md shadow-purple-500/20">
+              {course.price} ₽
+            </span>
           )}
+          
+          <span className="text-sm text-gray-500 flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            {totalLessons} {totalLessons === 1 ? 'урок' : totalLessons < 5 ? 'урока' : 'уроков'}
+          </span>
+          
+          {totalDuration > 0 && (
+            <span className="text-sm text-gray-500 flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {formatDuration(totalDuration)}
+            </span>
+          )}
+          
+          <span className="text-sm text-gray-500 flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            {new Date(course.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </span>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            👨‍🏫 Ваш наставник
-          </h3>
-          
-          {coach && (
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                {coach.display_name?.charAt(0).toUpperCase() || '👤'}
-              </div>
-              <div>
-                <p className="font-semibold text-gray-900">
-                  {coach.display_name}
-                </p>
-                {coach.specialization && (
-                  <p className="text-sm text-gray-600">
-                    {coach.specialization}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {coach?.bio && (
-            <p className="text-sm text-gray-700 leading-relaxed">
-              {coach.bio}
-            </p>
-          )}
-
-          {coach && (
+        {/* Кнопки действий */}
+        <div className="flex flex-wrap gap-3">
+          {isPurchased || isFree ? (
             <Link
-              href={`/mentor/${coach.id}`}
-              className="mt-4 block text-center bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              href={sortedModules[0]?.lessons?.[0]?.id ? `/lesson/${sortedModules[0].lessons[0].id}` : '#'}
+              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
             >
-              Смотреть профиль →
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {isPurchased ? 'Продолжить обучение' : 'Начать обучение'}
+            </Link>
+          ) : (
+            <Link
+              href={`/checkout?course_id=${id}`}
+              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Купить курс
             </Link>
           )}
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border p-6 mt-6">
-          <div className="mb-6">
-            <div className="text-3xl font-bold text-gray-900 mb-2">
-              {course.price === 0 ? 'Бесплатно' : `${course.price} ₽`}
-            </div>
-            <p className="text-gray-600">
-              {lessonsCount} {lessonsCount === 1 ? 'урок' : lessonsCount < 5 ? 'урока' : 'уроков'}
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            {course.price === 0 ? (
-              <Link
-                href={`/lesson/${lessons?.[0]?.id || '#'}`}
-                className="block w-full bg-green-600 text-white text-center px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
-              >
-                🚀 Начать обучение
-              </Link>
-            ) : (
-              <>
-                <Link
-                  href="/catalog"
-                  className="block w-full bg-blue-600 text-white text-center px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                >
-                  💳 Купить курс (скоро)
-                </Link>
-                
-                {lessons && lessons.length > 0 && (
-                  <Link
-                    href={`/lesson/${lessons[0].id}`}
-                    className="block w-full bg-gray-100 text-gray-700 text-center px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-                  >
-                    📖 Посмотреть первый урок
-                  </Link>
-                )}
-              </>
-            )}
-          </div>
-
-          <div className="mt-6 pt-6 border-t">
-            <h4 className="font-semibold text-gray-900 mb-3">
-              Что входит в курс:
-            </h4>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>{lessonsCount} видео-уроков</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Доступ навсегда</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Материалы для скачивания</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Поддержка наставника</span>
-              </li>
-            </ul>
-          </div>
+          
+          <button className="bg-white text-purple-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all inline-flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            В избранное
+          </button>
         </div>
       </div>
-            {/* Отзывы */}
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <CourseReviews courseId={id} />
+
+      {/* Программа курса (модули и уроки) */}
+      {sortedModules.length > 0 && (
+        <div className="style-card p-6 sm:p-8 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </span>
+            Программа курса
+          </h2>
+          
+          <div className="space-y-6">
+            {sortedModules.map((module, moduleIndex) => (
+              <div key={module.id} className="border border-purple-100 rounded-xl overflow-hidden">
+                {/* Заголовок модуля */}
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 px-5 py-4 border-b border-purple-100">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <span className="w-7 h-7 gradient-icon rounded-lg flex items-center justify-center text-white text-sm">
+                      {moduleIndex + 1}
+                    </span>
+                    {module.title || `Модуль ${moduleIndex + 1}`}
+                    <span className="text-sm text-gray-500 font-normal ml-2">
+                      • {module.lessons?.length || 0} {module.lessons?.length === 1 ? 'урок' : module.lessons?.length < 5 ? 'урока' : 'уроков'}
+                    </span>
+                  </h3>
+                </div>
+                
+                {/* Список уроков */}
+                <div className="divide-y divide-purple-50">
+                  {module.lessons?.map((lesson: any, lessonIndex: number) => {
+                    const hasContent = lesson.lesson_content && lesson.lesson_content.length > 0
+                    const contentType = hasContent ? lesson.lesson_content[0].content_type : null
+                    
+                    const contentIcon: Record<string, string> = {
+                      video: '',
+                      youtube: '',
+                      vk_video: '',
+                      pdf: '📄',
+                      image: '🖼️',
+                      storage: '📁',
+                      other: '🔗',
+                    }
+                    const icon = contentIcon[contentType || ''] || ''
+                    
+                    return (
+                      <Link
+                        key={lesson.id}
+                        href={`/lesson/${lesson.id}`}
+                        className="flex items-center gap-4 px-5 py-4 hover:bg-purple-50/50 transition-colors group"
+                      >
+                        <div className="w-10 h-10 flex-shrink-0 bg-purple-100 rounded-lg flex items-center justify-center text-lg group-hover:bg-purple-200 transition-colors">
+                          {icon}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-gray-900 truncate group-hover:text-purple-600 transition-colors">
+                            {lessonIndex + 1}. {lesson.title}
+                          </h4>
+                          {lesson.description && (
+                            <p className="text-sm text-gray-500 truncate mt-0.5">
+                              {lesson.description}
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {lesson.is_free_preview && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                              Бесплатно
+                            </span>
+                          )}
+                          {lesson.duration > 0 && (
+                            <span className="text-xs text-gray-500">
+                              {formatDuration(lesson.duration)}
+                            </span>
+                          )}
+                          <svg className="w-5 h-5 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Описание */}
+      {course.description && (
+        <div className="style-card p-6 sm:p-8 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </span>
+            Описание курса
+          </h2>
+          <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-base sm:text-lg">
+            {course.description}
+          </div>
+        </div>
+      )}
+
+      {/* Прогресс курса */}
+      {isPurchased && (
+        <div className="mb-6 sm:mb-8">
+          <CourseProgress lessonId={id} />
+        </div>
+      )}
+
+      {/* Отзывы */}
+      <div className="mb-6 sm:mb-8">
+        <ReviewsSection courseId={id} />
+      </div>
+
+      {/* Комментарии */}
+      <div className="mb-6 sm:mb-8">
+        <CourseComments lessonId={id} />
       </div>
     </main>
   )
