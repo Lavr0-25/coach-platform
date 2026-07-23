@@ -28,13 +28,6 @@ const CourseComments = dynamic(
   }
 )
 
-const CourseProgress = dynamic(
-  () => import('@/components/LessonProgress'),
-  { 
-    loading: () => <div className="animate-pulse h-24 bg-purple-100 rounded-xl"></div>
-  }
-)
-
 interface CoursePageProps {
   params: Promise<{
     id: string
@@ -114,14 +107,48 @@ export default async function CoursePage({ params }: CoursePageProps) {
   // Сортируем уроки внутри модулей
   const sortedModules = modules?.map(module => ({
     ...module,
-    lessons: (module.lessons || []).sort((a: any, b: any) => a.order_index - b.order_index)
+    lessons: (module.lessons || []).sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0))
   })) || []
 
+  // Если модулей нет, получаем уроки напрямую из курса
+  let directLessons: any[] = []
+  if (sortedModules.length === 0) {
+    const { data: lessonsData } = await supabase
+      .from('lessons')
+      .select(`
+        id,
+        title,
+        description,
+        price,
+        is_free_preview,
+        order_index,
+        duration,
+        lesson_content (
+          id,
+          content_type,
+          content_url,
+          order_index
+        )
+      `)
+      .eq('course_id', id)
+      .order('order_index', { ascending: true })
+    
+    if (lessonsData) {
+      directLessons = lessonsData
+    }
+  }
+
   // Подсчитываем общее количество уроков и длительность
-  const totalLessons = sortedModules.reduce((sum, m) => sum + (m.lessons?.length || 0), 0)
-  const totalDuration = sortedModules.reduce((sum, m) => 
-    sum + (m.lessons?.reduce((s: number, l: any) => s + (l.duration || 0), 0) || 0), 0
-  )
+  const totalLessons = sortedModules.length > 0 
+    ? sortedModules.reduce((sum, m) => sum + (m.lessons?.length || 0), 0)
+    : directLessons.length
+  
+  
+  const totalDuration = sortedModules.length > 0
+    ? sortedModules.reduce((sum, m) => 
+        sum + (m.lessons?.reduce((s: number, l: any) => s + (l.duration || 0), 0) || 0), 0
+      )
+    : directLessons.reduce((sum, l) => sum + (l.duration || 0), 0)
 
   const isFree = course.price === 0 || course.is_free_preview
 
@@ -140,11 +167,36 @@ export default async function CoursePage({ params }: CoursePageProps) {
   }
 
   const formatDuration = (minutes: number) => {
+    if (!minutes || minutes <= 0) return null
     if (minutes < 60) return `${minutes} мин`
     const hours = Math.floor(minutes / 60)
     const mins = minutes % 60
     return mins > 0 ? `${hours} ч ${mins} мин` : `${hours} ч`
   }
+
+  const getLessonsWord = (count: number) => {
+    if (count % 10 === 1 && count % 100 !== 11) return 'урок'
+    if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'урока'
+    return 'уроков'
+  }
+
+  const getContentTypeIcon = (contentType: string | null) => {
+    const icons: Record<string, string> = {
+      video: '🎥',
+      youtube: '🎥',
+      vk_video: '🎥',
+      pdf: '📄',
+      image: '️',
+      storage: '📁',
+      other: '🔗',
+    }
+    return icons[contentType || ''] || '📄'
+  }
+
+  // Получаем первый урок для кнопки "Начать обучение"
+  const firstLessonId = sortedModules.length > 0 
+    ? sortedModules[0]?.lessons?.[0]?.id 
+    : directLessons[0]?.id
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-5xl pt-24 sm:pt-28">
@@ -220,7 +272,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
-            {totalLessons} {totalLessons === 1 ? 'урок' : totalLessons < 5 ? 'урока' : 'уроков'}
+            {totalLessons} {getLessonsWord(totalLessons)}
           </span>
           
           {totalDuration > 0 && (
@@ -244,7 +296,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
         <div className="flex flex-wrap gap-3">
           {isPurchased || isFree ? (
             <Link
-              href={sortedModules[0]?.lessons?.[0]?.id ? `/lesson/${sortedModules[0].lessons[0].id}` : '#'}
+              href={firstLessonId ? `/lesson/${firstLessonId}` : '#'}
               className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -274,7 +326,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
         </div>
       </div>
 
-      {/* Программа курса (модули и уроки) */}
+      {/* Программа курса с модулями */}
       {sortedModules.length > 0 && (
         <div className="style-card p-6 sm:p-8 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -297,7 +349,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
                     </span>
                     {module.title || `Модуль ${moduleIndex + 1}`}
                     <span className="text-sm text-gray-500 font-normal ml-2">
-                      • {module.lessons?.length || 0} {module.lessons?.length === 1 ? 'урок' : module.lessons?.length < 5 ? 'урока' : 'уроков'}
+                      • {module.lessons?.length || 0} {getLessonsWord(module.lessons?.length || 0)}
                     </span>
                   </h3>
                 </div>
@@ -307,17 +359,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
                   {module.lessons?.map((lesson: any, lessonIndex: number) => {
                     const hasContent = lesson.lesson_content && lesson.lesson_content.length > 0
                     const contentType = hasContent ? lesson.lesson_content[0].content_type : null
-                    
-                    const contentIcon: Record<string, string> = {
-                      video: '',
-                      youtube: '',
-                      vk_video: '',
-                      pdf: '📄',
-                      image: '🖼️',
-                      storage: '📁',
-                      other: '🔗',
-                    }
-                    const icon = contentIcon[contentType || ''] || ''
+                    const icon = getContentTypeIcon(contentType)
                     
                     return (
                       <Link
@@ -365,6 +407,67 @@ export default async function CoursePage({ params }: CoursePageProps) {
         </div>
       )}
 
+      {/* Программа курса без модулей (уроки напрямую) */}
+      {sortedModules.length === 0 && directLessons.length > 0 && (
+        <div className="style-card p-6 sm:p-8 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </span>
+            Программа курса
+          </h2>
+          
+          <div className="space-y-3">
+            {directLessons.map((lesson: any, index: number) => {
+              const hasContent = lesson.lesson_content && lesson.lesson_content.length > 0
+              const contentType = hasContent ? lesson.lesson_content[0].content_type : null
+              const icon = getContentTypeIcon(contentType)
+              
+              return (
+                <Link
+                  key={lesson.id}
+                  href={`/lesson/${lesson.id}`}
+                  className="flex items-center gap-4 p-4 bg-purple-50/30 rounded-xl hover:bg-purple-50 transition-colors group border border-purple-100"
+                >
+                  <div className="w-10 h-10 flex-shrink-0 bg-purple-100 rounded-lg flex items-center justify-center text-lg group-hover:bg-purple-200 transition-colors">
+                    {icon}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-gray-900 group-hover:text-purple-600 transition-colors">
+                      {index + 1}. {lesson.title}
+                    </h4>
+                    {lesson.description && (
+                      <p className="text-sm text-gray-500 mt-0.5 truncate">
+                        {lesson.description}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {lesson.is_free_preview && (
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                        Бесплатно
+                      </span>
+                    )}
+                    {lesson.duration > 0 && (
+                      <span className="text-xs text-gray-500">
+                        {formatDuration(lesson.duration)}
+                      </span>
+                    )}
+                    <svg className="w-5 h-5 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Описание */}
       {course.description && (
         <div className="style-card p-6 sm:p-8 mb-6">
@@ -379,13 +482,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
           <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-base sm:text-lg">
             {course.description}
           </div>
-        </div>
-      )}
-
-      {/* Прогресс курса */}
-      {isPurchased && (
-        <div className="mb-6 sm:mb-8">
-          <CourseProgress lessonId={id} />
         </div>
       )}
 
