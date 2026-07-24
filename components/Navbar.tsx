@@ -17,7 +17,7 @@ interface Profile {
 export default function Navbar() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [coachId, setCoachId] = useState<string | null>(null) // ← ДОБАВЛЕНО
+  const [coachId, setCoachId] = useState<string | null>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
@@ -43,7 +43,7 @@ export default function Navbar() {
           console.error('Auth error:', userError)
           setUser(null)
           setProfile(null)
-          setCoachId(null) // ← ДОБАВЛЕНО
+          setCoachId(null)
           setIsMentor(false)
           setIsAdmin(false)
           setIsLoaded(true)
@@ -56,7 +56,7 @@ export default function Navbar() {
           try {
             const { data: coachData, error: coachError } = await supabase
               .from('coaches')
-              .select('id, display_name, role') // ← ДОБАВЛЕНО 'id'
+              .select('id, display_name, role')
               .eq('user_id', user.id)
               .single()
 
@@ -68,12 +68,12 @@ export default function Navbar() {
 
             if (coachData) {
               setProfile(coachData)
-              setCoachId(coachData.id) // ← ДОБАВЛЕНО
+              setCoachId(coachData.id)
               setIsMentor(coachData.role === 'mentor' || coachData.role === 'admin')
               setIsAdmin(coachData.role === 'admin')
             } else {
               setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
-              setCoachId(null) // ← ДОБАВЛЕНО
+              setCoachId(null)
               setIsMentor(false)
               setIsAdmin(false)
             }
@@ -81,13 +81,13 @@ export default function Navbar() {
             if (!mounted) return
             console.error('Coach load error:', err)
             setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
-            setCoachId(null) // ← ДОБАВЛЕНО
+            setCoachId(null)
             setIsMentor(false)
             setIsAdmin(false)
           }
         } else {
           setProfile(null)
-          setCoachId(null) // ← ДОБАВЛЕНО
+          setCoachId(null)
           setIsMentor(false)
           setIsAdmin(false)
         }
@@ -98,7 +98,7 @@ export default function Navbar() {
         console.error('Navbar load error:', error)
         setUser(null)
         setProfile(null)
-        setCoachId(null) // ← ДОБАВЛЕНО
+        setCoachId(null)
         setIsMentor(false)
         setIsAdmin(false)
         setIsLoaded(true)
@@ -114,7 +114,7 @@ export default function Navbar() {
         loadUser()
       } else {
         setProfile(null)
-        setCoachId(null) // ← ДОБАВЛЕНО
+        setCoachId(null)
         setIsMentor(false)
         setIsAdmin(false)
         setIsLoaded(true)
@@ -145,7 +145,7 @@ export default function Navbar() {
       
       setIsMentor(true)
       setProfile(prev => ({ ...prev, role: 'mentor' }))
-      alert(' Теперь вы автор! Теперь вы можете создавать уроки.')
+      alert('🎉 Теперь вы автор! Теперь вы можете создавать уроки.')
       router.refresh()
     } catch (error: any) {
       console.error('Error becoming mentor:', error)
@@ -188,8 +188,6 @@ export default function Navbar() {
             CoachPlatform
           </Link>
 
-          {/* Навигация убрана - остались только иконки */}
-
           {/* Правая часть с иконками */}
           <div className="flex items-center gap-3">
             {!isLoaded ? (
@@ -204,7 +202,7 @@ export default function Navbar() {
                     onClick={handleBecomeMentor}
                     className="hidden md:inline-flex gradient-btn px-4 py-2 text-white rounded-full font-medium text-sm shadow-lg shadow-purple-500/30"
                   >
-                     Стать автором
+                    Стать автором
                   </button>
                 )}
 
@@ -251,7 +249,7 @@ export default function Navbar() {
                                 </p>
                                 {isAdmin && (
                                   <span className="inline-block mt-1 text-xs bg-gradient-to-r from-pink-500 to-purple-600 text-white px-2 py-0.5 rounded-full font-medium">
-                                     Администратор
+                                    Администратор
                                   </span>
                                 )}
                               </div>
@@ -274,7 +272,7 @@ export default function Navbar() {
                             )}
 
                             <Link
-                              href="/dashboard/mentor"
+                              href="/dashboard/mentor/profile"
                               className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
                               onClick={() => setShowProfileMenu(false)}
                             >
@@ -282,32 +280,6 @@ export default function Navbar() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                               </svg>
                               Личный кабинет
-                            </Link>
-
-                            {/* ← ДОБАВЛЕНА ССЫЛКА НА ПРОФИЛЬ */}
-                            {coachId && (
-                              <Link
-                                href={`/mentor/${coachId}`}
-                                className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
-                                onClick={() => setShowProfileMenu(false)}
-                              >
-                                <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                                Мой профиль
-                              </Link>
-                            )}
-
-                            <Link
-                              href="/dashboard/mentor/profile"
-                              className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
-                              onClick={() => setShowProfileMenu(false)}
-                            >
-                              <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
-                              Настройки профиля
                             </Link>
 
                             <Link
@@ -374,7 +346,7 @@ export default function Navbar() {
                   </div>
                 ) : (
                   <Link
-                    href="/dashboard/mentor"
+                    href="/login"
                     className="px-4 py-2 text-gray-700 hover:text-purple-600 font-medium transition-colors"
                   >
                     Кабинет
