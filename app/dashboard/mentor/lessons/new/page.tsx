@@ -21,7 +21,7 @@ const CONTENT_TYPES = [
   },
   { 
     value: 'image', 
-    label: '️ Фото/Изображение', 
+    label: '🖼️ Фото/Изображение', 
     hint: 'Загрузите изображение или вставьте ссылку',
     placeholder: 'https://... или загрузите файл'
   },
@@ -87,6 +87,10 @@ export default function NewLessonPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // 🛡️ Предотвращаем двойное выполнение (исправление дублирования)
+    if (loading) return
+    
     setError('')
 
     if (!coachId) {
@@ -153,7 +157,7 @@ export default function NewLessonPage() {
   const selectedContentType = CONTENT_TYPES.find(t => t.value === contentType)
 
   return (
-    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl">
+    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl pt-24 sm:pt-28">
       <div className="flex items-center gap-2 text-sm text-gray-600 mb-6 flex-wrap">
         <Link href="/dashboard/mentor" className="hover:text-purple-600 transition-colors">Кабинет автора</Link>
         <span>/</span>
@@ -166,7 +170,10 @@ export default function NewLessonPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
             {error}
           </div>
         )}
@@ -196,7 +203,7 @@ export default function NewLessonPage() {
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                 placeholder="Например: Введение в профессию"
               />
             </div>
@@ -207,7 +214,7 @@ export default function NewLessonPage() {
                 rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none transition-all"
                 placeholder="Краткое описание урока..."
               />
             </div>
@@ -273,10 +280,10 @@ export default function NewLessonPage() {
                 <input
                   id="contentUrl"
                   type="url"
-                  required
+                  required={!isFileType}
                   value={contentUrl}
                   onChange={(e) => setContentUrl(e.target.value)}
-                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   placeholder={selectedContentType?.placeholder}
                 />
               </div>
@@ -292,7 +299,7 @@ export default function NewLessonPage() {
                   type="text"
                   value={contentTitle}
                   onChange={(e) => setContentTitle(e.target.value)}
-                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   placeholder="Например: Видеоурок №1"
                 />
               </div>
@@ -310,11 +317,11 @@ export default function NewLessonPage() {
                 id="price"
                 type="number"
                 min="0"
-                step="0.01"
+                step="100"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
-                placeholder="0.00"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                placeholder="0"
               />
               <p className="text-sm text-gray-500 mt-1">Оставьте 0, если урок бесплатный</p>
             </div>
@@ -326,12 +333,12 @@ export default function NewLessonPage() {
                   type="checkbox"
                   checked={isFreePreview}
                   onChange={(e) => setIsFreePreview(e.target.checked)}
-                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                  className="h-5 w-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
                 />
               </div>
               <div className="ml-3 text-sm">
-                <label htmlFor="isFreePreview" className="font-semibold text-gray-700">Бесплатный превью</label>
-                <p className="text-gray-500">Этот урок будет доступен для просмотра без покупки</p>
+                <label htmlFor="isFreePreview" className="font-semibold text-gray-900 cursor-pointer">Бесплатный превью</label>
+                <p className="text-gray-500 mt-0.5">Этот урок будет доступен для просмотра без покупки</p>
               </div>
             </div>
           </div>
@@ -342,14 +349,24 @@ export default function NewLessonPage() {
           <button
             type="submit"
             disabled={loading}
-            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 transition-all text-center"
+            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-center flex-1 sm:flex-none"
           >
-            {loading ? 'Создание...' : 'Создать урок'}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Создание...
+              </span>
+            ) : (
+              'Создать урок'
+            )}
           </button>
           
           <Link
             href="/dashboard/mentor/lessons"
-            className="bg-white text-gray-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all text-center"
+            className="bg-white text-gray-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all text-center flex-1 sm:flex-none"
           >
             Отмена
           </Link>
