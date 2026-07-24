@@ -167,7 +167,7 @@ export default function CreateCoursePage() {
                 <CoverImageUploader
                   currentImage={formData.cover_image}
                   onImageUpload={handleImageUpload}
-                  folder="courses"
+                  entityType="course"
                 />
                 <p className="text-xs text-gray-500 mt-2">
                   Рекомендуемый размер: 1200×675px (16:9). Поддерживается загрузка файла и вставка скриншотов (Ctrl+V)
@@ -260,7 +260,7 @@ export default function CreateCoursePage() {
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-5">
           <div className="flex items-start gap-3">
-            <div className="text-2xl"></div>
+            <div className="text-2xl">💡</div>
             <div>
               <h4 className="font-semibold text-gray-900 mb-1">Совет</h4>
               <p className="text-sm text-gray-600 leading-relaxed">
