@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import CoverImageUploader from '@/components/CoverImageUploader'
 
 interface Course {
   id: string
@@ -12,6 +13,7 @@ interface Course {
   price: number
   is_published: boolean
   cover_image_url: string | null
+  cover_image: string | null
   coach_id: string
 }
 
@@ -86,7 +88,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
         setDescription(course.description || '')
         setPrice(course.price?.toString() || '0')
         setIsPublished(course.is_published || false)
-        setCoverImageUrl(course.cover_image_url || '')
+        setCoverImageUrl(course.cover_image_url || course.cover_image || '')
       }
 
       const { data: lessons } = await supabase
@@ -133,6 +135,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
           price: parseFloat(price) || 0,
           is_published: isPublished,
           cover_image_url: coverImageUrl.trim() || null,
+          cover_image: coverImageUrl.trim() || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', courseId)
@@ -140,6 +143,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
       if (error) throw error
 
       setSuccess('✅ Курс успешно обновлён!')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (error: any) {
       console.error('Error updating course:', error)
       setError(error.message || 'Ошибка при сохранении курса')
@@ -250,27 +254,20 @@ function EditCourseForm({ courseId }: { courseId: string }) {
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-6xl pt-24 sm:pt-28">
       {/* Хлебные крошки */}
-      <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-        <Link href="/dashboard/mentor" className="hover:text-purple-600 transition-colors">
-          Кабинет наставника
-        </Link>
-        <span>/</span>
-        <Link href="/dashboard/mentor/courses" className="hover:text-purple-600 transition-colors">
-          Мои курсы
-        </Link>
-        <span>/</span>
-        <span className="text-gray-900 font-medium">Редактировать курс</span>
-      </div>
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-1">
-            Редактировать курс
-          </h1>
-          <p className="text-gray-600">Управление программой и материалами</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Link href="/dashboard/mentor" className="hover:text-purple-600 transition-colors">
+            Кабинет наставника
+          </Link>
+          <span>/</span>
+          <Link href="/dashboard/mentor/courses" className="hover:text-purple-600 transition-colors">
+            Мои курсы
+          </Link>
+          <span>/</span>
+          <span className="text-gray-900 font-medium">Редактировать курс</span>
         </div>
-        
-        <div className="flex gap-3">
+
+        <div className="flex gap-2">
           <Link
             href={`/course/${courseId}?view=preview`}
             className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-all inline-flex items-center gap-2"
@@ -294,13 +291,17 @@ function EditCourseForm({ courseId }: { courseId: string }) {
       {/* Уведомления */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 flex items-center gap-2">
-          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           {error}
         </div>
       )}
       {success && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-6 flex items-center gap-2">
-          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           {success}
         </div>
       )}
@@ -349,23 +350,17 @@ function EditCourseForm({ courseId }: { courseId: string }) {
               </div>
 
               <div>
-                <label htmlFor="coverImageUrl" className="block text-sm font-semibold text-gray-700 mb-2">
-                  URL обложки
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Обложка курса
                 </label>
-                <input
-                  id="coverImageUrl"
-                  type="url"
-                  value={coverImageUrl}
-                  onChange={(e) => setCoverImageUrl(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                  placeholder="https://example.com/image.jpg"
+                <CoverImageUploader
+                  currentImage={coverImageUrl}
+                  onImageUpload={(url) => setCoverImageUrl(url)}
+                  entityType="course"
                 />
-                
-                {coverImageUrl && (
-                  <div className="mt-4 aspect-video bg-gray-100 rounded-xl overflow-hidden border border-purple-200">
-                    <img src={coverImageUrl} alt="Preview" className="w-full h-full object-cover" />
-                  </div>
-                )}
+                <p className="text-xs text-gray-500 mt-2">
+                  Рекомендуемый размер: 1200×675px (16:9). Поддерживается загрузка файла и вставка скриншотов (Ctrl+V)
+                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -403,7 +398,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full sm:w-auto gradient-btn text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="gradient-btn text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'Сохранение...' : 'Сохранить изменения'}
               </button>
