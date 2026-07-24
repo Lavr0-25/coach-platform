@@ -349,10 +349,8 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                 />
               </div>
 
+              {/* ✅ ИСПРАВЛЕНИЕ: убран дублирующийся label "Обложка курса" */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Обложка курса
-                </label>
                 <CoverImageUploader
                   currentImage={coverImageUrl}
                   onImageUpload={(url) => setCoverImageUrl(url)}
@@ -535,7 +533,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        <div className="text-5xl mb-3">📭</div>
+                        <div className="text-5xl mb-3"></div>
                         <p className="text-gray-600 font-medium mb-4">Нет доступных уроков</p>
                         <Link
                           href="/dashboard/mentor/lessons/new"
