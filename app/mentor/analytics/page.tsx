@@ -19,13 +19,19 @@ export default async function MentorAnalyticsPage() {
     redirect('/dashboard/mentor')
   }
 
-  // Получаем все уроки ментора
+  // Получаем все уроки ментора с названиями
   const { data: lessons } = await supabase
     .from('lessons')
-    .select('id')
+    .select('id, title')
     .eq('coach_id', coach.id)
 
   const lessonIds = lessons?.map((l: any) => l.id) || []
+  
+  // Создаем мапу ID -> название
+  const lessonTitles: Record<string, string> = {}
+  lessons?.forEach((lesson: any) => {
+    lessonTitles[lesson.id] = lesson.title
+  })
 
   // Общая статистика
   const { count: totalLessons } = await supabase
@@ -45,7 +51,7 @@ export default async function MentorAnalyticsPage() {
     .eq('target_type', 'lesson')
     .in('target_id', lessonIds)
 
-  // Топ уроки по просмотрам (считаем вручную)
+  // Топ уроки по просмотрам
   const { data: allViews } = await supabase
     .from('analytics_events')
     .select('target_id')
@@ -58,13 +64,17 @@ export default async function MentorAnalyticsPage() {
     viewsCount[view.target_id] = (viewsCount[view.target_id] || 0) + 1
   })
 
-  // Сортируем и берем топ-5
+  // Сортируем и берем топ-5, добавляем названия
   const topLessons = Object.entries(viewsCount)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([target_id, count]) => ({ target_id, count }))
+    .map(([target_id, count]) => ({ 
+      target_id, 
+      count,
+      title: lessonTitles[target_id] || `Урок #${target_id.slice(0, 8)}...`
+    }))
 
-  // Недавняя активность
+  // Недавняя активность с названиями уроков
   const { data: recentActivity } = await supabase
     .from('analytics_events')
     .select(`
@@ -75,6 +85,12 @@ export default async function MentorAnalyticsPage() {
     .in('target_id', lessonIds)
     .order('created_at', { ascending: false })
     .limit(10)
+
+  // Добавляем названия к активности
+  const recentActivityWithTitles = recentActivity?.map((activity: any) => ({
+    ...activity,
+    lessonTitle: lessonTitles[activity.target_id] || `Урок #${activity.target_id.slice(0, 8)}...`
+  }))
 
   // Доход
   const { data: revenueData } = await supabase
@@ -181,14 +197,14 @@ export default async function MentorAnalyticsPage() {
           
           {topLessons && topLessons.length > 0 ? (
             <div className="space-y-3">
-              {topLessons.map((item: { target_id: string; count: number }, index: number) => (
+              {topLessons.map((item: { target_id: string; count: number; title: string }, index: number) => (
                 <div key={index} className="flex items-center gap-4 p-3 bg-purple-50/30 rounded-xl border border-purple-100">
                   <div className="w-8 h-8 gradient-icon rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                     {index + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 text-sm truncate">
-                      Урок #{item.target_id.slice(0, 8)}...
+                    <h3 className="font-semibold text-gray-900 text-sm truncate" title={item.title}>
+                      {item.title}
                     </h3>
                   </div>
                   <div className="text-lg font-bold text-purple-600">
@@ -216,9 +232,9 @@ export default async function MentorAnalyticsPage() {
             Недавняя активность
           </h2>
           
-          {recentActivity && recentActivity.length > 0 ? (
+          {recentActivityWithTitles && recentActivityWithTitles.length > 0 ? (
             <div className="space-y-3">
-              {recentActivity.map((activity: any, index: number) => (
+              {recentActivityWithTitles.map((activity: any, index: number) => (
                 <div key={index} className="flex items-start gap-3 p-3 hover:bg-purple-50/30 rounded-xl transition-colors">
                   <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
                   <div className="flex-1 min-w-0">
@@ -227,7 +243,10 @@ export default async function MentorAnalyticsPage() {
                       {activity.event_type === 'course_view' && '🎓 Просмотр курса'}
                       {activity.event_type === 'lesson_purchase' && '💰 Покупка урока'}
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">
+                      {activity.lessonTitle}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
                       {new Date(activity.created_at).toLocaleDateString('ru-RU', { 
                         day: 'numeric', 
                         month: 'short', 
