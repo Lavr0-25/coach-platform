@@ -67,14 +67,45 @@ function EditCourseForm({ courseId }: { courseId: string }) {
   // Уроки курса
   const [courseLessons, setCourseLessons] = useState<Lesson[]>([])
   const [availableLessons, setAvailableLessons] = useState<Lesson[]>([])
+  const [filteredLessons, setFilteredLessons] = useState<Lesson[]>([])
   const [showAddLesson, setShowAddLesson] = useState(false)
+  const [lessonSearch, setLessonSearch] = useState('')
 
   useEffect(() => {
     loadData()
   }, [])
 
+  // Фильтрация уроков при изменении поиска
+  useEffect(() => {
+    if (lessonSearch.trim()) {
+      const search = lessonSearch.toLowerCase()
+      setFilteredLessons(
+        availableLessons.filter(lesson =>
+          lesson.title.toLowerCase().includes(search) ||
+          (lesson.description && lesson.description.toLowerCase().includes(search))
+        )
+      )
+    } else {
+      setFilteredLessons(availableLessons)
+    }
+  }, [lessonSearch, availableLessons])
+
   const loadData = async () => {
     try {
+      // Получаем текущего пользователя
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Пользователь не найден')
+
+      // Получаем coach_id
+      const { data: coach } = await supabase
+        .from('coaches')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!coach) throw new Error('Coach не найден')
+
+      // Загружаем курс
       const { data: course, error: courseError } = await supabase
         .from('courses')
         .select('*')
@@ -91,6 +122,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
         setCoverImageUrl(course.cover_image_url || course.cover_image || '')
       }
 
+      // Загружаем уроки курса
       const { data: lessons } = await supabase
         .from('lessons')
         .select('*')
@@ -99,13 +131,16 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
       setCourseLessons(lessons || [])
 
+      // Загружаем ДОСТУПНЫЕ уроки ТОЛЬКО текущего автора (без курса)
       const { data: available } = await supabase
         .from('lessons')
         .select('*')
+        .eq('coach_id', coach.id) // ← Только свои уроки!
         .is('course_id', null)
         .order('created_at', { ascending: false })
 
       setAvailableLessons(available || [])
+      setFilteredLessons(available || [])
     } catch (error: any) {
       console.error('Error loading course:', error)
       setError('Ошибка загрузки курса')
@@ -173,6 +208,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
       }
 
       setShowAddLesson(false)
+      setLessonSearch('')
     } catch (error: any) {
       console.error('Error adding lesson:', error)
       alert('Ошибка при добавлении урока')
@@ -195,10 +231,32 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
       if (error) throw error
 
+      // Получаем текущего автора
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Пользователь не найден')
+
+      const { data: coach } = await supabase
+        .from('coaches')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!coach) throw new Error('Coach не найден')
+
+      // Обновляем списки
       const lesson = courseLessons.find(l => l.id === lessonId)
       if (lesson) {
         setAvailableLessons([...availableLessons, lesson])
         setCourseLessons(courseLessons.filter(l => l.id !== lessonId))
+        
+        // Проверяем, соответствует ли урок поиску
+        if (lessonSearch.trim()) {
+          const search = lessonSearch.toLowerCase()
+          if (lesson.title.toLowerCase().includes(search) ||
+              (lesson.description && lesson.description.toLowerCase().includes(search))) {
+            setFilteredLessons(prev => [...prev, lesson])
+          }
+        }
       }
     } catch (error: any) {
       console.error('Error removing lesson:', error)
@@ -349,7 +407,6 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                 />
               </div>
 
-              {/* ✅ ИСПРАВЛЕНИЕ: убран дублирующийся label "Обложка курса" */}
               <div>
                 <CoverImageUploader
                   currentImage={coverImageUrl}
@@ -415,7 +472,10 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                 Уроки курса ({courseLessons.length})
               </h2>
               <button
-                onClick={() => setShowAddLesson(true)}
+                onClick={() => {
+                  setShowAddLesson(true)
+                  setLessonSearch('')
+                }}
                 className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-all inline-flex items-center justify-center gap-2"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -482,9 +542,9 @@ function EditCourseForm({ courseId }: { courseId: string }) {
               </div>
             ) : (
               <div className="text-center py-12 bg-purple-50/30 rounded-xl border border-dashed border-purple-200">
-                <div className="text-5xl mb-3">📭</div>
+                <div className="text-5xl mb-3"></div>
                 <p className="text-gray-600 font-medium">В курсе пока нет уроков</p>
-                <p className="text-sm text-gray-500 mt-1">Добавьте уроки, чтобы сформировать программу</p>
+                <p className="text-sm text-gray-500 mt-1">Добавьте свои уроки, чтобы сформировать программу</p>
               </div>
             )}
 
@@ -494,10 +554,13 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                 <div className="style-card max-w-2xl w-full max-h-[80vh] flex flex-col">
                   <div className="p-6 border-b border-purple-100 flex items-center justify-between flex-shrink-0">
                     <h3 className="text-xl font-bold text-gray-900">
-                      Добавить урок в курс
+                      Добавить свой урок в курс
                     </h3>
                     <button
-                      onClick={() => setShowAddLesson(false)}
+                      onClick={() => {
+                        setShowAddLesson(false)
+                        setLessonSearch('')
+                      }}
                       className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-colors"
                     >
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -506,10 +569,30 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                     </button>
                   </div>
 
+                  {/* Поиск по своим урокам */}
+                  <div className="p-4 border-b border-purple-100">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={lessonSearch}
+                        onChange={(e) => setLessonSearch(e.target.value)}
+                        placeholder="Поиск по своим урокам..."
+                        className="w-full px-4 py-2.5 pl-11 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        autoFocus
+                      />
+                      <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Показаны только ваши уроки ({filteredLessons.length})
+                    </p>
+                  </div>
+
                   <div className="p-6 overflow-y-auto flex-1">
-                    {availableLessons.length > 0 ? (
+                    {filteredLessons.length > 0 ? (
                       <div className="space-y-3">
-                        {availableLessons.map(lesson => (
+                        {filteredLessons.map(lesson => (
                           <div
                             key={lesson.id}
                             className="bg-purple-50/30 rounded-xl p-4 flex items-center justify-between border border-purple-100 hover:bg-purple-50 transition-colors"
@@ -520,6 +603,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                               </h4>
                               <p className="text-sm text-gray-500 mt-0.5">
                                 {lesson.price === 0 ? 'Бесплатно' : `${lesson.price} ₽`}
+                                {lesson.is_free_preview && ' • Превью'}
                               </p>
                             </div>
                             <button
@@ -534,10 +618,19 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                     ) : (
                       <div className="text-center py-8">
                         <div className="text-5xl mb-3"></div>
-                        <p className="text-gray-600 font-medium mb-4">Нет доступных уроков</p>
+                        <p className="text-gray-600 font-medium mb-4">
+                          {lessonSearch ? 'Уроки не найдены' : 'Нет доступных уроков'}
+                        </p>
+                        <p className="text-sm text-gray-500 mb-4">
+                          {lessonSearch 
+                            ? 'Попробуйте изменить поисковый запрос'
+                            : 'Сначала создайте уроки, затем добавьте их в курс'
+                          }
+                        </p>
                         <Link
                           href="/dashboard/mentor/lessons/new"
                           className="text-purple-600 hover:text-purple-700 font-semibold inline-flex items-center gap-1"
+                          onClick={() => setShowAddLesson(false)}
                         >
                           Создать новый урок
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
