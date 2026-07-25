@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -15,15 +15,26 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
   const [isFavorited, setIsFavorited] = useState(initialIsFavorited)
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  const [checked, setChecked] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+  const mountedRef = useRef(true)
 
   useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
+      if (cancelled) return
+      
       setUserId(user?.id || null)
       
-      if (user && !initialIsFavorited) {
+      if (user) {
         const { data } = await supabase
           .from('favorites')
           .select('id')
@@ -31,14 +42,21 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
           .eq('lesson_id', itemId)
           .maybeSingle()
         
-        setIsFavorited(!!data)
+        if (!cancelled) {
+          setIsFavorited(!!data)
+          setChecked(true)
+        }
+      } else {
+        if (!cancelled) setChecked(true)
       }
     }
+    
     getUser()
-  }, [itemId, itemType, initialIsFavorited])
+    
+    return () => { cancelled = true }
+  }, [itemId, initialIsFavorited])
 
   const toggleFavorite = async (e: React.MouseEvent) => {
-    // ВАЖНО: останавливаем всплытие клика, чтобы не переходить по ссылке
     e.stopPropagation()
     e.preventDefault()
 
@@ -47,29 +65,44 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
       return
     }
 
+    if (loading) return
+
     setLoading(true)
+    
     try {
       if (isFavorited) {
+        // Удаляем из избранного
         const { error } = await supabase
           .from('favorites')
           .delete()
           .eq('user_id', userId)
           .eq('lesson_id', itemId)
         
-        if (error) throw error
+        if (error) {
+          console.error('Ошибка удаления:', error)
+          return
+        }
+        
+        setIsFavorited(false)
       } else {
-        // Сначала проверяем, нет ли уже записи (чтобы избежать 409)
-        const { data: existing } = await supabase
+        // Сначала проверяем, нет ли уже записи
+        const { data: existing, error: checkError } = await supabase
           .from('favorites')
           .select('id')
           .eq('user_id', userId)
           .eq('lesson_id', itemId)
           .maybeSingle()
 
+        if (checkError) {
+          console.error('Ошибка проверки:', checkError)
+          return
+        }
+
         if (existing) {
-          // Уже в избранном — просто обновляем состояние
+          // Уже в избранном
           setIsFavorited(true)
         } else {
+          // Добавляем в избранное
           const { error } = await supabase
             .from('favorites')
             .insert({ 
@@ -79,20 +112,21 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
             })
           
           if (error) {
-            // Если всё равно 409 — значит добавили между запросами
+            console.error('Ошибка вставки:', error)
+            // Если UNIQUE violation — значит уже добавили
             if (error.code === '23505') {
               setIsFavorited(true)
-            } else {
-              throw error
             }
-          } else {
-            setIsFavorited(true)
+            return
           }
+          
+          setIsFavorited(true)
         }
       }
+      
       router.refresh()
     } catch (error) {
-      console.error('Ошибка при изменении избранного:', error)
+      console.error('Общая ошибка:', error)
     } finally {
       setLoading(false)
     }
@@ -104,7 +138,7 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
   return (
     <button
       onClick={toggleFavorite}
-      disabled={loading}
+      disabled={loading || !checked}
       className={`${sizeClasses} rounded-full bg-white/90 backdrop-blur-sm border border-purple-200 shadow-sm flex items-center justify-center transition-all hover:scale-110 active:scale-95 disabled:opacity-50`}
       title={isFavorited ? 'Удалить из избранного' : 'Добавить в избранное'}
     >
