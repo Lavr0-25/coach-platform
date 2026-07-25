@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
-export default function RemoveFavoriteButton({ itemId, itemType }: { itemId: string, itemType: 'course' | 'lesson' }) {
+export default function RemoveFavoriteButton({ itemId }: { itemId: string }) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -15,14 +15,15 @@ export default function RemoveFavoriteButton({ itemId, itemType }: { itemId: str
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      await supabase
+      const { error } = await supabase
         .from('favorites')
         .delete()
         .eq('user_id', user.id)
-        .eq('item_type', itemType)
-        .eq('item_id', itemId)
+        .eq('lesson_id', itemId)
       
-      router.refresh() // Мгновенно обновляем страницу
+      if (error) throw error
+      
+      router.refresh()
     } catch (error) {
       console.error('Ошибка удаления:', error)
     } finally {
