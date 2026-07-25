@@ -1,130 +1,198 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import RemoveFavoriteButton from '@/components/RemoveFavoriteButton'
 
 export default async function FavoritesPage() {
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    redirect('/login')
-  }
+  if (!user) redirect('/login')
 
-  const { data: favorites, error } = await supabase
+  // 1. Получаем все записи избранного пользователя
+  const { data: favorites } = await supabase
     .from('favorites')
-    .select(`
-      id,
-      group_name,
-      created_at,
-      lessons (
-        id,
-        title,
-        description,
-        price,
-        is_free_preview,
-        coaches (
-          id,
-          display_name
-        )
-      )
-    `)
+    .select('item_type, item_id, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  if (error) {
-    console.error('Error loading favorites:', error)
+  const courseIds = favorites?.filter(f => f.item_type === 'course').map(f => f.item_id) || []
+  const lessonIds = favorites?.filter(f => f.item_type === 'lesson').map(f => f.item_id) || []
+
+  let favCourses: any[] = []
+  let favLessons: any[] = []
+
+  // 2. Получаем данные курсов
+  if (courseIds.length > 0) {
+    const { data: courses } = await supabase
+      .from('courses')
+      .select('id, title, description, price, cover_image, is_published, lessons(id)')
+      .in('id', courseIds)
+    
+    favCourses = courses?.map(c => ({
+      ...c,
+      favorited_at: favorites?.find(f => f.item_id === c.id)?.created_at
+    })) || []
   }
 
+  // 3. Получаем данные уроков
+  if (lessonIds.length > 0) {
+    const { data: lessons } = await supabase
+      .from('lessons')
+      .select('id, title, description, price, cover_image, is_free_preview')
+      .in('id', lessonIds)
+    
+    favLessons = lessons?.map(l => ({
+      ...l,
+      favorited_at: favorites?.find(f => f.item_id === l.id)?.created_at
+    })) || []
+  }
+
+  // Сортируем по дате добавления в избранное (новые сверху)
+  favCourses.sort((a, b) => new Date(b.favorited_at).getTime() - new Date(a.favorited_at).getTime())
+  favLessons.sort((a, b) => new Date(b.favorited_at).getTime() - new Date(a.favorited_at).getTime())
+
+  const totalFavorites = favCourses.length + favLessons.length
+
   return (
-    <main className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-6xl">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            ⭐ Избранное
-          </h1>
-          <p className="text-gray-600 text-lg">
-            Уроки, которые вы сохранили для дальнейшего изучения
+    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-7xl pt-24 sm:pt-28">
+      {/* Хлебные крошки */}
+      <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
+        <Link href="/" className="hover:text-purple-600 transition-colors">Главная</Link>
+        <span>/</span>
+        <span className="text-gray-900 font-medium">Избранное</span>
+      </div>
+
+      {/* Заголовок */}
+      <div className="mb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-2">
+          Избранное
+        </h1>
+        <p className="text-gray-600">
+          {totalFavorites > 0 
+            ? `Вы сохранили ${totalFavorites} ${totalFavorites === 1 ? 'материал' : totalFavorites < 5 ? 'материала' : 'материалов'}`
+            : 'Здесь будут отображаться сохраненные курсы и уроки'
+          }
+        </p>
+      </div>
+
+      {/* Если пусто */}
+      {totalFavorites === 0 && (
+        <div className="style-card p-12 text-center">
+          <div className="text-6xl mb-4">💜</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Список избранного пуст</h2>
+          <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            Нажимайте на сердечко на карточках курсов и уроков, чтобы сохранять их здесь
           </p>
+          <Link
+            href="/mentors"
+            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
+          >
+            Найти авторов и материалы
+          </Link>
         </div>
+      )}
 
-        {favorites && favorites.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {favorites.map((favorite) => {
-              const lesson = Array.isArray(favorite.lessons) 
-                ? favorite.lessons[0] 
-                : favorite.lessons
-
-              if (!lesson || !lesson.id) return null
-
-              const coach = Array.isArray(lesson.coaches) 
-                ? lesson.coaches[0] 
-                : lesson.coaches
-
+      {/* Избранные курсы */}
+      {favCourses.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📚</span>
+            Курсы ({favCourses.length})
+          </h2>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {favCourses.map((course) => {
+              const lessonsCount = course.lessons?.length || 0
               return (
-                <Link
-                  key={favorite.id}
-                  href={`/lesson/${lesson.id}`}
-                  className="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow"
-                >
-                  <div className="mb-3">
-                    {favorite.group_name && (
-                      <span className="inline-block text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded mb-2">
-                        {favorite.group_name}
-                      </span>
-                    )}
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                      {lesson.title}
+                <div key={course.id} className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100 relative">
+                  <RemoveFavoriteButton itemId={course.id} itemType="course" />
+                  
+                  <Link href={`/course/${course.id}`} className="block">
+                    <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
+                      {course.cover_image ? (
+                        <img src={course.cover_image} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <span className="opacity-50">📚</span>
+                      )}
+                    </div>
+                    
+                    <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
+                      {course.title}
                     </h3>
-                    {coach && (
-                      <p className="text-sm text-gray-600 mb-2">
-                        👨‍🏫 {coach.display_name}
-                      </p>
+                    
+                    {course.description && (
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{course.description}</p>
                     )}
-                  </div>
 
-                  {lesson.description && (
-                    <p className="text-sm text-gray-700 line-clamp-2 mb-3">
-                      {lesson.description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    {lesson.price === 0 || lesson.is_free_preview ? (
-                      <span className="text-green-600 font-medium text-sm">
-                        🆓 Бесплатно
+                    <div className="flex items-center justify-between pt-3 border-t border-purple-100">
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <span>📖</span>
+                        <span>{lessonsCount} {lessonsCount === 1 ? 'урок' : lessonsCount < 5 ? 'урока' : 'уроков'}</span>
+                      </div>
+                      <span className="text-sm font-bold text-purple-700">
+                        {course.price === 0 ? 'Бесплатно' : `${course.price} ₽`}
                       </span>
-                    ) : (
-                      <span className="text-purple-600 font-medium text-sm">
-                        💰 {lesson.price} ₽
-                      </span>
-                    )}
-                    <span className="text-xs text-gray-500">
-                      {new Date(favorite.created_at).toLocaleDateString('ru-RU')}
-                    </span>
-                  </div>
-                </Link>
+                    </div>
+                  </Link>
+                </div>
               )
             })}
           </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
-            <div className="text-6xl mb-4">⭐</div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-              Пока нет избранных уроков
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Добавьте уроки в избранное, чтобы быстро найти их позже
-            </p>
-            <Link
-              href="/catalog"
-              className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-            >
-              Перейти в каталог
-            </Link>
+        </div>
+      )}
+
+      {/* Избранные уроки */}
+      {favLessons.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📝</span>
+            Уроки ({favLessons.length})
+          </h2>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {favLessons.map((lesson) => (
+              <div key={lesson.id} className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100 relative">
+                <RemoveFavoriteButton itemId={lesson.id} itemType="lesson" />
+                
+                <Link href={`/lesson/${lesson.id}`} className="block">
+                  <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
+                    {lesson.cover_image ? (
+                      <img src={lesson.cover_image} alt={lesson.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    ) : (
+                      <span className="opacity-50">📝</span>
+                    )}
+                  </div>
+                  
+                  <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
+                    {lesson.title}
+                  </h3>
+                  
+                  {lesson.description && (
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{lesson.description}</p>
+                  )}
+
+                  <div className="flex items-center justify-between pt-3 border-t border-purple-100">
+                    <div className="flex items-center gap-2">
+                      {lesson.is_free_preview ? (
+                        <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">Бесплатно</span>
+                      ) : (
+                        <span className="text-sm font-bold text-purple-700">{lesson.price} ₽</span>
+                      )}
+                    </div>
+                    <div className="text-purple-600 font-semibold text-sm group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                      Перейти
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </main>
   )
 }
