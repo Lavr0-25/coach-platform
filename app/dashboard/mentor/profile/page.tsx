@@ -27,11 +27,12 @@ export default function MentorProfilePage() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   
-  // Статистика
+  // Статистика (как на странице уроков)
   const [stats, setStats] = useState({
     totalLessons: 0,
     totalCourses: 0,
-    publishedLessons: 0,
+    inCoursesLessons: 0,
+    freeLessons: 0,
   })
   
   // Контент
@@ -44,22 +45,17 @@ export default function MentorProfilePage() {
 
   const loadProfile = async () => {
     try {
-      console.log('👤 Загрузка профиля...')
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/login')
         return
       }
 
-      console.log('🔑 User ID:', user.id)
-
       const { data: coach, error: coachError } = await supabase
         .from('coaches')
         .select('id, display_name, bio, specialization, avatar_url')
         .eq('user_id', user.id)
         .single()
-
-      console.log(' Coach data:', { coach, coachError })
 
       if (coachError) {
         console.error('❌ Coach error:', coachError)
@@ -74,7 +70,6 @@ export default function MentorProfilePage() {
         setSpecialization(coach.specialization || '')
         setAvatarUrl(coach.avatar_url || '')
 
-        console.log('✅ Coach loaded, ID:', coach.id)
         await loadContent(coach.id)
       }
     } catch (error: any) {
@@ -89,10 +84,10 @@ export default function MentorProfilePage() {
     try {
       console.log('🔍 Загрузка контента для coachId:', coachId)
       
-      // === 1. Загружаем ВСЕ уроки для статистики ===
+      // === 1. Загружаем ВСЕ уроки (используем те же поля, что и на странице уроков) ===
       const { data: allLessons, error: lessonsError } = await supabase
         .from('lessons')
-        .select('id, title, description, price, is_published, cover_image_url, cover_image, created_at')
+        .select('id, title, description, price, is_free_preview, course_id, cover_image, created_at')
         .eq('coach_id', coachId)
         .order('created_at', { ascending: false })
       
@@ -101,14 +96,16 @@ export default function MentorProfilePage() {
       // Считаем статистику по всем урокам
       if (allLessons) {
         const totalLessons = allLessons.length
-        const publishedLessons = allLessons.filter(l => l.is_published).length
+        const inCoursesLessons = allLessons.filter(l => l.course_id).length
+        const freeLessons = allLessons.filter(l => l.is_free_preview).length
         
-        console.log('📊 Статистика уроков:', { totalLessons, publishedLessons })
+        console.log('📊 Статистика уроков:', { totalLessons, inCoursesLessons, freeLessons })
         
         setStats(prev => ({
           ...prev,
           totalLessons,
-          publishedLessons,
+          inCoursesLessons,
+          freeLessons,
         }))
         
         // Берём только первые 10 для отображения
@@ -136,7 +133,7 @@ export default function MentorProfilePage() {
         setMyCourses(allCourses.slice(0, 10))
       }
     } catch (error: any) {
-      console.error(' Error loading content:', error)
+      console.error('❌ Error loading content:', error)
     }
   }
 
@@ -341,8 +338,8 @@ export default function MentorProfilePage() {
             </div>
           </div>
 
-          {/* Статистика */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {/* Статистика (исправленная) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="style-card p-4 text-center">
               <div className="text-3xl font-bold gradient-text mb-1">{stats.totalLessons}</div>
               <div className="text-sm text-gray-600">Всего уроков</div>
@@ -352,8 +349,12 @@ export default function MentorProfilePage() {
               <div className="text-sm text-gray-600">Курсов</div>
             </div>
             <div className="style-card p-4 text-center">
-              <div className="text-3xl font-bold gradient-text mb-1">{stats.publishedLessons}</div>
-              <div className="text-sm text-gray-600">Опубликовано</div>
+              <div className="text-3xl font-bold gradient-text mb-1">{stats.inCoursesLessons}</div>
+              <div className="text-sm text-gray-600">В курсах</div>
+            </div>
+            <div className="style-card p-4 text-center">
+              <div className="text-3xl font-bold gradient-text mb-1">{stats.freeLessons}</div>
+              <div className="text-sm text-gray-600">Бесплатных</div>
             </div>
           </div>
 
@@ -415,7 +416,7 @@ export default function MentorProfilePage() {
                       </h3>
                       <p className="text-sm text-gray-500">
                         {lesson.price === 0 ? 'Бесплатно' : `${lesson.price} ₽`}
-                        {lesson.is_published && ' • Опубликовано'}
+                        {lesson.is_free_preview && ' • Превью'}
                       </p>
                     </div>
                     <svg className="w-5 h-5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -559,9 +560,9 @@ export default function MentorProfilePage() {
 
                     <div className="flex items-center justify-between pt-3 border-t border-purple-100">
                       <div className="flex items-center gap-2">
-                        {lesson.is_published ? (
+                        {lesson.is_free_preview ? (
                           <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-                            Опубликовано
+                            Бесплатно
                           </span>
                         ) : (
                           <span className="text-sm font-bold text-purple-700">
