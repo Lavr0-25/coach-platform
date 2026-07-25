@@ -310,13 +310,9 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
               const courseLessonsCount = course.lessons?.length || 0
               
               return (
-                <div key={course.id} className="style-card overflow-hidden hover:shadow-lg transition-all group border border-purple-100 relative">
-                  {/* Кнопка избранного — ЛЕВЫЙ ВЕРХНИЙ УГОЛ */}
-                  <div className="absolute top-3 left-3 z-10">
-                    <FavoriteButton itemId={course.id} itemType="course" size="sm" />
-                  </div>
-
+                <div key={course.id} className="style-card overflow-hidden hover:shadow-lg transition-all group border border-purple-100">
                   <Link href={`/course/${course.id}`} className="block">
+                    {/* Обложка с кнопкой избранного внизу */}
                     <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 relative overflow-hidden">
                       {course.cover_image ? (
                         <img 
@@ -328,9 +324,14 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
                         <div className="w-full h-full flex items-center justify-center text-white text-6xl opacity-50"></div>
                       )}
                       
-                      {/* Цена — ПРАВЫЙ ВЕРХНИЙ УГОЛ */}
+                      {/* Цена — ВЕРХНИЙ ПРАВЫЙ УГОЛ */}
                       <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full">
                         {course.price === 0 ? 'Бесплатно' : `${course.price} ₽`}
+                      </div>
+
+                      {/* Кнопка избранного — НИЖНИЙ ЛЕВЫЙ УГОЛ */}
+                      <div className="absolute bottom-3 left-3 z-10">
+                        <FavoriteButton itemId={course.id} itemType="course" size="sm" />
                       </div>
                     </div>
 
@@ -378,14 +379,10 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredLessons.map((lesson) => {
               return (
-                <div key={lesson.id} className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100 relative">
-                  {/* Кнопка избранного — ЛЕВЫЙ ВЕРХНИЙ УГОЛ */}
-                  <div className="absolute top-3 left-3 z-10">
-                    <FavoriteButton itemId={lesson.id} itemType="lesson" size="sm" />
-                  </div>
-
+                <div key={lesson.id} className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100">
                   <Link href={`/lesson/${lesson.id}`} className="block">
-                    <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
+                    {/* Обложка с кнопкой избранного внизу */}
+                    <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden relative">
                       {lesson.cover_image ? (
                         <img 
                           src={lesson.cover_image} 
@@ -395,6 +392,11 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
                       ) : (
                         <span className="opacity-50"></span>
                       )}
+
+                      {/* Кнопка избранного — НИЖНИЙ ЛЕВЫЙ УГОЛ */}
+                      <div className="absolute bottom-3 left-3 z-10">
+                        <FavoriteButton itemId={lesson.id} itemType="lesson" size="sm" />
+                      </div>
                     </div>
                     
                     <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
