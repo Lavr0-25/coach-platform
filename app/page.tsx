@@ -82,7 +82,7 @@ export default function Home() {
     const loadData = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser()
-        setUser(user)
+        setUser(user || null)
 
         const { data: coachesData } = await supabase
           .from('coaches')
@@ -102,9 +102,9 @@ export default function Home() {
             .eq('user_id', user.id)
             .order('subscribed_at', { ascending: false })
 
-          if (subsData) {
-            setSubscriptions(subsData as any)
-          }
+          setSubscriptions(subsData || [])
+        } else {
+          setSubscriptions([])
         }
       } catch (error) {
         console.error('Error loading data:', error)
@@ -115,6 +115,10 @@ export default function Home() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      if (!session?.user) {
+        setSubscriptions([])
+        setActiveFilter('all')
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -133,7 +137,7 @@ export default function Home() {
 
         // Получаем ID авторов, на которых подписан пользователь
         let subscribedCoachIds: string[] = []
-        if (activeFilter === 'subscriptions' && subscriptions.length > 0) {
+        if (activeFilter === 'subscriptions' && subscriptions?.length > 0) {
           const subscribedUserIds = subscriptions.map(s => s.coach_id)
           const { data: coachesData } = await supabase
             .from('coaches')
@@ -326,7 +330,7 @@ export default function Home() {
         .eq('user_id', user.id)
         .order('subscribed_at', { ascending: false })
 
-      if (subsData) setSubscriptions(subsData as any)
+      setSubscriptions(subsData || [])
     } catch (error) {
       console.error('Error subscribing:', error)
       alert('Ошибка при подписке')
@@ -336,6 +340,8 @@ export default function Home() {
   }
 
   const handleUnsubscribe = async (coachId: string) => {
+    // КРИТИЧЕСКИ ВАЖНО: проверка на наличие пользователя перед обращением к user.id
+    if (!user) return;
     if (!confirm('Отписаться от этого автора?')) return
 
     try {
@@ -346,6 +352,7 @@ export default function Home() {
         .eq('coach_id', coachId)
 
       if (error) throw error
+      
       setSubscriptions(prev => prev.filter(sub => sub.coach_id !== coachId))
     } catch (error) {
       console.error('Error unsubscribing:', error)
@@ -453,7 +460,7 @@ export default function Home() {
                         </p>
                       ) : (
                         filteredCoaches.map((coach) => {
-                          const isSubscribed = subscriptions.some(s => s.coach_id === coach.user_id)
+                          const isSubscribed = subscriptions?.some(s => s.coach_id === coach.user_id)
                           return (
                             <div
                               key={coach.user_id}
@@ -515,12 +522,12 @@ export default function Home() {
                       <>
                         {isExpanded && (
                           <div className="max-h-96 overflow-y-auto space-y-2">
-                            {subscriptions.length === 0 ? (
+                            {subscriptions?.length === 0 ? (
                               <p className="text-sm text-gray-500 text-center py-3">
                                 Нет подписок
                               </p>
                             ) : (
-                              subscriptions.map((sub) => (
+                              subscriptions?.map((sub) => (
                                 <div
                                   key={sub.coach_id}
                                   className="flex items-center gap-3 p-2.5 bg-purple-50/30 rounded-xl group"
@@ -758,7 +765,7 @@ export default function Home() {
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <div className="w-16 h-16 gradient-icon rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
-                                {item.type === 'lesson' ? '📚' : ''}
+                                {item.type === 'lesson' ? '📚' : '🎓'}
                               </div>
                             </div>
                           )}
