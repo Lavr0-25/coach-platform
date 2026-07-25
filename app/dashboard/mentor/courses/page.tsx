@@ -1,50 +1,95 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createCourse } from '@/app/actions/createCourse'
 
-export default async function MentorCoursesPage() {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+export default function MentorCoursesPage() {
+  const [courses, setCourses] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const supabase = createClient()
 
-  // Получаем coach_id
-  const { data: coach } = await supabase
-    .from('coaches')
-    .select('id, display_name')
-    .eq('user_id', user.id)
-    .single()
+  useEffect(() => {
+    loadCourses()
+  }, [])
 
-  if (!coach) {
-    redirect('/dashboard/mentor')
+  // Debounce для поиска (300ms, после 3 символов)
+  useEffect(() => {
+    if (searchQuery.length >= 3) {
+      const timer = setTimeout(() => {
+        setDebouncedSearch(searchQuery)
+      }, 300)
+      return () => clearTimeout(timer)
+    } else {
+      setDebouncedSearch('')
+    }
+  }, [searchQuery])
+
+  const loadCourses = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) redirect('/login')
+
+    const { data: coach } = await supabase
+      .from('coaches')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!coach) {
+      redirect('/dashboard/mentor')
+    }
+
+    const { data: coursesData } = await supabase
+      .from('courses')
+      .select(`
+        id,
+        title,
+        description,
+        price,
+        is_published,
+        cover_image_url,
+        cover_image,
+        created_at,
+        lessons (
+          id,
+          title
+        )
+      `)
+      .eq('coach_id', coach.id)
+      .order('created_at', { ascending: false })
+
+    // Считаем количество уроков в каждом курсе
+    const coursesWithCount = coursesData?.map(course => ({
+      ...course,
+      lessonsCount: course.lessons?.length || 0
+    })) || []
+
+    setCourses(coursesWithCount)
+    setLoading(false)
   }
 
-  // Получаем курсы автора (включая черновики)
-  const { data: courses } = await supabase
-    .from('courses')
-    .select(`
-      id,
-      title,
-      description,
-      price,
-      is_published,
-      cover_image_url,
-      cover_image,
-      created_at,
-      lessons (
-        id,
-        title
+  // Фильтрация курсов
+  const filteredCourses = debouncedSearch
+    ? courses.filter(c => 
+        c.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        (c.description?.toLowerCase().includes(debouncedSearch.toLowerCase()) || false)
       )
-    `)
-    .eq('coach_id', coach.id)
-    .order('created_at', { ascending: false })
+    : courses
 
-  // Считаем количество уроков в каждом курсе
-  const coursesWithCount = courses?.map(course => ({
-    ...course,
-    lessonsCount: course.lessons?.length || 0
-  })) || []
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Загрузка...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-6xl pt-24 sm:pt-28">
@@ -80,10 +125,55 @@ export default async function MentorCoursesPage() {
         </form>
       </div>
 
+      {/* Поиск */}
+      <div className="mb-8">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Поиск по курсам..."
+            className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+          />
+          <svg 
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {debouncedSearch && (
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Найдено: <span className="font-bold text-purple-700">{filteredCourses.length}</span> курсов
+            </p>
+            <button
+              onClick={() => setSearchQuery('')}
+              className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+            >
+              Сбросить поиск
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Список курсов */}
-      {coursesWithCount.length > 0 ? (
+      {filteredCourses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {coursesWithCount.map((course) => (
+          {filteredCourses.map((course) => (
             <Link
               key={course.id}
               href={`/dashboard/mentor/courses/${course.id}/edit`}
@@ -144,24 +234,29 @@ export default async function MentorCoursesPage() {
         </div>
       ) : (
         <div className="style-card p-12 text-center">
-          <div className="text-6xl mb-4">📚</div>
+          <div className="text-6xl mb-4">🔍</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Пока нет курсов
+            {debouncedSearch ? 'Ничего не найдено' : 'Пока нет курсов'}
           </h2>
           <p className="text-gray-600 mb-6 max-w-md mx-auto">
-            Создайте свой первый курс, чтобы объединить уроки в учебную программу
+            {debouncedSearch 
+              ? `По запросу "${debouncedSearch}" курсов не найдено.`
+              : 'Создайте свой первый курс, чтобы объединить уроки в учебную программу'
+            }
           </p>
-          <form action={createCourse}>
-            <button
-              type="submit"
-              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Создать курс
-            </button>
-          </form>
+          {!debouncedSearch && (
+            <form action={createCourse}>
+              <button
+                type="submit"
+                className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Создать курс
+              </button>
+            </form>
+          )}
         </div>
       )}
     </main>
