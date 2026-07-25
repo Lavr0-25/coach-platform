@@ -78,38 +78,45 @@ export default function MentorProfilePage() {
 
   const loadContent = async (coachId: string) => {
     try {
-      // Загружаем уроки
-      const { data: lessonsData } = await supabase
+      // === 1. Загружаем ВСЕ уроки для статистики ===
+      const { data: allLessons } = await supabase
         .from('lessons')
         .select('id, title, description, price, is_free_preview, course_id, created_at')
         .eq('coach_id', coachId)
         .order('created_at', { ascending: false })
-        .limit(10)
       
-      if (lessonsData) {
-        setMyLessons(lessonsData)
+      // Считаем статистику по всем урокам
+      if (allLessons) {
+        const totalLessons = allLessons.length
+        const freeLessons = allLessons.filter(l => l.is_free_preview).length
+        const inCoursesLessons = allLessons.filter(l => l.course_id).length
+        
         setStats(prev => ({
           ...prev,
-          totalLessons: lessonsData.length,
-          freeLessons: lessonsData.filter(l => l.is_free_preview).length,
-          inCoursesLessons: lessonsData.filter(l => l.course_id).length,
+          totalLessons,
+          freeLessons,
+          inCoursesLessons,
         }))
+        
+        // Берём только первые 10 для отображения
+        setMyLessons(allLessons.slice(0, 10))
       }
 
-      // Загружаем курсы
-      const { data: coursesData } = await supabase
+      // === 2. Загружаем ВСЕ курсы для статистики ===
+      const { data: allCourses } = await supabase
         .from('courses')
-        .select('id, title, description, price, is_published, cover_image, created_at, lessons(id)')
+        .select('id, title, description, price, is_published, cover_image, created_at')
         .eq('coach_id', coachId)
         .order('created_at', { ascending: false })
-        .limit(10)
       
-      if (coursesData) {
-        setMyCourses(coursesData)
+      if (allCourses) {
         setStats(prev => ({
           ...prev,
-          totalCourses: coursesData.length,
+          totalCourses: allCourses.length,
         }))
+        
+        // Берём только первые 10 для отображения
+        setMyCourses(allCourses.slice(0, 10))
       }
     } catch (error: any) {
       console.error('Error loading content:', error)
@@ -342,7 +349,7 @@ export default function MentorProfilePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link href="/dashboard/mentor/courses" className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100">
               <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl mb-3 group-hover:scale-110 transition-transform">
-                📚
+                
               </div>
               <h3 className="font-bold text-gray-900 mb-1">Мои курсы</h3>
               <p className="text-sm text-gray-600">Управление курсами</p>
@@ -366,7 +373,7 @@ export default function MentorProfilePage() {
 
             <Link href="/dashboard/mentor/profile" className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100">
               <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl mb-3 group-hover:scale-110 transition-transform">
-                ⚙️
+                ️
               </div>
               <h3 className="font-bold text-gray-900 mb-1">Настройки</h3>
               <p className="text-sm text-gray-600">Профиль и пароль</p>
