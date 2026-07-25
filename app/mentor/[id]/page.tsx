@@ -5,7 +5,7 @@ import Link from 'next/link'
 interface MentorPageProps {
   params: Promise<{ id: string }>
 }
-# для обновления
+
 export default async function MentorPage({ params }: MentorPageProps) {
   const { id } = await params
   const supabase = await createClient()
@@ -117,7 +117,7 @@ export default async function MentorPage({ params }: MentorPageProps) {
       {coursesCount > 0 && (
         <div className="mb-10">
           <h2 className="text-2xl font-bold gradient-text mb-6 flex items-center gap-2">
-            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📚</span>
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm"></span>
             Курсы автора
           </h2>
 
@@ -221,7 +221,7 @@ export default async function MentorPage({ params }: MentorPageProps) {
       {/* Если нет материалов */}
       {coursesCount === 0 && lessonsCount === 0 && (
         <div className="style-card p-12 text-center">
-          <div className="text-6xl mb-4"></div>
+          <div className="text-6xl mb-4">📭</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Пока нет материалов</h2>
           <p className="text-gray-600">Автор пока не добавил курсы или уроки</p>
         </div>
