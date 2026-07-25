@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import NotificationsBell from './NotificationsBell'
 import MessagesBell from './MessagesBell'
-import FeedbackModal from './FeedbackModal'
 
 interface Profile {
   display_name?: string
@@ -20,7 +19,6 @@ export default function Navbar() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [coachId, setCoachId] = useState<string | null>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [isMentor, setIsMentor] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -344,18 +342,16 @@ export default function Navbar() {
                               Избранное
                             </Link>
 
-                            <button
-                              onClick={() => {
-                                setShowProfileMenu(false)
-                                setShowFeedbackModal(true)
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
+                            <Link
+                              href="/feedback"
+                              className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
+                              onClick={() => setShowProfileMenu(false)}
                             >
                               <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                               </svg>
                               Обратная связь
-                            </button>
+                            </Link>
 
                             <hr className="my-2 border-purple-100" />
 
@@ -401,13 +397,6 @@ export default function Navbar() {
           </div>
         </div>
       </div>
-
-      {user && (
-        <FeedbackModal 
-          isOpen={showFeedbackModal} 
-          onClose={() => setShowFeedbackModal(false)} 
-        />
-      )}
     </nav>
   )
 }
