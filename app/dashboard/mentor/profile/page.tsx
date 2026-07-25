@@ -32,8 +32,7 @@ export default function MentorProfilePage() {
   const [stats, setStats] = useState({
     totalLessons: 0,
     totalCourses: 0,
-    freeLessons: 0,
-    inCoursesLessons: 0,
+    publishedLessons: 0,
   })
   
   // Контент
@@ -81,21 +80,19 @@ export default function MentorProfilePage() {
       // === 1. Загружаем ВСЕ уроки для статистики ===
       const { data: allLessons } = await supabase
         .from('lessons')
-        .select('id, title, description, price, is_free_preview, course_id, created_at')
+        .select('id, title, description, price, is_published, cover_image_url, cover_image, created_at')
         .eq('coach_id', coachId)
         .order('created_at', { ascending: false })
       
       // Считаем статистику по всем урокам
       if (allLessons) {
         const totalLessons = allLessons.length
-        const freeLessons = allLessons.filter(l => l.is_free_preview).length
-        const inCoursesLessons = allLessons.filter(l => l.course_id).length
+        const publishedLessons = allLessons.filter(l => l.is_published).length
         
         setStats(prev => ({
           ...prev,
           totalLessons,
-          freeLessons,
-          inCoursesLessons,
+          publishedLessons,
         }))
         
         // Берём только первые 10 для отображения
@@ -326,7 +323,7 @@ export default function MentorProfilePage() {
           </div>
 
           {/* Статистика */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div className="style-card p-4 text-center">
               <div className="text-3xl font-bold gradient-text mb-1">{stats.totalLessons}</div>
               <div className="text-sm text-gray-600">Всего уроков</div>
@@ -336,12 +333,8 @@ export default function MentorProfilePage() {
               <div className="text-sm text-gray-600">Курсов</div>
             </div>
             <div className="style-card p-4 text-center">
-              <div className="text-3xl font-bold gradient-text mb-1">{stats.inCoursesLessons}</div>
-              <div className="text-sm text-gray-600">В курсах</div>
-            </div>
-            <div className="style-card p-4 text-center">
-              <div className="text-3xl font-bold gradient-text mb-1">{stats.freeLessons}</div>
-              <div className="text-sm text-gray-600">Бесплатных</div>
+              <div className="text-3xl font-bold gradient-text mb-1">{stats.publishedLessons}</div>
+              <div className="text-sm text-gray-600">Опубликовано</div>
             </div>
           </div>
 
@@ -403,7 +396,7 @@ export default function MentorProfilePage() {
                       </h3>
                       <p className="text-sm text-gray-500">
                         {lesson.price === 0 ? 'Бесплатно' : `${lesson.price} ₽`}
-                        {lesson.is_free_preview && ' • Превью'}
+                        {lesson.is_published && ' • Опубликовано'}
                       </p>
                     </div>
                     <svg className="w-5 h-5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -504,11 +497,6 @@ export default function MentorProfilePage() {
                           {course.price === 0 ? 'Бесплатно' : `${course.price} ₽`}
                         </span>
                       </div>
-                      
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
-                        <span>📖</span>
-                        <span>{course.lessons?.length || 0} уроков</span>
-                      </div>
                     </div>
                   </Link>
                 ))}
@@ -517,12 +505,12 @@ export default function MentorProfilePage() {
           )}
 
           {/* Отдельные уроки */}
-          {myLessons.filter(l => !l.course_id).length > 0 && (
+          {myLessons.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                   <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📝</span>
-                  Отдельные уроки
+                  Мои уроки
                 </h2>
                 <Link href="/dashboard/mentor/lessons" className="text-purple-600 hover:text-purple-700 font-medium text-sm">
                   Все уроки →
@@ -530,7 +518,7 @@ export default function MentorProfilePage() {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {myLessons.filter(l => !l.course_id).map((lesson) => (
+                {myLessons.map((lesson) => (
                   <Link
                     key={lesson.id}
                     href={`/dashboard/mentor/lessons/${lesson.id}/edit`}
@@ -552,9 +540,9 @@ export default function MentorProfilePage() {
 
                     <div className="flex items-center justify-between pt-3 border-t border-purple-100">
                       <div className="flex items-center gap-2">
-                        {lesson.is_free_preview ? (
+                        {lesson.is_published ? (
                           <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-                            Бесплатно
+                            Опубликовано
                           </span>
                         ) : (
                           <span className="text-sm font-bold text-purple-700">
