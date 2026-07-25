@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import FavoriteButton from '@/components/FavoriteButton'
 
 interface Course {
   id: string
@@ -309,53 +310,56 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
               const courseLessonsCount = course.lessons?.length || 0
               
               return (
-                <Link
-                  key={course.id}
-                  href={`/course/${course.id}`}
-                  className="style-card overflow-hidden hover:shadow-lg transition-all group border border-purple-100"
-                >
-                  <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 relative overflow-hidden">
-                    {course.cover_image ? (
-                      <img 
-                        src={course.cover_image} 
-                        alt={course.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white text-6xl opacity-50"></div>
-                    )}
-                    
-                    <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full">
-                      {course.price === 0 ? 'Бесплатно' : `${course.price} ₽`}
-                    </div>
+                <div key={course.id} className="style-card overflow-hidden hover:shadow-lg transition-all group border border-purple-100 relative">
+                  {/* Кнопка избранного */}
+                  <div className="absolute top-3 right-3 z-10">
+                    <FavoriteButton itemId={course.id} itemType="course" size="sm" />
                   </div>
 
-                  <div className="p-5">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
-                      {course.title}
-                    </h3>
-
-                    {course.description && (
-                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                        {course.description}
-                      </p>
-                    )}
-
-                    <div className="flex items-center justify-between pt-4 border-t border-purple-100">
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <span>📖</span>
-                        <span>
-                          {courseLessonsCount} {courseLessonsCount === 1 ? 'урок' : courseLessonsCount < 5 ? 'урока' : 'уроков'}
-                        </span>
-                      </div>
+                  <Link href={`/course/${course.id}`} className="block">
+                    <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 relative overflow-hidden">
+                      {course.cover_image ? (
+                        <img 
+                          src={course.cover_image} 
+                          alt={course.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white text-6xl opacity-50"></div>
+                      )}
                       
-                      <div className="text-purple-600 font-semibold text-sm group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                        Подробнее 
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                      <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full">
+                        {course.price === 0 ? 'Бесплатно' : `${course.price} ₽`}
                       </div>
                     </div>
-                  </div>
-                </Link>
+
+                    <div className="p-5">
+                      <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
+                        {course.title}
+                      </h3>
+
+                      {course.description && (
+                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                          {course.description}
+                        </p>
+                      )}
+
+                      <div className="flex items-center justify-between pt-4 border-t border-purple-100">
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <span>📖</span>
+                          <span>
+                            {courseLessonsCount} {courseLessonsCount === 1 ? 'урок' : courseLessonsCount < 5 ? 'урока' : 'уроков'}
+                          </span>
+                        </div>
+                        
+                        <div className="text-purple-600 font-semibold text-sm group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                          Подробнее 
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </div>
               )
             })}
           </div>
@@ -373,54 +377,57 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredLessons.map((lesson) => {
               return (
-                <Link
-                  key={lesson.id}
-                  href={`/lesson/${lesson.id}`}
-                  className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100"
-                >
-                  <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
-                    {lesson.cover_image ? (
-                      <img 
-                        src={lesson.cover_image} 
-                        alt={lesson.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <span className="opacity-50">📝</span>
-                    )}
+                <div key={lesson.id} className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100 relative">
+                  {/* Кнопка избранного */}
+                  <div className="absolute top-3 right-3 z-10">
+                    <FavoriteButton itemId={lesson.id} itemType="lesson" size="sm" />
                   </div>
-                  
-                  <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
-                    {lesson.title}
-                  </h3>
-                  
-                  {lesson.description && (
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                      {lesson.description}
-                    </p>
-                  )}
 
-                  <div className="flex items-center justify-between pt-3 border-t border-purple-100">
-                    <div className="flex items-center gap-2">
-                      {lesson.is_free_preview ? (
-                        <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-                          Бесплатно
-                        </span>
+                  <Link href={`/lesson/${lesson.id}`} className="block">
+                    <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
+                      {lesson.cover_image ? (
+                        <img 
+                          src={lesson.cover_image} 
+                          alt={lesson.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
                       ) : (
-                        <span className="text-sm font-bold text-purple-700">
-                          {lesson.price} ₽
-                        </span>
+                        <span className="opacity-50"></span>
                       )}
                     </div>
                     
-                    <div className="text-purple-600 font-semibold text-sm group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                      Подробнее
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                    <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">
+                      {lesson.title}
+                    </h3>
+                    
+                    {lesson.description && (
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                        {lesson.description}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between pt-3 border-t border-purple-100">
+                      <div className="flex items-center gap-2">
+                        {lesson.is_free_preview ? (
+                          <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                            Бесплатно
+                          </span>
+                        ) : (
+                          <span className="text-sm font-bold text-purple-700">
+                            {lesson.price} ₽
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="text-purple-600 font-semibold text-sm group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                        Подробнее
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </div>
               )
             })}
           </div>
@@ -430,7 +437,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
       {/* Если ничего не найдено */}
       {(filteredCourses.length === 0 && filteredLessons.length === 0) && (
         <div className="style-card p-12 text-center">
-          <div className="text-6xl mb-4">🔍</div>
+          <div className="text-6xl mb-4"></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {debouncedSearch ? 'Ничего не найдено' : 'Пока нет материалов'}
           </h2>
