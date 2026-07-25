@@ -707,7 +707,7 @@ const loadContent = async (coachId: string) => {
             </div>
           </form>
 
-          {/* Смена пароля */}
+          {/* Смена пароля  */}
           <form onSubmit={handleChangePassword} className="style-card p-6 sm:p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
