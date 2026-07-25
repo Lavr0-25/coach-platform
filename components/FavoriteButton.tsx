@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -15,46 +15,29 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
   const [isFavorited, setIsFavorited] = useState(initialIsFavorited)
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
-  const [checked, setChecked] = useState(false)
   const router = useRouter()
   const supabase = createClient()
-  const mountedRef = useRef(true)
 
   useEffect(() => {
-    mountedRef.current = true
-    return () => { mountedRef.current = false }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (cancelled) return
-      
       setUserId(user?.id || null)
       
       if (user) {
-        const { data } = await supabase
-          .from('favorites')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('lesson_id', itemId)
-          .maybeSingle()
+        let query = supabase.from('favorites').select('id').eq('user_id', user.id)
         
-        if (!cancelled) {
-          setIsFavorited(!!data)
-          setChecked(true)
+        if (itemType === 'course') {
+          query = query.eq('course_id', itemId)
+        } else {
+          query = query.eq('lesson_id', itemId)
         }
-      } else {
-        if (!cancelled) setChecked(true)
+        
+        const { data } = await query.maybeSingle()
+        setIsFavorited(!!data)
       }
     }
-    
     getUser()
-    
-    return () => { cancelled = true }
-  }, [itemId, initialIsFavorited])
+  }, [itemId, itemType])
 
   const toggleFavorite = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -65,66 +48,47 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
       return
     }
 
-    if (loading) return
-
     setLoading(true)
     
     try {
       if (isFavorited) {
         // Удаляем из избранного
-        const { error } = await supabase
-          .from('favorites')
-          .delete()
-          .eq('user_id', userId)
-          .eq('lesson_id', itemId)
+        let query = supabase.from('favorites').delete().eq('user_id', userId)
+        
+        if (itemType === 'course') {
+          query = query.eq('course_id', itemId)
+        } else {
+          query = query.eq('lesson_id', itemId)
+        }
+        
+        const { error } = await query
         
         if (error) {
           console.error('Ошибка удаления:', error)
-          return
+        } else {
+          setIsFavorited(false)
+        }
+      } else {
+        // Добавляем в избранное
+        const insertData: any = { user_id: userId }
+        
+        if (itemType === 'course') {
+          insertData.course_id = itemId
+        } else {
+          insertData.lesson_id = itemId
         }
         
-        setIsFavorited(false)
-      } else {
-        // Сначала проверяем, нет ли уже записи
-        const { data: existing, error: checkError } = await supabase
-          .from('favorites')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('lesson_id', itemId)
-          .maybeSingle()
-
-        if (checkError) {
-          console.error('Ошибка проверки:', checkError)
-          return
-        }
-
-        if (existing) {
-          // Уже в избранном
-          setIsFavorited(true)
-        } else {
-          // Добавляем в избранное
-          const { error } = await supabase
-            .from('favorites')
-            .insert({ 
-              user_id: userId, 
-              lesson_id: itemId,
-              group_name: 'default'
-            })
-          
-          if (error) {
-            console.error('Ошибка вставки:', error)
-            // Если UNIQUE violation — значит уже добавили
-            if (error.code === '23505') {
-              setIsFavorited(true)
-            }
-            return
+        const { error } = await supabase.from('favorites').insert(insertData)
+        
+        if (error) {
+          console.error('Ошибка вставки:', error)
+          if (error.code === '23505') {
+            setIsFavorited(true)
           }
-          
+        } else {
           setIsFavorited(true)
         }
       }
-      
-      router.refresh()
     } catch (error) {
       console.error('Общая ошибка:', error)
     } finally {
@@ -138,7 +102,7 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
   return (
     <button
       onClick={toggleFavorite}
-      disabled={loading || !checked}
+      disabled={loading}
       className={`${sizeClasses} rounded-full bg-white/90 backdrop-blur-sm border border-purple-200 shadow-sm flex items-center justify-center transition-all hover:scale-110 active:scale-95 disabled:opacity-50`}
       title={isFavorited ? 'Удалить из избранного' : 'Добавить в избранное'}
     >
