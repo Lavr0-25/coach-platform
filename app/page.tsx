@@ -459,27 +459,32 @@ export default function Home() {
                               key={coach.user_id}
                               className="flex items-center gap-3 p-2.5 bg-purple-50/30 rounded-xl hover:bg-purple-50/60 transition-colors"
                             >
-                              {coach.avatar_url ? (
-                                <img
-                                  src={coach.avatar_url}
-                                  alt={coach.display_name || ''}
-                                  className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="w-9 h-9 gradient-icon rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                  {coach.display_name?.charAt(0).toUpperCase() || '?'}
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-gray-900 truncate">
-                                  {coach.display_name || 'Автор'}
-                                </p>
-                                {coach.specialization && (
-                                  <p className="text-xs text-gray-500 truncate">
-                                    {coach.specialization}
-                                  </p>
+                              <Link
+                                href={`/mentor/${coach.user_id}`}
+                                className="flex items-center gap-3 flex-1 min-w-0 group"
+                              >
+                                {coach.avatar_url ? (
+                                  <img
+                                    src={coach.avatar_url}
+                                    alt={coach.display_name || ''}
+                                    className="w-9 h-9 rounded-full object-cover flex-shrink-0 group-hover:ring-2 group-hover:ring-purple-400 transition-all"
+                                  />
+                                ) : (
+                                  <div className="w-9 h-9 gradient-icon rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 group-hover:ring-2 group-hover:ring-purple-400 transition-all">
+                                    {coach.display_name?.charAt(0).toUpperCase() || '?'}
+                                  </div>
                                 )}
-                              </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-purple-600 transition-colors">
+                                    {coach.display_name || 'Автор'}
+                                  </p>
+                                  {coach.specialization && (
+                                    <p className="text-xs text-gray-500 truncate">
+                                      {coach.specialization}
+                                    </p>
+                                  )}
+                                </div>
+                              </Link>
                               {isSubscribed ? (
                                 <button
                                   onClick={() => handleUnsubscribe(coach.user_id)}
@@ -520,27 +525,32 @@ export default function Home() {
                                   key={sub.coach_id}
                                   className="flex items-center gap-3 p-2.5 bg-purple-50/30 rounded-xl group"
                                 >
-                                  {sub.coach?.avatar_url ? (
-                                    <img
-                                      src={sub.coach.avatar_url}
-                                      alt={sub.coach.display_name || ''}
-                                      className="w-9 h-9 rounded-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-9 h-9 gradient-icon rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                      {sub.coach?.display_name?.charAt(0).toUpperCase() || '?'}
-                                    </div>
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-gray-900 truncate">
-                                      {sub.coach?.display_name || 'Автор'}
-                                    </p>
-                                    {sub.coach?.specialization && (
-                                      <p className="text-xs text-gray-500 truncate">
-                                        {sub.coach.specialization}
-                                      </p>
+                                  <Link
+                                    href={`/mentor/${sub.coach_id}`}
+                                    className="flex items-center gap-3 flex-1 min-w-0"
+                                  >
+                                    {sub.coach?.avatar_url ? (
+                                      <img
+                                        src={sub.coach.avatar_url}
+                                        alt={sub.coach.display_name || ''}
+                                        className="w-9 h-9 rounded-full object-cover group-hover:ring-2 group-hover:ring-purple-400 transition-all"
+                                      />
+                                    ) : (
+                                      <div className="w-9 h-9 gradient-icon rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 group-hover:ring-2 group-hover:ring-purple-400 transition-all">
+                                        {sub.coach?.display_name?.charAt(0).toUpperCase() || '?'}
+                                      </div>
                                     )}
-                                  </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-purple-600 transition-colors">
+                                        {sub.coach?.display_name || 'Автор'}
+                                      </p>
+                                      {sub.coach?.specialization && (
+                                        <p className="text-xs text-gray-500 truncate">
+                                          {sub.coach.specialization}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </Link>
                                   <button
                                     onClick={() => handleUnsubscribe(sub.coach_id)}
                                     className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
@@ -748,22 +758,13 @@ export default function Home() {
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <div className="w-16 h-16 gradient-icon rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
-                                {item.type === 'lesson' ? '📚' : '🎓'}
+                                {item.type === 'lesson' ? '📚' : ''}
                               </div>
                             </div>
                           )}
                           
-                          {/* Кнопка избранного — ЛЕВЫЙ ВЕРХНИЙ УГОЛ */}
-                          <div className="absolute top-3 left-3 z-10" onClick={(e) => e.stopPropagation()}>
-                            <FavoriteButton 
-                              itemId={item.id} 
-                              itemType={item.type === 'lesson' ? 'lesson' : 'course'} 
-                              size="sm" 
-                            />
-                          </div>
-                          
-                          {/* Тип контента */}
-                          <div className="absolute top-3 right-16">
+                          {/* Тип контента — ЛЕВЫЙ ВЕРХНИЙ УГОЛ */}
+                          <div className="absolute top-3 left-3">
                             <span className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-lg ${
                               item.type === 'lesson'
                                 ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
@@ -771,6 +772,21 @@ export default function Home() {
                             }`}>
                               {item.type === 'lesson' ? 'Урок' : 'Курс'}
                             </span>
+                          </div>
+                          
+                          {/* Кнопка избранного — ЛЕВЫЙ НИЖНИЙ УГОЛ */}
+                          <div 
+                            className="absolute bottom-3 left-3 z-10" 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              e.preventDefault()
+                            }}
+                          >
+                            <FavoriteButton 
+                              itemId={item.id} 
+                              itemType={item.type === 'lesson' ? 'lesson' : 'course'} 
+                              size="sm" 
+                            />
                           </div>
                           
                           {item.is_free && (
@@ -842,7 +858,7 @@ export default function Home() {
                             <div className="flex items-center gap-3">
                               {activeFilter === 'popular' && item.reviews_count !== undefined && (
                                 <span className="flex items-center gap-1 text-purple-600 font-medium">
-                                   {item.reviews_count}
+                                  💬 {item.reviews_count}
                                 </span>
                               )}
                               <span>{formatDate(item.created_at)}</span>
