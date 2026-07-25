@@ -104,6 +104,15 @@ export default function FavoritesPage() {
     }
   }, [searchQuery])
 
+  // Мгновенное удаление из избранного
+  const removeFromFavorites = (itemId: string, itemType: 'course' | 'lesson') => {
+    if (itemType === 'course') {
+      setFavCourses(prev => prev.filter(course => course.id !== itemId))
+    } else {
+      setFavLessons(prev => prev.filter(lesson => lesson.id !== itemId))
+    }
+  }
+
   // Фильтрация на клиенте
   const filteredCourses = debouncedSearch
     ? favCourses.filter(c => 
@@ -155,46 +164,48 @@ export default function FavoritesPage() {
 
         {/* Поле поиска (показываем, только если есть что искать) */}
         {(favCourses.length + favLessons.length > 0) && (
-          <div className="relative max-w-3xl">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск уроков и курсов..."
-              className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm"
-            />
-            <svg 
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-400" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+          <div className="max-w-3xl">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Поиск уроков и курсов..."
+                className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm"
+              />
+              <svg 
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-400" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-        )}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
 
-        {debouncedSearch && (
-          <div className="mt-3 flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              Найдено: <span className="font-bold text-purple-700">{totalFavorites}</span> {totalFavorites === 1 ? 'материал' : totalFavorites < 5 ? 'материала' : 'материалов'}
-            </p>
-            <button
-              onClick={() => setSearchQuery('')}
-              className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-            >
-              Сбросить поиск
-            </button>
+            {debouncedSearch && (
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Найдено: <span className="font-bold text-purple-700">{totalFavorites}</span> {totalFavorites === 1 ? 'материал' : totalFavorites < 5 ? 'материала' : 'материалов'}
+                </p>
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                >
+                  Сбросить поиск
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -246,7 +257,11 @@ export default function FavoritesPage() {
               const lessonsCount = course.lessons?.length || 0
               return (
                 <div key={course.id} className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100 relative">
-                  <RemoveFavoriteButton itemId={course.id} itemType="course" />
+                  <RemoveFavoriteButton 
+                    itemId={course.id} 
+                    itemType="course" 
+                    onRemove={() => removeFromFavorites(course.id, 'course')}
+                  />
                   
                   <Link href={`/course/${course.id}`} className="block">
                     <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
@@ -281,7 +296,7 @@ export default function FavoritesPage() {
 
                     <div className="flex items-center justify-between pt-3 border-t border-purple-100">
                       <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <span>📖</span>
+                        <span></span>
                         <span>{lessonsCount} {lessonsCount === 1 ? 'урок' : lessonsCount < 5 ? 'урока' : 'уроков'}</span>
                       </div>
                       <span className="text-sm font-bold text-purple-700">
@@ -300,14 +315,18 @@ export default function FavoritesPage() {
       {filteredLessons.length > 0 && (
         <div className="mb-10">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📝</span>
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm"></span>
             Уроки {debouncedSearch && <span className="text-base text-gray-500">({filteredLessons.length})</span>}
           </h2>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredLessons.map((lesson) => (
               <div key={lesson.id} className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100 relative">
-                <RemoveFavoriteButton itemId={lesson.id} itemType="lesson" />
+                <RemoveFavoriteButton 
+                  itemId={lesson.id} 
+                  itemType="lesson" 
+                  onRemove={() => removeFromFavorites(lesson.id, 'lesson')}
+                />
                 
                 <Link href={`/lesson/${lesson.id}`} className="block">
                   <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">

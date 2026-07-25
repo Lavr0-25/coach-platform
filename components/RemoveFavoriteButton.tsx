@@ -2,16 +2,15 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 
 interface RemoveFavoriteButtonProps {
   itemId: string
   itemType: 'course' | 'lesson'
+  onRemove: () => void
 }
 
-export default function RemoveFavoriteButton({ itemId, itemType }: RemoveFavoriteButtonProps) {
+export default function RemoveFavoriteButton({ itemId, itemType, onRemove }: RemoveFavoriteButtonProps) {
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
   const supabase = createClient()
 
   const handleRemove = async () => {
@@ -32,7 +31,8 @@ export default function RemoveFavoriteButton({ itemId, itemType }: RemoveFavorit
       
       if (error) throw error
       
-      router.refresh()
+      // Вызываем callback для немедленного удаления из UI
+      onRemove()
     } catch (error) {
       console.error('Ошибка удаления:', error)
     } finally {
