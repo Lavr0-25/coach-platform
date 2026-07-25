@@ -75,50 +75,60 @@ export default function MentorProfilePage() {
     }
   }
 
-  const loadContent = async (coachId: string) => {
-    try {
-      // === 1. Загружаем ВСЕ уроки для статистики ===
-      const { data: allLessons } = await supabase
-        .from('lessons')
-        .select('id, title, description, price, is_published, cover_image_url, cover_image, created_at')
-        .eq('coach_id', coachId)
-        .order('created_at', { ascending: false })
+const loadContent = async (coachId: string) => {
+  try {
+    console.log('🔍 Загрузка контента для coachId:', coachId)
+    
+    // === 1. Загружаем ВСЕ уроки для статистики ===
+    const { data: allLessons, error: lessonsError } = await supabase
+      .from('lessons')
+      .select('id, title, description, price, is_published, cover_image_url, cover_image, created_at')
+      .eq('coach_id', coachId)
+      .order('created_at', { ascending: false })
+    
+    console.log('📚 Уроки:', { allLessons, lessonsError })
+    
+    // Считаем статистику по всем урокам
+    if (allLessons) {
+      const totalLessons = allLessons.length
+      const publishedLessons = allLessons.filter(l => l.is_published).length
       
-      // Считаем статистику по всем урокам
-      if (allLessons) {
-        const totalLessons = allLessons.length
-        const publishedLessons = allLessons.filter(l => l.is_published).length
-        
-        setStats(prev => ({
-          ...prev,
-          totalLessons,
-          publishedLessons,
-        }))
-        
-        // Берём только первые 10 для отображения
-        setMyLessons(allLessons.slice(0, 10))
-      }
-
-      // === 2. Загружаем ВСЕ курсы для статистики ===
-      const { data: allCourses } = await supabase
-        .from('courses')
-        .select('id, title, description, price, is_published, cover_image, created_at')
-        .eq('coach_id', coachId)
-        .order('created_at', { ascending: false })
+      console.log(' Статистика уроков:', { totalLessons, publishedLessons })
       
-      if (allCourses) {
-        setStats(prev => ({
-          ...prev,
-          totalCourses: allCourses.length,
-        }))
-        
-        // Берём только первые 10 для отображения
-        setMyCourses(allCourses.slice(0, 10))
-      }
-    } catch (error: any) {
-      console.error('Error loading content:', error)
+      setStats(prev => ({
+        ...prev,
+        totalLessons,
+        publishedLessons,
+      }))
+      
+      // Берём только первые 10 для отображения
+      setMyLessons(allLessons.slice(0, 10))
     }
+
+    // === 2. Загружаем ВСЕ курсы для статистики ===
+    const { data: allCourses, error: coursesError } = await supabase
+      .from('courses')
+      .select('id, title, description, price, is_published, cover_image, created_at')
+      .eq('coach_id', coachId)
+      .order('created_at', { ascending: false })
+    
+    console.log('📦 Курсы:', { allCourses, coursesError })
+    
+    if (allCourses) {
+      console.log('📊 Статистика курсов:', { total: allCourses.length })
+      
+      setStats(prev => ({
+        ...prev,
+        totalCourses: allCourses.length,
+      }))
+      
+      // Берём только первые 10 для отображения
+      setMyCourses(allCourses.slice(0, 10))
+    }
+  } catch (error: any) {
+    console.error('❌ Error loading content:', error)
   }
+}
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
