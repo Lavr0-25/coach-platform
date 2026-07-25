@@ -10,6 +10,7 @@ import FeedbackModal from './FeedbackModal'
 
 interface Profile {
   display_name?: string
+  avatar_url?: string | null
   email?: string
   role?: string
 }
@@ -56,7 +57,7 @@ export default function Navbar() {
           try {
             const { data: coachData, error: coachError } = await supabase
               .from('coaches')
-              .select('id, display_name, role')
+              .select('id, display_name, avatar_url, role')
               .eq('user_id', user.id)
               .single()
 
@@ -67,12 +68,19 @@ export default function Navbar() {
             }
 
             if (coachData) {
-              setProfile(coachData)
+              setProfile({
+                display_name: coachData.display_name,
+                avatar_url: coachData.avatar_url,
+                role: coachData.role,
+              })
               setCoachId(coachData.id)
               setIsMentor(coachData.role === 'mentor' || coachData.role === 'admin')
               setIsAdmin(coachData.role === 'admin')
             } else {
-              setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
+              setProfile({ 
+                display_name: user.email?.split('@')[0] || 'Пользователь',
+                avatar_url: null,
+              })
               setCoachId(null)
               setIsMentor(false)
               setIsAdmin(false)
@@ -80,7 +88,10 @@ export default function Navbar() {
           } catch (err) {
             if (!mounted) return
             console.error('Coach load error:', err)
-            setProfile({ display_name: user.email?.split('@')[0] || 'Пользователь' })
+            setProfile({ 
+              display_name: user.email?.split('@')[0] || 'Пользователь',
+              avatar_url: null,
+            })
             setCoachId(null)
             setIsMentor(false)
             setIsAdmin(false)
@@ -145,7 +156,7 @@ export default function Navbar() {
       
       setIsMentor(true)
       setProfile(prev => ({ ...prev, role: 'mentor' }))
-      alert(' Теперь вы автор! Теперь вы можете создавать уроки.')
+      alert('✅ Теперь вы автор! Теперь вы можете создавать уроки.')
       router.refresh()
     } catch (error: any) {
       console.error('Error becoming mentor:', error)
@@ -212,9 +223,18 @@ export default function Navbar() {
                       onClick={() => setShowProfileMenu(!showProfileMenu)}
                       className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-purple-50 transition-colors"
                     >
-                      <div className="w-9 h-9 gradient-icon rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                        {getInitials(profile?.display_name)}
-                      </div>
+                      {/* Аватарка или инициалы */}
+                      {profile?.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt={profile?.display_name || ''}
+                          className="w-9 h-9 rounded-full object-cover border-2 border-purple-200"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 gradient-icon rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                          {getInitials(profile?.display_name)}
+                        </div>
+                      )}
                       <span className="hidden md:block text-gray-700 font-medium max-w-[150px] truncate">
                         {profile?.display_name || 'Пользователь'}
                       </span>
@@ -237,9 +257,18 @@ export default function Navbar() {
                         <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-purple-100 z-20 overflow-hidden">
                           <div className="p-4 border-b border-purple-100 bg-gradient-to-br from-purple-50 to-blue-50">
                             <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 gradient-icon rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-lg">
-                                {getInitials(profile?.display_name)}
-                              </div>
+                              {/* Аватарка в выпадающем меню */}
+                              {profile?.avatar_url ? (
+                                <img
+                                  src={profile.avatar_url}
+                                  alt={profile?.display_name || ''}
+                                  className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-lg"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 gradient-icon rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-lg">
+                                  {getInitials(profile?.display_name)}
+                                </div>
+                              )}
                               <div className="flex-1 min-w-0">
                                 <p className="font-semibold text-gray-900 truncate">
                                   {profile?.display_name || 'Пользователь'}
