@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import FavoriteButton from '@/components/FavoriteButton'
 
 interface Lesson {
   id: string
   title: string
   description: string | null
-  cover_image: string | null  // ← ИСПРАВЛЕНО: было cover_url
+  cover_image: string | null
   is_free: boolean
   price: number
   created_at: string
@@ -26,7 +27,7 @@ interface Course {
   id: string
   title: string
   description: string | null
-  cover_image: string | null  // ← ИСПРАВЛЕНО: было cover_url
+  cover_image: string | null
   is_free: boolean
   price: number
   created_at: string
@@ -711,7 +712,7 @@ export default function Home() {
               </div>
             ) : displayedContent.length === 0 ? (
               <div className="text-center py-16">
-                <div className="text-6xl mb-4"></div>
+                <div className="text-6xl mb-4">🔍</div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   {activeFilter === 'subscriptions' 
                     ? 'Нет контента от ваших подписок' 
@@ -731,115 +732,125 @@ export default function Home() {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {displayedContent.map((item) => (
-                    <Link
-                      key={`${item.type}-${item.id}`}
-                      href={`/${item.type === 'lesson' ? 'lesson' : 'course'}/${item.id}`}
-                      className="group style-card overflow-hidden"
-                    >
-                      {/* Превью */}
-                      <div className="aspect-video bg-gradient-to-br from-purple-100 via-indigo-50 to-blue-100 relative overflow-hidden">
-                        {item.cover_image ? (  // ← ИСПРАВЛЕНО: было cover_url
-                          <img
-                            src={item.cover_image}  // ← ИСПРАВЛЕНО: было cover_url
-                            alt={item.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <div className="w-16 h-16 gradient-icon rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
-                              {item.type === 'lesson' ? '📚' : '🎓'}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Тип контента */}
-                        <div className="absolute top-3 left-3">
-                          <span className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-lg ${
-                            item.type === 'lesson'
-                              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                              : 'bg-gradient-to-r from-pink-600 to-purple-600 text-white'
-                          }`}>
-                            {item.type === 'lesson' ? 'Урок' : 'Курс'}
-                          </span>
-                        </div>
-                        
-                        {item.is_free && (
-                          <div className="absolute top-3 right-16 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-                            Бесплатно
-                          </div>
-                        )}
-                        
-                        {!item.is_free && item.price > 0 && (
-                          <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full">
-                            {item.price} ₽
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Контент */}
-                      <div className="p-5">
-                        <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-purple-600 transition-colors text-base">
-                          {item.title}
-                        </h3>
-                        
-                        {item.description && (
-                          <p className="text-sm text-gray-600 line-clamp-2 mb-4">
-                            {item.description}
-                          </p>
-                        )}
-
-                        {/* Рейтинг и отзывы */}
-                        {item.reviews_count !== undefined && item.reviews_count > 0 && (
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="flex items-center gap-0.5">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <svg
-                                  key={star}
-                                  className={`w-4 h-4 ${
-                                    star <= Math.round(item.rating || 0)
-                                      ? 'text-yellow-400 fill-yellow-400'
-                                      : 'text-gray-300'
-                                  }`}
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                              ))}
-                            </div>
-                            <span className="text-xs text-gray-500">
-                              {item.rating?.toFixed(1)} ({item.reviews_count} {item.reviews_count === 1 ? 'отзыв' : item.reviews_count < 5 ? 'отзыва' : 'отзывов'})
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-purple-100">
-                          <div className="flex items-center gap-2">
-                            {item.coach?.avatar_url ? (
-                              <img
-                                src={item.coach.avatar_url}
-                                alt={item.coach.display_name || ''}
-                                className="w-6 h-6 rounded-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-6 h-6 gradient-icon rounded-full flex items-center justify-center text-white text-[10px] font-bold">
-                                {item.coach?.display_name?.charAt(0).toUpperCase() || '?'}
+                    <div key={`${item.type}-${item.id}`} className="group style-card overflow-hidden relative">
+                      <Link
+                        href={`/${item.type === 'lesson' ? 'lesson' : 'course'}/${item.id}`}
+                        className="block"
+                      >
+                        {/* Превью */}
+                        <div className="aspect-video bg-gradient-to-br from-purple-100 via-indigo-50 to-blue-100 relative overflow-hidden">
+                          {item.cover_image ? (
+                            <img
+                              src={item.cover_image}
+                              alt={item.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="w-16 h-16 gradient-icon rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg">
+                                {item.type === 'lesson' ? '📚' : '🎓'}
                               </div>
-                            )}
-                            <span className="truncate max-w-[120px] font-medium">
-                              {item.coach?.display_name || 'Автор'}
+                            </div>
+                          )}
+                          
+                          {/* Кнопка избранного — ЛЕВЫЙ ВЕРХНИЙ УГОЛ */}
+                          <div className="absolute top-3 left-3 z-10" onClick={(e) => e.stopPropagation()}>
+                            <FavoriteButton 
+                              itemId={item.id} 
+                              itemType={item.type === 'lesson' ? 'lesson' : 'course'} 
+                              size="sm" 
+                            />
+                          </div>
+                          
+                          {/* Тип контента */}
+                          <div className="absolute top-3 right-16">
+                            <span className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-lg ${
+                              item.type === 'lesson'
+                                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                                : 'bg-gradient-to-r from-pink-600 to-purple-600 text-white'
+                            }`}>
+                              {item.type === 'lesson' ? 'Урок' : 'Курс'}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3">
-                            {activeFilter === 'popular' && item.reviews_count !== undefined && (
-                              <span className="flex items-center gap-1 text-purple-600 font-medium">
-                                💬 {item.reviews_count}
+                          
+                          {item.is_free && (
+                            <div className="absolute top-3 right-3 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                              Бесплатно
+                            </div>
+                          )}
+                          
+                          {!item.is_free && item.price > 0 && (
+                            <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full">
+                              {item.price} ₽
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Контент */}
+                        <div className="p-5">
+                          <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-purple-600 transition-colors text-base">
+                            {item.title}
+                          </h3>
+                          
+                          {item.description && (
+                            <p className="text-sm text-gray-600 line-clamp-2 mb-4">
+                              {item.description}
+                            </p>
+                          )}
+
+                          {/* Рейтинг и отзывы */}
+                          {item.reviews_count !== undefined && item.reviews_count > 0 && (
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <svg
+                                    key={star}
+                                    className={`w-4 h-4 ${
+                                      star <= Math.round(item.rating || 0)
+                                        ? 'text-yellow-400 fill-yellow-400'
+                                        : 'text-gray-300'
+                                    }`}
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                  </svg>
+                                ))}
+                              </div>
+                              <span className="text-xs text-gray-500">
+                                {item.rating?.toFixed(1)} ({item.reviews_count} {item.reviews_count === 1 ? 'отзыв' : item.reviews_count < 5 ? 'отзыва' : 'отзывов'})
                               </span>
-                            )}
-                            <span>{formatDate(item.created_at)}</span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-purple-100">
+                            <div className="flex items-center gap-2">
+                              {item.coach?.avatar_url ? (
+                                <img
+                                  src={item.coach.avatar_url}
+                                  alt={item.coach.display_name || ''}
+                                  className="w-6 h-6 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-6 h-6 gradient-icon rounded-full flex items-center justify-center text-white text-[10px] font-bold">
+                                  {item.coach?.display_name?.charAt(0).toUpperCase() || '?'}
+                                </div>
+                              )}
+                              <span className="truncate max-w-[120px] font-medium">
+                                {item.coach?.display_name || 'Автор'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {activeFilter === 'popular' && item.reviews_count !== undefined && (
+                                <span className="flex items-center gap-1 text-purple-600 font-medium">
+                                   {item.reviews_count}
+                                </span>
+                              )}
+                              <span>{formatDate(item.created_at)}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </Link>
+                      </Link>
+                    </div>
                   ))}
                 </div>
 
