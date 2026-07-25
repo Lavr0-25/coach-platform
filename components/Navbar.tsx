@@ -145,7 +145,7 @@ export default function Navbar() {
       
       setIsMentor(true)
       setProfile(prev => ({ ...prev, role: 'mentor' }))
-      alert('🎉 Теперь вы автор! Теперь вы можете создавать уроки.')
+      alert(' Теперь вы автор! Теперь вы можете создавать уроки.')
       router.refresh()
     } catch (error: any) {
       console.error('Error becoming mentor:', error)
@@ -202,7 +202,7 @@ export default function Navbar() {
                     onClick={handleBecomeMentor}
                     className="hidden md:inline-flex gradient-btn px-4 py-2 text-white rounded-full font-medium text-sm shadow-lg shadow-purple-500/30"
                   >
-                    Стать автором
+                    ✍️ Стать автором
                   </button>
                 )}
 
@@ -249,7 +249,7 @@ export default function Navbar() {
                                 </p>
                                 {isAdmin && (
                                   <span className="inline-block mt-1 text-xs bg-gradient-to-r from-pink-500 to-purple-600 text-white px-2 py-0.5 rounded-full font-medium">
-                                    Администратор
+                                    👑 Администратор
                                   </span>
                                 )}
                               </div>
@@ -349,7 +349,7 @@ export default function Navbar() {
                     href="/login"
                     className="px-4 py-2 text-gray-700 hover:text-purple-600 font-medium transition-colors"
                   >
-                    Кабинет
+                    Войти
                   </Link>
                 )}
               </>
