@@ -155,16 +155,16 @@ export default function FavoritesPage() {
 
         {/* Поле поиска (показываем, только если есть что искать) */}
         {(favCourses.length + favLessons.length > 0) && (
-          <div className="relative max-w-xl">
+          <div className="relative max-w-3xl">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск по избранным курсам и урокам..."
-              className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+              placeholder="Поиск уроков и курсов..."
+              className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm"
             />
             <svg 
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-400" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -174,7 +174,7 @@ export default function FavoritesPage() {
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -185,10 +185,16 @@ export default function FavoritesPage() {
         )}
 
         {debouncedSearch && (
-          <div className="mt-3">
+          <div className="mt-3 flex items-center justify-between">
             <p className="text-sm text-gray-600">
-              Найдено: <span className="font-bold text-purple-700">{totalFavorites}</span> материалов
+              Найдено: <span className="font-bold text-purple-700">{totalFavorites}</span> {totalFavorites === 1 ? 'материал' : totalFavorites < 5 ? 'материала' : 'материалов'}
             </p>
+            <button
+              onClick={() => setSearchQuery('')}
+              className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+            >
+              Сбросить поиск
+            </button>
           </div>
         )}
       </div>
