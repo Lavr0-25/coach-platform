@@ -29,9 +29,8 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
           .from('favorites')
           .select('id')
           .eq('user_id', user.id)
-          .eq('item_type', itemType)
-          .eq('item_id', itemId)
-          .maybeSingle() // Используем maybeSingle вместо single
+          .eq('lesson_id', itemId) // Используем lesson_id вместо item_id
+          .maybeSingle()
         
         setIsFavorited(!!data)
       }
@@ -52,8 +51,7 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
           .from('favorites')
           .delete()
           .eq('user_id', userId)
-          .eq('item_type', itemType)
-          .eq('item_id', itemId)
+          .eq('lesson_id', itemId)
         
         if (error) throw error
       } else {
@@ -61,8 +59,8 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
           .from('favorites')
           .insert({ 
             user_id: userId, 
-            item_type: itemType, 
-            item_id: itemId 
+            lesson_id: itemId,
+            group_name: 'default' // Добавляем обязательное поле group_name
           })
         
         if (error) throw error
