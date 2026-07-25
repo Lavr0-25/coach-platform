@@ -98,4 +98,4 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
       )}
     </button>
   )
-}
+} 
