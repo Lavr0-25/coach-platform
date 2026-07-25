@@ -311,8 +311,8 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
               
               return (
                 <div key={course.id} className="style-card overflow-hidden hover:shadow-lg transition-all group border border-purple-100 relative">
-                  {/* Кнопка избранного */}
-                  <div className="absolute top-3 right-3 z-10">
+                  {/* Кнопка избранного — ЛЕВЫЙ ВЕРХНИЙ УГОЛ */}
+                  <div className="absolute top-3 left-3 z-10">
                     <FavoriteButton itemId={course.id} itemType="course" size="sm" />
                   </div>
 
@@ -328,6 +328,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
                         <div className="w-full h-full flex items-center justify-center text-white text-6xl opacity-50"></div>
                       )}
                       
+                      {/* Цена — ПРАВЫЙ ВЕРХНИЙ УГОЛ */}
                       <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full">
                         {course.price === 0 ? 'Бесплатно' : `${course.price} ₽`}
                       </div>
@@ -378,8 +379,8 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
             {filteredLessons.map((lesson) => {
               return (
                 <div key={lesson.id} className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100 relative">
-                  {/* Кнопка избранного */}
-                  <div className="absolute top-3 right-3 z-10">
+                  {/* Кнопка избранного — ЛЕВЫЙ ВЕРХНИЙ УГОЛ */}
+                  <div className="absolute top-3 left-3 z-10">
                     <FavoriteButton itemId={lesson.id} itemType="lesson" size="sm" />
                   </div>
 
