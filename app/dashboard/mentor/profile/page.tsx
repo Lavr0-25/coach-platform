@@ -10,12 +10,15 @@ export default function MentorProfilePage() {
   const supabase = createClient()
   const router = useRouter()
   
-  // Теперь только profile и settings (settings скрыт из табов)
   const [activeTab, setActiveTab] = useState<'profile' | 'settings'>('profile')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  
+  // Поиск
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   
   // Данные профиля
   const [displayName, setDisplayName] = useState('')
@@ -47,6 +50,18 @@ export default function MentorProfilePage() {
     loadProfile()
   }, [])
 
+  // Debounce для поиска (300ms, после 3 символов)
+  useEffect(() => {
+    if (searchQuery.length >= 3) {
+      const timer = setTimeout(() => {
+        setDebouncedSearch(searchQuery)
+      }, 300)
+      return () => clearTimeout(timer)
+    } else {
+      setDebouncedSearch('')
+    }
+  }, [searchQuery])
+
   const loadProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -64,7 +79,7 @@ export default function MentorProfilePage() {
         .single()
 
       if (coachError) {
-        console.error('❌ Coach error:', coachError)
+        console.error(' Coach error:', coachError)
         setError('Ошибка загрузки профиля: ' + coachError.message)
         return
       }
@@ -109,7 +124,7 @@ export default function MentorProfilePage() {
           freeLessons,
         }))
         
-        setMyLessons(allLessons.slice(0, 10))
+        setMyLessons(allLessons)
       }
 
       // === 2. Загружаем ВСЕ курсы ===
@@ -125,7 +140,7 @@ export default function MentorProfilePage() {
           totalCourses: allCourses.length,
         }))
         
-        setMyCourses(allCourses.slice(0, 10))
+        setMyCourses(allCourses)
       }
     } catch (error: any) {
       console.error('❌ Error loading content:', error)
@@ -208,6 +223,21 @@ export default function MentorProfilePage() {
     const parts = name.split(' ')
     return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
   }
+
+  // Фильтрация по поиску
+  const filteredCourses = debouncedSearch
+    ? myCourses.filter(c => 
+        c.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        (c.description?.toLowerCase().includes(debouncedSearch.toLowerCase()) || false)
+      )
+    : myCourses
+
+  const filteredLessons = debouncedSearch
+    ? myLessons.filter(l => 
+        l.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        (l.description?.toLowerCase().includes(debouncedSearch.toLowerCase()) || false)
+      )
+    : myLessons
 
   if (loading) {
     return (
@@ -328,13 +358,58 @@ export default function MentorProfilePage() {
             </div>
           </div>
 
+          {/* Поиск по контенту */}
+          <div>
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Поиск по моим курсам и урокам..."
+                className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+              />
+              <svg 
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {debouncedSearch && (
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Найдено: <span className="font-bold text-purple-700">{filteredCourses.length + filteredLessons.length}</span> материалов
+                </p>
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                >
+                  Сбросить поиск
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Мои курсы */}
-          {myCourses.length > 0 && (
+          {filteredCourses.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📚</span>
-                  Мои курсы
+                  <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm"></span>
+                  Мои курсы {debouncedSearch && <span className="text-base text-gray-500">({filteredCourses.length})</span>}
                 </h2>
                 <Link href="/dashboard/mentor/courses" className="text-purple-600 hover:text-purple-700 font-medium text-sm">
                   Все курсы →
@@ -342,7 +417,7 @@ export default function MentorProfilePage() {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {myCourses.map((course) => (
+                {filteredCourses.map((course) => (
                   <Link
                     key={course.id}
                     href={`/dashboard/mentor/courses/${course.id}/edit`}
@@ -380,12 +455,12 @@ export default function MentorProfilePage() {
           )}
 
           {/* Отдельные уроки */}
-          {myLessons.length > 0 && (
+          {filteredLessons.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                   <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📝</span>
-                  Мои уроки
+                  Мои уроки {debouncedSearch && <span className="text-base text-gray-500">({filteredLessons.length})</span>}
                 </h2>
                 <Link href="/dashboard/mentor/lessons" className="text-purple-600 hover:text-purple-700 font-medium text-sm">
                   Все уроки →
@@ -393,7 +468,7 @@ export default function MentorProfilePage() {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {myLessons.map((lesson) => (
+                {filteredLessons.map((lesson) => (
                   <Link
                     key={lesson.id}
                     href={`/dashboard/mentor/lessons/${lesson.id}/edit`}
@@ -439,34 +514,41 @@ export default function MentorProfilePage() {
             </div>
           )}
 
-          {/* Если нет материалов */}
-          {myLessons.length === 0 && myCourses.length === 0 && (
+          {/* Если ничего не найдено */}
+          {filteredCourses.length === 0 && filteredLessons.length === 0 && (
             <div className="style-card p-12 text-center">
-              <div className="text-6xl mb-4">📭</div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Пока нет материалов</h2>
-              <p className="text-gray-600 mb-6">
-                Создайте свой первый урок или курс, чтобы начать делиться знаниями
+              <div className="text-6xl mb-4">🔍</div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                {debouncedSearch ? 'Ничего не найдено' : 'Пока нет материалов'}
+              </h2>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                {debouncedSearch 
+                  ? `По запросу "${debouncedSearch}" материалов не найдено. Попробуйте изменить поисковый запрос.`
+                  : 'Создайте свой первый урок или курс, чтобы начать делиться знаниями'
+                }
               </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                <Link
-                  href="/dashboard/mentor/lessons/new"
-                  className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  Создать урок
-                </Link>
-                <Link
-                  href="/dashboard/mentor/courses"
-                  className="bg-white text-purple-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all inline-flex items-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                  Мои курсы
-                </Link>
-              </div>
+              {!debouncedSearch && (
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Link
+                    href="/dashboard/mentor/lessons/new"
+                    className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Создать урок
+                  </Link>
+                  <Link
+                    href="/dashboard/mentor/courses"
+                    className="bg-white text-purple-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all inline-flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    Мои курсы
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>
