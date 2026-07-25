@@ -23,15 +23,15 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
       const { data: { user } } = await supabase.auth.getUser()
       setUserId(user?.id || null)
       
-      // Если мы не передали initialIsFavorited, проверяем сами
-      if (!initialIsFavorited && user) {
-        const { data } = await supabase
+      // Проверяем, есть ли в избранном
+      if (user && !initialIsFavorited) {
+        const { data, error } = await supabase
           .from('favorites')
           .select('id')
           .eq('user_id', user.id)
           .eq('item_type', itemType)
           .eq('item_id', itemId)
-          .single()
+          .maybeSingle() // Используем maybeSingle вместо single
         
         setIsFavorited(!!data)
       }
@@ -48,19 +48,27 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
     setLoading(true)
     try {
       if (isFavorited) {
-        await supabase
+        const { error } = await supabase
           .from('favorites')
           .delete()
           .eq('user_id', userId)
           .eq('item_type', itemType)
           .eq('item_id', itemId)
+        
+        if (error) throw error
       } else {
-        await supabase
+        const { error } = await supabase
           .from('favorites')
-          .insert({ user_id: userId, item_type: itemType, item_id: itemId })
+          .insert({ 
+            user_id: userId, 
+            item_type: itemType, 
+            item_id: itemId 
+          })
+        
+        if (error) throw error
       }
       setIsFavorited(!isFavorited)
-      router.refresh() // Обновляем серверные компоненты
+      router.refresh()
     } catch (error) {
       console.error('Ошибка при изменении избранного:', error)
     } finally {
