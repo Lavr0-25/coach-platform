@@ -21,7 +21,6 @@ export default function MentorProfilePage() {
   const [bio, setBio] = useState('')
   const [specialization, setSpecialization] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
-  const [coverImageUrl, setCoverImageUrl] = useState('')
   const [coachId, setCoachId] = useState<string>('')
   
   // Данные для смены пароля
@@ -45,17 +44,28 @@ export default function MentorProfilePage() {
 
   const loadProfile = async () => {
     try {
+      console.log('👤 Загрузка профиля...')
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/login')
         return
       }
 
-      const { data: coach } = await supabase
+      console.log('🔑 User ID:', user.id)
+
+      const { data: coach, error: coachError } = await supabase
         .from('coaches')
-        .select('id, display_name, bio, specialization, avatar_url, cover_image')
+        .select('id, display_name, bio, specialization, avatar_url')
         .eq('user_id', user.id)
         .single()
+
+      console.log(' Coach data:', { coach, coachError })
+
+      if (coachError) {
+        console.error('❌ Coach error:', coachError)
+        setError('Ошибка загрузки профиля: ' + coachError.message)
+        return
+      }
 
       if (coach) {
         setCoachId(coach.id)
@@ -63,72 +73,72 @@ export default function MentorProfilePage() {
         setBio(coach.bio || '')
         setSpecialization(coach.specialization || '')
         setAvatarUrl(coach.avatar_url || '')
-        setCoverImageUrl(coach.cover_image || '')
 
+        console.log('✅ Coach loaded, ID:', coach.id)
         await loadContent(coach.id)
       }
     } catch (error: any) {
-      console.error('Error loading profile:', error)
+      console.error('❌ Error loading profile:', error)
       setError(error.message || 'Ошибка загрузки профиля')
     } finally {
       setLoading(false)
     }
   }
 
-const loadContent = async (coachId: string) => {
-  try {
-    console.log('🔍 Загрузка контента для coachId:', coachId)
-    
-    // === 1. Загружаем ВСЕ уроки для статистики ===
-    const { data: allLessons, error: lessonsError } = await supabase
-      .from('lessons')
-      .select('id, title, description, price, is_published, cover_image_url, cover_image, created_at')
-      .eq('coach_id', coachId)
-      .order('created_at', { ascending: false })
-    
-    console.log('📚 Уроки:', { allLessons, lessonsError })
-    
-    // Считаем статистику по всем урокам
-    if (allLessons) {
-      const totalLessons = allLessons.length
-      const publishedLessons = allLessons.filter(l => l.is_published).length
+  const loadContent = async (coachId: string) => {
+    try {
+      console.log('🔍 Загрузка контента для coachId:', coachId)
       
-      console.log(' Статистика уроков:', { totalLessons, publishedLessons })
+      // === 1. Загружаем ВСЕ уроки для статистики ===
+      const { data: allLessons, error: lessonsError } = await supabase
+        .from('lessons')
+        .select('id, title, description, price, is_published, cover_image_url, cover_image, created_at')
+        .eq('coach_id', coachId)
+        .order('created_at', { ascending: false })
       
-      setStats(prev => ({
-        ...prev,
-        totalLessons,
-        publishedLessons,
-      }))
+      console.log('📚 Уроки:', { allLessons, lessonsError })
       
-      // Берём только первые 10 для отображения
-      setMyLessons(allLessons.slice(0, 10))
-    }
+      // Считаем статистику по всем урокам
+      if (allLessons) {
+        const totalLessons = allLessons.length
+        const publishedLessons = allLessons.filter(l => l.is_published).length
+        
+        console.log('📊 Статистика уроков:', { totalLessons, publishedLessons })
+        
+        setStats(prev => ({
+          ...prev,
+          totalLessons,
+          publishedLessons,
+        }))
+        
+        // Берём только первые 10 для отображения
+        setMyLessons(allLessons.slice(0, 10))
+      }
 
-    // === 2. Загружаем ВСЕ курсы для статистики ===
-    const { data: allCourses, error: coursesError } = await supabase
-      .from('courses')
-      .select('id, title, description, price, is_published, cover_image, created_at')
-      .eq('coach_id', coachId)
-      .order('created_at', { ascending: false })
-    
-    console.log('📦 Курсы:', { allCourses, coursesError })
-    
-    if (allCourses) {
-      console.log('📊 Статистика курсов:', { total: allCourses.length })
+      // === 2. Загружаем ВСЕ курсы для статистики ===
+      const { data: allCourses, error: coursesError } = await supabase
+        .from('courses')
+        .select('id, title, description, price, is_published, cover_image, created_at')
+        .eq('coach_id', coachId)
+        .order('created_at', { ascending: false })
       
-      setStats(prev => ({
-        ...prev,
-        totalCourses: allCourses.length,
-      }))
+      console.log('📦 Курсы:', { allCourses, coursesError })
       
-      // Берём только первые 10 для отображения
-      setMyCourses(allCourses.slice(0, 10))
+      if (allCourses) {
+        console.log('📊 Статистика курсов:', { total: allCourses.length })
+        
+        setStats(prev => ({
+          ...prev,
+          totalCourses: allCourses.length,
+        }))
+        
+        // Берём только первые 10 для отображения
+        setMyCourses(allCourses.slice(0, 10))
+      }
+    } catch (error: any) {
+      console.error(' Error loading content:', error)
     }
-  } catch (error: any) {
-    console.error('❌ Error loading content:', error)
   }
-}
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -150,7 +160,6 @@ const loadContent = async (coachId: string) => {
           bio: bio.trim() || null,
           specialization: specialization.trim() || null,
           avatar_url: avatarUrl || null,
-          cover_image: coverImageUrl || null,
         })
         .eq('id', coachId)
 
@@ -319,13 +328,13 @@ const loadContent = async (coachId: string) => {
                   </Link>
                   
                   <Link
-                    href="/dashboard/mentor/courses/new"
+                    href="/dashboard/mentor/courses"
                     className="bg-white text-purple-700 border border-purple-200 px-5 py-2.5 rounded-xl font-semibold hover:bg-purple-50 transition-all flex items-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
-                    Создать курс
+                    Мои курсы
                   </Link>
                 </div>
               </div>
@@ -352,7 +361,7 @@ const loadContent = async (coachId: string) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link href="/dashboard/mentor/courses" className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100">
               <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl mb-3 group-hover:scale-110 transition-transform">
-                
+                📚
               </div>
               <h3 className="font-bold text-gray-900 mb-1">Мои курсы</h3>
               <p className="text-sm text-gray-600">Управление курсами</p>
@@ -368,7 +377,7 @@ const loadContent = async (coachId: string) => {
 
             <Link href="/mentor/analytics" className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100">
               <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl mb-3 group-hover:scale-110 transition-transform">
-                
+                📊
               </div>
               <h3 className="font-bold text-gray-900 mb-1">Статистика</h3>
               <p className="text-sm text-gray-600">Аналитика и просмотры</p>
@@ -376,7 +385,7 @@ const loadContent = async (coachId: string) => {
 
             <Link href="/dashboard/mentor/profile" className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100">
               <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl mb-3 group-hover:scale-110 transition-transform">
-                ️
+                ⚙️
               </div>
               <h3 className="font-bold text-gray-900 mb-1">Настройки</h3>
               <p className="text-sm text-gray-600">Профиль и пароль</p>
@@ -593,13 +602,13 @@ const loadContent = async (coachId: string) => {
                   Создать урок
                 </Link>
                 <Link
-                  href="/dashboard/mentor/courses/new"
+                  href="/dashboard/mentor/courses"
                   className="bg-white text-purple-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all inline-flex items-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                   </svg>
-                  Создать курс
+                  Мои курсы
                 </Link>
               </div>
             </div>
@@ -665,34 +674,18 @@ const loadContent = async (coachId: string) => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Аватар
-                  </label>
-                  <CoverImageUploader
-                    currentImage={avatarUrl}
-                    onImageUpload={(url) => setAvatarUrl(url)}
-                    entityType="course"
-                  />
-                  <p className="text-xs text-gray-500 mt-2">
-                    Рекомендуемый размер: 400×400px (1:1)
-                  </p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Обложка профиля
-                  </label>
-                  <CoverImageUploader
-                    currentImage={coverImageUrl}
-                    onImageUpload={(url) => setCoverImageUrl(url)}
-                    entityType="course"
-                  />
-                  <p className="text-xs text-gray-500 mt-2">
-                    Рекомендуемый размер: 1200×400px (3:1)
-                  </p>
-                </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Аватар
+                </label>
+                <CoverImageUploader
+                  currentImage={avatarUrl}
+                  onImageUpload={(url) => setAvatarUrl(url)}
+                  entityType="course"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Рекомендуемый размер: 400×400px (1:1)
+                </p>
               </div>
             </div>
 
@@ -707,7 +700,7 @@ const loadContent = async (coachId: string) => {
             </div>
           </form>
 
-          {/* Смена пароля  */}
+          {/* Смена пароля */}
           <form onSubmit={handleChangePassword} className="style-card p-6 sm:p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
