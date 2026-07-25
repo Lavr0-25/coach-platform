@@ -1,92 +1,167 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 
-interface MentorPageProps {
-  params: Promise<{ id: string }>
-  searchParams: Promise<{
-    search?: string
-  }>
+interface Course {
+  id: string
+  title: string
+  description: string | null
+  price: number
+  cover_image: string | null
+  is_published: boolean
+  created_at: string
+  lessons?: { id: string }[]
 }
 
-export default async function MentorPage({ params, searchParams }: MentorPageProps) {
-  const { id } = await params
-  const { search = '' } = await searchParams
-  const supabase = await createClient()
+interface Lesson {
+  id: string
+  title: string
+  description: string | null
+  price: number
+  is_free_preview: boolean
+  created_at: string
+  cover_image: string | null
+}
 
-  // Получаем данные автора
-  const { data: coach, error: coachError } = await supabase
-    .from('coaches')
-    .select('id, user_id, display_name, avatar_url, bio, specialization, created_at')
-    .eq('id', id)
-    .single()
+interface Coach {
+  id: string
+  user_id: string
+  display_name: string | null
+  avatar_url: string | null
+  bio: string | null
+  specialization: string | null
+  created_at: string
+}
 
-  if (coachError || !coach) {
-    notFound()
-  }
+export default function MentorPage({ params }: { params: Promise<{ id: string }> }) {
+  const [id, setId] = useState<string>('')
+  const [coach, setCoach] = useState<Coach | null>(null)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [lessons, setLessons] = useState<Lesson[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [uniqueStudents, setUniqueStudents] = useState(0)
+  const [experienceYears, setExperienceYears] = useState(0)
 
-  // Получаем курсы автора
-  let coursesQuery = supabase
-    .from('courses')
-    .select(`
-      id,
-      title,
-      description,
-      price,
-      cover_image,
-      is_published,
-      created_at,
-      lessons(id)
-    `)
-    .eq('coach_id', coach.id)
-    .eq('is_published', true)
+  useEffect(() => {
+    params.then(p => setId(p.id))
+  }, [params])
 
-  // Применяем поиск к курсам
-  if (search.trim()) {
-    coursesQuery = coursesQuery.ilike('title', `%${search.trim()}%`)
-  }
+  useEffect(() => {
+    if (!id) return
 
-  const { data: courses } = await coursesQuery
-    .order('created_at', { ascending: false })
+    const loadData = async () => {
+      const supabase = createClient()
+      
+      // Получаем данные автора
+      const { data: coachData } = await supabase
+        .from('coaches')
+        .select('id, user_id, display_name, avatar_url, bio, specialization, created_at')
+        .eq('id', id)
+        .single()
 
-  // Получаем отдельные уроки автора
-  let lessonsQuery = supabase
-    .from('lessons')
-    .select('id, title, description, price, is_free_preview, created_at, cover_image')
-    .eq('coach_id', coach.id)
-    .is('course_id', null)
+      if (!coachData) {
+        notFound()
+        return
+      }
 
-  // Применяем поиск к урокам
-  if (search.trim()) {
-    lessonsQuery = lessonsQuery.ilike('title', `%${search.trim()}%`)
-  }
+      setCoach(coachData)
 
-  const { data: lessons } = await lessonsQuery
-    .order('created_at', { ascending: false })
+      // Рассчитываем опыт
+      const years = Math.floor((new Date().getTime() - new Date(coachData.created_at).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+      setExperienceYears(years)
 
-  const coursesCount = courses?.length || 0
-  const lessonsCount = lessons?.length || 0
+      // Получаем курсы
+      const { data: coursesData } = await supabase
+        .from('courses')
+        .select(`
+          id,
+          title,
+          description,
+          price,
+          cover_image,
+          is_published,
+          created_at,
+          lessons(id)
+        `)
+        .eq('coach_id', coachData.id)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false })
 
-  // Получаем статистику (общее количество студентов)
-  const { data: progressData } = await supabase
-    .from('lesson_progress')
-    .select('user_id', { count: 'exact' })
-    .in('lesson_id', [
-      ...(courses?.flatMap(c => c.lessons || []) || []),
-      ...(lessons || [])
-    ].map(l => l.id))
+      setCourses(coursesData || [])
 
-  const uniqueStudents = new Set(progressData?.map(p => p.user_id) || []).size
+      // Получаем отдельные уроки
+      const { data: lessonsData } = await supabase
+        .from('lessons')
+        .select('id, title, description, price, is_free_preview, created_at, cover_image')
+        .eq('coach_id', coachData.id)
+        .is('course_id', null)
+        .order('created_at', { ascending: false })
 
-  // Рассчитываем "стаж" автора
-  const experienceYears = coach.created_at 
-    ? Math.floor((new Date().getTime() - new Date(coach.created_at).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-    : 0
+      setLessons(lessonsData || [])
+
+      // Считаем уникальных студентов
+      const allLessonIds = [
+        ...(coursesData?.flatMap(c => c.lessons || []) || []),
+        ...(lessonsData || [])
+      ].map(l => l.id)
+
+      const { data: progressData } = await supabase
+        .from('lesson_progress')
+        .select('user_id', { count: 'exact' })
+        .in('lesson_id', allLessonIds)
+
+      const uniqueIds = new Set(progressData?.map(p => p.user_id) || [])
+      setUniqueStudents(uniqueIds.size)
+
+      setLoading(false)
+    }
+
+    loadData()
+  }, [id])
+
+  // Debounce для поиска (300ms)
+  useEffect(() => {
+    if (searchQuery.length >= 3) {
+      const timer = setTimeout(() => {
+        setDebouncedSearch(searchQuery)
+      }, 300)
+      return () => clearTimeout(timer)
+    } else {
+      setDebouncedSearch('')
+    }
+  }, [searchQuery])
+
+  // Фильтрация курсов и уроков
+  const filteredCourses = debouncedSearch
+    ? courses.filter(c => c.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+                         (c.description?.toLowerCase().includes(debouncedSearch.toLowerCase()) || false))
+    : courses
+
+  const filteredLessons = debouncedSearch
+    ? lessons.filter(l => l.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+                         (l.description?.toLowerCase().includes(debouncedSearch.toLowerCase()) || false))
+    : lessons
 
   const getInitials = (name?: string | null) => {
     if (!name) return 'A'
     const parts = name.split(' ')
     return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
+  }
+
+  if (loading || !coach) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Загрузка...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -101,7 +176,7 @@ export default async function MentorPage({ params, searchParams }: MentorPagePro
         </Link>
       </div>
 
-      {/* Профиль автора с расширенной информацией */}
+      {/* Профиль автора */}
       <div className="style-card p-6 sm:p-8 mb-8">
         <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
           {/* Аватар */}
@@ -131,21 +206,21 @@ export default async function MentorPage({ params, searchParams }: MentorPagePro
             {/* Статистика */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
               <div className="text-center p-3 bg-purple-50 rounded-xl">
-                <div className="text-2xl sm:text-3xl font-bold gradient-text">{coursesCount}</div>
+                <div className="text-2xl sm:text-3xl font-bold gradient-text">{courses.length}</div>
                 <div className="text-sm text-gray-600">
-                  {coursesCount === 1 ? 'курс' : coursesCount < 5 ? 'курса' : 'курсов'}
+                  {courses.length === 1 ? 'курс' : courses.length < 5 ? 'курса' : 'курсов'}
                 </div>
               </div>
               <div className="text-center p-3 bg-purple-50 rounded-xl">
-                <div className="text-2xl sm:text-3xl font-bold gradient-text">{lessonsCount}</div>
+                <div className="text-2xl sm:text-3xl font-bold gradient-text">{lessons.length}</div>
                 <div className="text-sm text-gray-600">
-                  {lessonsCount === 1 ? 'урок' : lessonsCount < 5 ? 'урока' : 'уроков'}
+                  {lessons.length === 1 ? 'урок' : lessons.length < 5 ? 'урока' : 'уроков'}
                 </div>
               </div>
               <div className="text-center p-3 bg-purple-50 rounded-xl">
                 <div className="text-2xl sm:text-3xl font-bold gradient-text">{uniqueStudents}</div>
                 <div className="text-sm text-gray-600">
-                  {uniqueStudents === 1 ? 'студент' : uniqueStudents < 5 ? 'студента' : 'студентов'}
+                  {uniqueStudents === 1 ? 'подписчик' : uniqueStudents < 5 ? 'подписчика' : 'подписчиков'}
                 </div>
               </div>
               <div className="text-center p-3 bg-purple-50 rounded-xl">
@@ -153,50 +228,42 @@ export default async function MentorPage({ params, searchParams }: MentorPagePro
                 <div className="text-sm text-gray-600">лет на платформе</div>
               </div>
             </div>
-
-            {/* Биография */}
-            {coach.bio && (
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-3">Обо мне</h2>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{coach.bio}</p>
-              </div>
-            )}
-
-            {/* Достижения и информация */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {experienceYears > 0 && (
-                <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl">
-                  <div className="w-10 h-10 gradient-icon rounded-lg flex items-center justify-center text-white">
-                    
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">Опыт работы</div>
-                    <div className="text-sm text-gray-600">{experienceYears}+ лет на платформе</div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl">
-                <div className="w-10 h-10 gradient-icon rounded-lg flex items-center justify-center text-white">
-                  
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">Активных студентов</div>
-                  <div className="text-sm text-gray-600">{uniqueStudents} человек обучается</div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Поиск по контенту автора */}
+      {/* Раздел "Об Авторе" */}
+      {coach.bio && (
+        <div className="style-card p-6 sm:p-8 mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm"></span>
+            Об авторе
+          </h2>
+          <div className="prose prose-purple max-w-none">
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{coach.bio}</p>
+          </div>
+          
+          {experienceYears > 0 && (
+            <div className="mt-6 flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl">
+              <div className="w-12 h-12 gradient-icon rounded-lg flex items-center justify-center text-white text-2xl">
+                
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900">Опыт работы на платформе</div>
+                <div className="text-sm text-gray-600">{experienceYears}+ лет создаю обучающие материалы</div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Поиск */}
       <div className="mb-8">
         <div className="relative">
           <input
             type="text"
-            name="search"
-            defaultValue={search}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Поиск по курсам и урокам автора..."
             className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
           />
@@ -208,45 +275,37 @@ export default async function MentorPage({ params, searchParams }: MentorPagePro
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          {search && (
-            <Link
-              href={`/mentor/${id}`}
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
               className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </Link>
+            </button>
           )}
         </div>
 
-        {search && (
-          <div className="mt-3 flex items-center justify-between">
+        {debouncedSearch && (
+          <div className="mt-3">
             <p className="text-sm text-gray-600">
-              Найдено: <span className="font-bold text-purple-700">{coursesCount + lessonsCount}</span> материалов
+              Найдено: <span className="font-bold text-purple-700">{filteredCourses.length + filteredLessons.length}</span> материалов
             </p>
-            <Link
-              href={`/mentor/${id}`}
-              className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-            >
-              Сбросить поиск
-            </Link>
           </div>
         )}
       </div>
 
       {/* Курсы автора */}
-      {coursesCount > 0 && (
+      {filteredCourses.length > 0 && (
         <div className="mb-10">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold gradient-text flex items-center gap-2">
-              <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📚</span>
-              Курсы автора {search && <span className="text-base text-gray-500">({coursesCount})</span>}
-            </h2>
-          </div>
+          <h2 className="text-2xl font-bold gradient-text mb-6 flex items-center gap-2">
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📚</span>
+            Курсы автора
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {courses?.map((course: any) => {
+            {filteredCourses.map((course) => {
               const courseLessonsCount = course.lessons?.length || 0
               
               return (
@@ -304,17 +363,15 @@ export default async function MentorPage({ params, searchParams }: MentorPagePro
       )}
 
       {/* Отдельные уроки автора */}
-      {lessonsCount > 0 && (
+      {filteredLessons.length > 0 && (
         <div className="mb-10">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold gradient-text flex items-center gap-2">
-              <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📝</span>
-              Отдельные уроки {search && <span className="text-base text-gray-500">({lessonsCount})</span>}
-            </h2>
-          </div>
+          <h2 className="text-2xl font-bold gradient-text mb-6 flex items-center gap-2">
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📝</span>
+            Отдельные уроки
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {lessons?.map((lesson: any) => {
+            {filteredLessons.map((lesson) => {
               return (
                 <Link
                   key={lesson.id}
@@ -370,29 +427,21 @@ export default async function MentorPage({ params, searchParams }: MentorPagePro
         </div>
       )}
 
-      {/* Если нет материалов или ничего не найдено */}
-      {coursesCount === 0 && lessonsCount === 0 && (
+      {/* Если ничего не найдено */}
+      {(filteredCourses.length === 0 && filteredLessons.length === 0) && (
         <div className="style-card p-12 text-center">
           <div className="text-6xl mb-4">🔍</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {search ? 'Ничего не найдено' : 'Пока нет материалов'}
+            {debouncedSearch ? 'Ничего не найдено' : 'Пока нет материалов'}
           </h2>
           <p className="text-gray-600 max-w-md mx-auto">
-            {search 
-              ? `По запросу "${search}" материалов не найдено. Попробуйте изменить поисковый запрос.`
+            {debouncedSearch 
+              ? `По запросу "${debouncedSearch}" материалов не найдено.`
               : 'Автор пока не добавил курсы или уроки'
             }
           </p>
-          {search && (
-            <Link
-              href={`/mentor/${id}`}
-              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-block mt-6"
-            >
-              Сбросить поиск
-            </Link>
-          )}
         </div>
       )}
     </main>
   )
-} 
+}
