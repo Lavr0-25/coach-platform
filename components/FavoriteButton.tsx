@@ -23,13 +23,12 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
       const { data: { user } } = await supabase.auth.getUser()
       setUserId(user?.id || null)
       
-      // Проверяем, есть ли в избранном
       if (user && !initialIsFavorited) {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('favorites')
           .select('id')
           .eq('user_id', user.id)
-          .eq('lesson_id', itemId) // Используем lesson_id вместо item_id
+          .eq('lesson_id', itemId)
           .maybeSingle()
         
         setIsFavorited(!!data)
@@ -38,7 +37,11 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
     getUser()
   }, [itemId, itemType, initialIsFavorited])
 
-  const toggleFavorite = async () => {
+  const toggleFavorite = async (e: React.MouseEvent) => {
+    // ВАЖНО: останавливаем всплытие клика, чтобы не переходить по ссылке
+    e.stopPropagation()
+    e.preventDefault()
+
     if (!userId) {
       router.push('/login')
       return
@@ -55,17 +58,38 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
         
         if (error) throw error
       } else {
-        const { error } = await supabase
+        // Сначала проверяем, нет ли уже записи (чтобы избежать 409)
+        const { data: existing } = await supabase
           .from('favorites')
-          .insert({ 
-            user_id: userId, 
-            lesson_id: itemId,
-            group_name: 'default' // Добавляем обязательное поле group_name
-          })
-        
-        if (error) throw error
+          .select('id')
+          .eq('user_id', userId)
+          .eq('lesson_id', itemId)
+          .maybeSingle()
+
+        if (existing) {
+          // Уже в избранном — просто обновляем состояние
+          setIsFavorited(true)
+        } else {
+          const { error } = await supabase
+            .from('favorites')
+            .insert({ 
+              user_id: userId, 
+              lesson_id: itemId,
+              group_name: 'default'
+            })
+          
+          if (error) {
+            // Если всё равно 409 — значит добавили между запросами
+            if (error.code === '23505') {
+              setIsFavorited(true)
+            } else {
+              throw error
+            }
+          } else {
+            setIsFavorited(true)
+          }
+        }
       }
-      setIsFavorited(!isFavorited)
       router.refresh()
     } catch (error) {
       console.error('Ошибка при изменении избранного:', error)
@@ -98,4 +122,4 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
       )}
     </button>
   )
-} 
+}
