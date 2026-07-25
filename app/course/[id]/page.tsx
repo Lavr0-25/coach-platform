@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import FavoriteButton from '@/components/FavoriteButton'
 
 const ReviewsSection = dynamic(
   () => import('@/components/CourseReviews'),
@@ -162,7 +163,18 @@ export default async function CoursePage({ params }: CoursePageProps) {
       </div>
 
       {/* Заголовок курса */}
-      <div className="style-card p-6 sm:p-8 mb-6">
+      <div className="style-card p-6 sm:p-8 mb-6 relative">
+        {/* Кнопка избранного — ЛЕВЫЙ НИЖНИЙ УГОЛ обложки */}
+        {!isOwner && (
+          <div className="absolute bottom-6 left-6 z-10">
+            <FavoriteButton 
+              itemId={id} 
+              itemType="course" 
+              size="md" 
+            />
+          </div>
+        )}
+
         {course.cover_image ? (
           <div className="mb-6">
             <div className="aspect-video rounded-xl overflow-hidden shadow-lg">
@@ -251,13 +263,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
                 Купить курс
               </Link>
             )}
-            
-            <button className="bg-white text-purple-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all inline-flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-              В избранное
-            </button>
           </div>
         )}
       </div>
