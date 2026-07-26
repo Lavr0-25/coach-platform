@@ -22,24 +22,34 @@ export default function StopListPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [filterActive, setFilterActive] = useState(false)
-  const [, setNow] = useState(Date.now())
+  const [filterDate, setFilterDate] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 8
 
   useEffect(() => {
     loadStopList()
-    const interval = setInterval(() => setNow(Date.now()), 60000)
-    return () => clearInterval(interval)
-  }, [filterActive])
+  }, [filterActive, filterDate, currentPage])
 
   const loadStopList = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('stop_list')
         .select('*')
         .order('created_at', { ascending: false })
 
+      if (filterActive) {
+        query = query.gte('banned_until', new Date().toISOString())
+      }
+      
+      if (filterDate) {
+        query = query.lte('banned_until', filterDate)
+      }
+
+      const { data, error } = await query
+
       if (error) throw error
 
-      // 🔥 ОПТИМИЗАЦИЯ: Собираем все user_id и делаем ОДИН запрос вместо цикла
+      // 🔥 ОПТИМИЗАЦИЯ: Собираем все user_id и делаем ОДИН запрос
       const userIds = (data || []).map((entry: any) => entry.user_id)
       
       let usersMap = new Map<string, string>()
@@ -59,7 +69,11 @@ export default function StopListPage() {
         display_name: usersMap.get(entry.user_id) || 'Неизвестно',
       }))
 
-      setEntries(entriesWithUsers)
+      // Пагинация
+      const startIndex = (currentPage - 1) * itemsPerPage
+      const paginatedEntries = entriesWithUsers.slice(startIndex, startIndex + itemsPerPage)
+      
+      setEntries(paginatedEntries)
     } catch (error) {
       console.error('Error loading stop list:', error)
     } finally {
@@ -93,12 +107,17 @@ export default function StopListPage() {
     try {
       const { error } = await supabase
         .from('stop_list')
-        .upsert({ user_id: newBan.user_id, reason: newBan.reason, banned_until: newBan.banned_until }, { onConflict: 'user_id' })
+        .upsert({ 
+          user_id: newBan.user_id, 
+          reason: newBan.reason, 
+          banned_until: newBan.banned_until 
+        }, { onConflict: 'user_id' })
       if (error) throw error
       alert('✅ Пользователь добавлен в стоп-лист')
       setShowAddModal(false)
       setNewBan({ user_id: '', reason: '', banned_until: '' })
       setSearchQuery('')
+      setCurrentPage(1)
       await loadStopList()
     } catch (error: any) {
       alert('Ошибка: ' + (error.message || 'Не удалось добавить'))
@@ -110,6 +129,7 @@ export default function StopListPage() {
     try {
       const { error } = await supabase.from('stop_list').delete().eq('id', id)
       if (error) throw error
+      setCurrentPage(1)
       await loadStopList()
     } catch (error) {
       console.error('Error removing ban:', error)
@@ -127,18 +147,20 @@ export default function StopListPage() {
 
   const isExpired = (bannedUntil: string) => new Date(bannedUntil) < new Date()
   const formatDate = (dateString: string) => new Date(dateString).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const formatShortDate = (dateString: string) => new Date(dateString).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
   const filteredEntries = filterActive ? entries.filter(e => !isExpired(e.banned_until)) : entries
+  const totalPages = Math.ceil((entries.length || 0) / itemsPerPage)
 
   return (
-    <main className="min-h-screen bg-gray-50 py-6 md:py-10">
+    <main className="py-6 md:py-10">
       <div className="container mx-auto px-4 max-w-5xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold gradient-text">🚫 Стоп-лист</h1>
             <p className="text-gray-600 text-sm mt-1">Управление заблокированными пользователями</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Link href="/admin" className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm">
               ← Назад
             </Link>
@@ -148,14 +170,50 @@ export default function StopListPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={filterActive} onChange={(e) => setFilterActive(e.target.checked)} className="w-4 h-4 text-purple-600 rounded border-purple-300 focus:ring-purple-500" />
-            <span className="text-sm font-medium text-gray-700">Только активные блокировки</span>
-          </label>
-          <p className="text-xs text-gray-500">Всего: {entries.length} | Показано: {filteredEntries.length}</p>
+        {/* Фильтры */}
+        <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                checked={filterActive} 
+                onChange={(e) => { 
+                  setFilterActive(e.target.checked)
+                  setCurrentPage(1)
+                }} 
+                className="w-4 h-4 text-purple-600 rounded border-purple-300 focus:ring-purple-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Только активные блокировки</span>
+            </div>
+            <div className="flex-1 flex flex-col sm:flex-row gap-2">
+              <input
+                type="date"
+                value={filterDate}
+                onChange={(e) => {
+                  setFilterDate(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="w-full px-3 py-2 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400"
+                placeholder="Выберите дату"
+              />
+              <button
+                onClick={() => {
+                  setFilterDate('')
+                  setCurrentPage(1)
+                }}
+                className="px-3 py-2 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition-colors text-sm"
+              >
+                Сбросить
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4 text-xs text-gray-500">
+            <span>Всего: {entries.length} | Показано: {filteredEntries.length}</span>
+            <span>Страница {currentPage} из {totalPages}</span>
+          </div>
         </div>
 
+        {/* Список */}
         {loading ? (
           <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-6 animate-pulse space-y-4">
             {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-purple-100 rounded-xl"></div>)}
@@ -181,7 +239,8 @@ export default function StopListPage() {
                     </div>
                     <div className="text-sm text-gray-600 space-y-1 ml-13">
                       <p><strong className="text-gray-700">Причина:</strong> {entry.reason}</p>
-                      <p className="text-xs text-gray-500">До: {formatDate(entry.banned_until)} {!expired && <span className="text-orange-600 font-medium ml-2">⏱️ Осталось: {getRemainingTime(entry.banned_until)}</span>}</p>
+                      <p className="text-xs text-gray-500">Заблокирован: {formatDate(entry.created_at)}</p>
+                      <p className="text-xs text-gray-500">До: {formatShortDate(entry.banned_until)} {!expired && <span className="text-orange-600 font-medium ml-2">⏱️ Осталось: {getRemainingTime(entry.banned_until)}</span>}</p>
                     </div>
                   </div>
                   <button onClick={() => handleRemoveBan(entry.id)} className="w-full sm:w-auto px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium hover:bg-red-100 transition-colors text-sm">
@@ -190,6 +249,26 @@ export default function StopListPage() {
                 </div>
               )
             })}
+            {/* Пагинация */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6">
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm"
+                >
+                  ← Предыдущая
+                </button>
+                <div className="text-gray-600 text-sm">Страница {currentPage} из {totalPages}</div>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm"
+                >
+                  Следующая →
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-12 text-center">
@@ -207,11 +286,28 @@ export default function StopListPage() {
               <div className="space-y-4">
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Имя пользователя</label>
-                  <input type="text" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); searchUser() }} className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400" placeholder="Введите имя..." />
+                  <input 
+                    type="text" 
+                    value={searchQuery} 
+                    onChange={(e) => { 
+                      setSearchQuery(e.target.value)
+                      searchUser()
+                    }} 
+                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400" 
+                    placeholder="Введите имя..." 
+                  />
                   {searchResults.length > 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-purple-100 rounded-xl shadow-lg max-h-40 overflow-y-auto">
                       {searchResults.map((user) => (
-                        <button key={user.user_id} onClick={() => { setNewBan({ ...newBan, user_id: user.user_id }); setSearchResults([]); setSearchQuery(user.display_name) }} className="w-full px-4 py-2 text-left hover:bg-purple-50 transition-colors text-sm">
+                        <button 
+                          key={user.user_id} 
+                          onClick={() => { 
+                            setNewBan({ ...newBan, user_id: user.user_id })
+                            setSearchResults([])
+                            setSearchQuery(user.display_name)
+                          }} 
+                          className="w-full px-4 py-2 text-left hover:bg-purple-50 transition-colors text-sm"
+                        >
                           {user.display_name}
                         </button>
                       ))}
@@ -220,15 +316,40 @@ export default function StopListPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Причина</label>
-                  <textarea rows={3} value={newBan.reason} onChange={(e) => setNewBan({ ...newBan, reason: e.target.value })} className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400" placeholder="Опишите причину..." />
+                  <textarea 
+                    rows={3} 
+                    value={newBan.reason} 
+                    onChange={(e) => setNewBan({ ...newBan, reason: e.target.value })} 
+                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400" 
+                    placeholder="Опишите причину..." 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Заблокировать до</label>
-                  <input type="datetime-local" value={newBan.banned_until} onChange={(e) => setNewBan({ ...newBan, banned_until: e.target.value })} className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400" />
+                  <input 
+                    type="datetime-local" 
+                    value={newBan.banned_until} 
+                    onChange={(e) => setNewBan({ ...newBan, banned_until: e.target.value })} 
+                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400" 
+                  />
                 </div>
                 <div className="flex gap-3 pt-2">
-                  <button onClick={handleAddBan} className="flex-1 gradient-btn text-white py-2.5 rounded-xl font-medium shadow-lg shadow-purple-500/30">Заблокировать</button>
-                  <button onClick={() => { setShowAddModal(false); setNewBan({ user_id: '', reason: '', banned_until: '' }); setSearchQuery('') }} className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors">Отмена</button>
+                  <button 
+                    onClick={handleAddBan} 
+                    className="flex-1 gradient-btn text-white py-2.5 rounded-xl font-medium shadow-lg shadow-purple-500/30"
+                  >
+                    Заблокировать
+                  </button>
+                  <button 
+                    onClick={() => { 
+                      setShowAddModal(false)
+                      setNewBan({ user_id: '', reason: '', banned_until: '' })
+                      setSearchQuery('')
+                    }} 
+                    className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                  >
+                    Отмена
+                  </button>
                 </div>
               </div>
             </div>
