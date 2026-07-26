@@ -19,28 +19,14 @@ function MessageContent({ content }: { content: string }) {
 
       if (lessonMatch) {
         const lessonId = lessonMatch[1]
-        supabase
-          .from('lessons')
-          .select('id, title')
-          .eq('id', lessonId)
-          .single()
-          .then(({ data }) => {
-            if (data) {
-              setLessonInfo({ id: lessonId, title: data.title, type: 'lesson' })
-            }
-          })
+        supabase.from('lessons').select('id, title').eq('id', lessonId).single().then(({ data }) => {
+          if (data) setLessonInfo({ id: lessonId, title: data.title, type: 'lesson' })
+        })
       } else if (courseMatch) {
         const courseId = courseMatch[1]
-        supabase
-          .from('courses')
-          .select('id, title')
-          .eq('id', courseId)
-          .single()
-          .then(({ data }) => {
-            if (data) {
-              setLessonInfo({ id: courseId, title: data.title, type: 'course' })
-            }
-          })
+        supabase.from('courses').select('id, title').eq('id', courseId).single().then(({ data }) => {
+          if (data) setLessonInfo({ id: courseId, title: data.title, type: 'course' })
+        })
       }
     }
   }, [content])
@@ -52,12 +38,10 @@ function MessageContent({ content }: { content: string }) {
     
     return (
       <div className="space-y-2">
-        {textWithoutUrl && (
-          <p className="break-words">{textWithoutUrl}</p>
-        )}
+        {textWithoutUrl && <p className="break-words">{textWithoutUrl}</p>}
         <Link
           href={href}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+          className="inline-flex items-center gap-2 px-3 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
           target="_blank"
         >
           <span className="text-lg">{icon}</span>
@@ -79,7 +63,7 @@ function MessageContent({ content }: { content: string }) {
               href={part}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-300 hover:underline break-all"
+              className="text-purple-200 hover:underline break-all"
               onClick={(e) => e.stopPropagation()}
             >
               {part}
@@ -108,21 +92,6 @@ export default function ChatPage() {
   const [blockedBy, setBlockedBy] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Блокируем глобальный скролл
-  useEffect(() => {
-    const originalBodyOverflow = document.body.style.overflow
-    const originalHtmlOverflow = document.documentElement.style.overflow
-    
-    document.body.style.overflow = 'hidden'
-    document.documentElement.style.overflow = 'hidden'
-    
-    return () => {
-      document.body.style.overflow = originalBodyOverflow
-      document.documentElement.style.overflow = originalHtmlOverflow
-    }
-  }, [])
-
-  // Автопрокрутка вниз при новых сообщениях
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -133,39 +102,19 @@ export default function ChatPage() {
     async function loadData() {
       try {
         const { data: { user } } = await supabase.auth.getUser()
-        
         if (!user) {
           router.push('/login')
           return
         }
-
         if (!mounted) return
         setCurrentUser(user)
 
-        const { data: coach } = await supabase
-          .from('coaches')
-          .select('*')
-          .eq('user_id', userId)
-          .single()
-
+        const { data: coach } = await supabase.from('coaches').select('*').eq('user_id', userId).single()
         if (!mounted) return
-        if (coach) {
-          setOtherUser(coach)
-        }
+        if (coach) setOtherUser(coach)
 
-        const { data: iBlockedHim } = await supabase
-          .from('blocked_users')
-          .select('id')
-          .eq('blocker_id', user.id)
-          .eq('blocked_id', userId)
-          .maybeSingle()
-
-        const { data: heBlockedMe } = await supabase
-          .from('blocked_users')
-          .select('id')
-          .eq('blocker_id', userId)
-          .eq('blocked_id', user.id)
-          .maybeSingle()
+        const { data: iBlockedHim } = await supabase.from('blocked_users').select('id').eq('blocker_id', user.id).eq('blocked_id', userId).maybeSingle()
+        const { data: heBlockedMe } = await supabase.from('blocked_users').select('id').eq('blocker_id', userId).eq('blocked_id', user.id).maybeSingle()
 
         if (!mounted) return
 
@@ -176,30 +125,11 @@ export default function ChatPage() {
         setBlockedBy(blockedByOther)
 
         if (!blocked && !blockedByOther) {
-          const { data: unreadMessages, error: unreadError } = await supabase
-            .from('messages')
-            .select('id')
-            .eq('receiver_id', user.id)
-            .eq('sender_id', userId)
-            .eq('is_read', false)
-
-          if (unreadError) {
-            console.error('Error loading unread messages:', unreadError)
-          }
+          const { data: unreadMessages } = await supabase.from('messages').select('id').eq('receiver_id', user.id).eq('sender_id', userId).eq('is_read', false)
 
           if (unreadMessages && unreadMessages.length > 0) {
-            const { error: updateError } = await supabase
-              .from('messages')
-              .update({ is_read: true })
-              .in('id', unreadMessages.map(m => m.id))
-
-            if (updateError) {
-              console.error('Error updating messages:', updateError)
-            } else {
-              window.dispatchEvent(new CustomEvent('messages-read', { 
-                detail: { userId } 
-              }))
-            }
+            await supabase.from('messages').update({ is_read: true }).in('id', unreadMessages.map(m => m.id))
+            window.dispatchEvent(new CustomEvent('messages-read', { detail: { userId } }))
           }
         }
 
@@ -216,10 +146,7 @@ export default function ChatPage() {
           .order('created_at', { ascending: true })
 
         if (!mounted) return
-        if (msgs) {
-          setMessages(msgs)
-        }
-
+        if (msgs) setMessages(msgs)
         setIsLoading(false)
       } catch (error) {
         console.error('Error:', error)
@@ -228,10 +155,7 @@ export default function ChatPage() {
     }
 
     loadData()
-
-    return () => {
-      mounted = false
-    }
+    return () => { mounted = false }
   }, [userId])
 
   const handleSend = async (e: React.FormEvent) => {
@@ -244,7 +168,6 @@ export default function ChatPage() {
     }
 
     const messageContent = newMessage.trim()
-    
     const tempMessage = {
       id: `temp-${Date.now()}`,
       sender_id: currentUser.id,
@@ -259,12 +182,7 @@ export default function ChatPage() {
 
     const { data, error } = await supabase
       .from('messages')
-      .insert({
-        sender_id: currentUser.id,
-        receiver_id: userId,
-        content: messageContent,
-        is_read: false
-      })
+      .insert({ sender_id: currentUser.id, receiver_id: userId, content: messageContent, is_read: false })
       .select()
       .single()
 
@@ -273,95 +191,45 @@ export default function ChatPage() {
       setMessages(prev => prev.filter(m => m.id !== tempMessage.id))
       alert('Ошибка при отправке сообщения')
     } else if (data) {
-      setMessages(prev => 
-        prev.map(m => m.id === tempMessage.id ? data : m)
-      )
+      setMessages(prev => prev.map(m => m.id === tempMessage.id ? data : m))
     }
   }
 
   const handleDelete = async (messageId: string) => {
     if (!confirm('Удалить сообщение?')) return
-    
-    await supabase
-      .from('messages')
-      .delete()
-      .eq('id', messageId)
-    
+    await supabase.from('messages').delete().eq('id', messageId)
     setMessages(prev => prev.filter(m => m.id !== messageId))
   }
 
   const handleBlockUser = async () => {
     if (!confirm('Заблокировать этого пользователя? Вы не сможете получать от него сообщений.')) return
-
-    try {
-      const { error } = await supabase
-        .from('blocked_users')
-        .insert({
-          blocker_id: currentUser.id,
-          blocked_id: userId
-        })
-
-      if (error) {
-        console.error('Ошибка блокировки:', error)
-        alert('Ошибка при блокировке пользователя')
-        return
-      }
-
-      setIsBlocked(true)
-      setMessages([])
-      alert('Пользователь заблокирован')
-    } catch (err) {
-      console.error('Error blocking user:', err)
-      alert('Ошибка при блокировке')
+    const { error } = await supabase.from('blocked_users').insert({ blocker_id: currentUser.id, blocked_id: userId })
+    if (error) {
+      alert('Ошибка при блокировке пользователя')
+      return
     }
+    setIsBlocked(true)
+    setMessages([])
   }
 
   const handleUnblockUser = async () => {
     if (!confirm('Разблокировать этого пользователя?')) return
-
-    try {
-      const { error } = await supabase
-        .from('blocked_users')
-        .delete()
-        .eq('blocker_id', currentUser.id)
-        .eq('blocked_id', userId)
-
-      if (error) {
-        console.error('Ошибка разблокировки:', error)
-        alert('Ошибка при разблокировке пользователя')
-        return
-      }
-
-      setIsBlocked(false)
-      setBlockedBy(false)
-      
-      const { data: msgs } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${currentUser.id})`)
-        .order('created_at', { ascending: true })
-
-      if (msgs) {
-        setMessages(msgs)
-      }
-      alert('Пользователь разблокирован')
-    } catch (err) {
-      console.error('Error unblocking user:', err)
-      alert('Ошибка при разблокировке')
+    const { error } = await supabase.from('blocked_users').delete().eq('blocker_id', currentUser.id).eq('blocked_id', userId)
+    if (error) {
+      alert('Ошибка при разблокировке пользователя')
+      return
     }
+    setIsBlocked(false)
+    setBlockedBy(false)
+    const { data: msgs } = await supabase.from('messages').select('*').or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${currentUser.id})`).order('created_at', { ascending: true })
+    if (msgs) setMessages(msgs)
   }
 
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-  }
-
+  const formatTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    
+    const days = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
     if (days === 0) return 'Сегодня'
     if (days === 1) return 'Вчера'
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
@@ -374,36 +242,24 @@ export default function ChatPage() {
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
       </div>
     )
   }
 
   if (isBlocked || blockedBy) {
     return (
-      <div className="flex flex-col h-full items-center justify-center bg-gray-50 p-8">
+      <div className="flex flex-col h-full items-center justify-center bg-gray-50 p-8 pt-24">
         <div className="text-center">
           <div className="text-6xl mb-4">🚫</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {isBlocked 
-              ? `Вы заблокировали ${otherUser?.display_name || 'этого пользователя'}` 
-              : `${otherUser?.display_name || 'Этот пользователь'} заблокировал вас`}
+            {isBlocked ? `Вы заблокировали ${otherUser?.display_name || 'этого пользователя'}` : `${otherUser?.display_name || 'Этот пользователь'} заблокировал вас`}
           </h2>
-          <p className="text-gray-600 mb-6">
-            Вы не можете отправлять сообщения этому пользователю
-          </p>
+          <p className="text-gray-600 mb-6">Вы не можете отправлять сообщения этому пользователю</p>
           {isBlocked && (
-            <button
-              onClick={handleUnblockUser}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-            >
+            <button onClick={handleUnblockUser} className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors">
               Разблокировать
             </button>
-          )}
-          {!isBlocked && blockedBy && (
-            <p className="text-sm text-gray-500">
-              Только {otherUser?.display_name || 'этот пользователь'} может разблокировать вас
-            </p>
           )}
         </div>
       </div>
@@ -411,10 +267,11 @@ export default function ChatPage() {
   }
 
   return (
-    // Чат занимает всю высоту родителя
-    <div className="flex flex-col h-full">
-           {/* Шапка чата - фиксированная высота 72px */}
-      <div className="bg-white border-b px-4 flex items-center gap-4 flex-shrink-0" style={{ height: '72px' }}>
+    // ВАЖНО: pt-16 md:pt-20 добавляет отступ сверху, чтобы навбар не перекрывал контент
+    <div className="flex flex-col h-full pt-16 md:pt-20">
+      
+      {/* Шапка чата */}
+      <div className="bg-white border-b border-purple-100 px-4 flex items-center gap-4 flex-shrink-0 h-[72px]">
         <div className="flex items-center gap-3 flex-shrink-0">
           <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
             {otherUser?.display_name?.[0]?.toUpperCase() || '?'}
@@ -441,25 +298,20 @@ export default function ChatPage() {
               placeholder="Поиск по чату..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full px-4 py-2 pl-10 border border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 text-sm transition-all"
             />
-            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
+              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">✕</button>
             )}
           </div>
         </div>
       </div>
 
       {/* Сообщения */}
-      <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-white">
+      <div className="flex-1 overflow-y-auto p-4 min-h-0 bg-gray-50/50">
         {filteredMessages.length === 0 ? (
           <div className="text-center text-gray-500 mt-8">
             {searchQuery ? 'Ничего не найдено' : 'Нет сообщений'}
@@ -468,8 +320,7 @@ export default function ChatPage() {
           filteredMessages.map((msg, index) => {
             const isMyMessage = msg.sender_id === currentUser?.id
             const prevMsg = filteredMessages[index - 1]
-            const showDate = !prevMsg || 
-              formatDate(prevMsg.created_at) !== formatDate(msg.created_at)
+            const showDate = !prevMsg || formatDate(prevMsg.created_at) !== formatDate(msg.created_at)
 
             return (
               <div key={msg.id}>
@@ -482,12 +333,12 @@ export default function ChatPage() {
                 )}
 
                 <div className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'} mb-2 group`}>
-                  <div className={`max-w-[70%] px-4 py-2 rounded-2xl relative ${
-                    isMyMessage ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white border rounded-bl-sm'
+                  <div className={`max-w-[85%] md:max-w-[70%] px-4 py-2 rounded-2xl relative ${
+                    isMyMessage ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-br-sm' : 'bg-white border border-purple-100 rounded-bl-sm shadow-sm'
                   }`}>
                     <MessageContent content={msg.content} />
                     <div className={`flex items-center justify-end gap-1 mt-1 text-xs ${
-                      isMyMessage ? 'text-blue-100' : 'text-gray-500'
+                      isMyMessage ? 'text-purple-100' : 'text-gray-500'
                     }`}>
                       <span className="flex-shrink-0">{formatTime(msg.created_at)}</span>
                       {isMyMessage && <span className="flex-shrink-0">{msg.is_read ? '✓✓' : '✓'}</span>}
@@ -496,7 +347,7 @@ export default function ChatPage() {
                     {isMyMessage && (
                       <button
                         onClick={() => handleDelete(msg.id)}
-                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1 text-white hover:text-red-300 transition-opacity"
+                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1 text-white/70 hover:text-red-300 transition-opacity"
                         title="Удалить"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -513,23 +364,34 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Поле ввода - ВЫРАВНИВАНИЕ КНОПКИ И ПОЛЯ */}
-      <form onSubmit={handleSend} className="bg-white border-t p-4 flex-shrink-0">
-        <div className="flex items-center gap-2">
+      {/* Поле ввода */}
+      <form onSubmit={handleSend} className="bg-white border-t border-purple-100 p-3 md:p-4 flex-shrink-0">
+        <div className="flex items-end gap-2">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Сообщение..."
-            className="flex-1 px-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0 h-[46px]"
+            className="flex-1 px-4 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 min-w-0 h-[46px] bg-gray-50 transition-all"
           />
-          <EmojiPicker onEmojiSelect={(emoji) => setNewMessage(prev => prev + emoji)} />
+          
+          {/* Эмодзи-пикер: СКРЫТ НА МОБИЛЬНЫХ (hidden md:block) */}
+          <div className="hidden md:block">
+            <EmojiPicker onEmojiSelect={(emoji) => setNewMessage(prev => prev + emoji)} />
+          </div>
+
           <button
             type="submit"
             disabled={!newMessage.trim()}
-            className="px-6 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0 h-[46px] flex items-center justify-center"
+            className="gradient-btn text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0 h-[46px] flex items-center justify-center px-4 md:px-6 shadow-lg shadow-purple-500/20"
           >
-            Отправить
+            {/* На мобильном показываем иконку, на десктопе текст */}
+            <span className="md:hidden">
+              <svg className="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </span>
+            <span className="hidden md:inline">Отправить</span>
           </button>
         </div>
       </form>
