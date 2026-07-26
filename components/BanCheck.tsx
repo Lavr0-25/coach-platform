@@ -35,14 +35,17 @@ export default function BanCheck() {
   const checkBan = async () => {
     setChecking(true)
     
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      setChecking(false)
-      return
-    }
-
     try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      //  Если нет пользователя или ошибка авторизации — выходим
+      if (authError || !user) {
+        setIsBanned(false)
+        setBanInfo(null)
+        setChecking(false)
+        return
+      }
+
       const { data, error } = await supabase
         .from('stop_list')
         .select('*')
@@ -51,7 +54,7 @@ export default function BanCheck() {
         .maybeSingle()
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error checking ban:', error)
+        console.warn('Warning checking ban:', error)
       }
 
       if (data) {
@@ -66,6 +69,8 @@ export default function BanCheck() {
       }
     } catch (error) {
       console.error('Error checking ban:', error)
+      setIsBanned(false)
+      setBanInfo(null)
     } finally {
       setChecking(false)
     }
