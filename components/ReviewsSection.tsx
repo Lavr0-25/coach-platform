@@ -8,8 +8,10 @@ import { checkBannedWords } from '@/lib/banned-words'
 interface Review {
   id: string
   user_id: string
+  course_id: string | null
+  lesson_id: string | null
   rating: number
-  comment: string
+  comment: string | null
   created_at: string
   report_count?: number
 }
@@ -88,23 +90,34 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
     }
   }
 
+  // 🔥 ОПТИМИЗАЦИЯ: Один запрос вместо цикла
   const loadUserNames = async (userIds: string[]) => {
     if (userIds.length === 0) return
 
     const uniqueIds = [...new Set(userIds)]
     const namesMap: Record<string, string> = {}
 
-    for (const uid of uniqueIds) {
-      const { data: coach } = await supabase
+    try {
+      const { data } = await supabase
         .from('coaches')
-        .select('display_name')
-        .eq('user_id', uid)
-        .single()
+        .select('user_id, display_name')
+        .in('user_id', uniqueIds)
 
-      namesMap[uid] = coach?.display_name || 'Пользователь'
+      if (data) {
+        data.forEach(coach => {
+          namesMap[coach.user_id] = coach.display_name || 'Пользователь'
+        })
+      }
+      
+      // Заполняем тех, кого нет в таблице coaches
+      uniqueIds.forEach(uid => {
+        if (!namesMap[uid]) namesMap[uid] = 'Пользователь'
+      })
+
+      setUsersMap(prev => ({ ...prev, ...namesMap }))
+    } catch (error) {
+      console.error('Error loading user names:', error)
     }
-
-    setUsersMap(prev => ({ ...prev, ...namesMap }))
   }
 
   const loadReviews = async () => {
@@ -123,7 +136,6 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
       }
 
       const { data, error } = await query
-
       if (error) throw error
 
       const reviewsList = data || []
@@ -227,12 +239,11 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
     setUserReview(review)
     setNewRating(review.rating)
     setNewComment(review.comment || '')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: document.querySelector('form')?.getBoundingClientRect().top! + window.scrollY - 100, behavior: 'smooth' })
   }
 
   const handleDelete = async () => {
     if (!userReview) return
-    
     if (!confirm('Удалить отзыв?')) return
 
     try {
@@ -285,7 +296,6 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         return
       }
 
-      // Получаем обновлённое количество жалоб
       const { count } = await supabase
         .from('review_reports')
         .select('*', { count: 'exact', head: true })
@@ -310,26 +320,32 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
     }
   }
 
-  const renderStars = (rating: number, size: 'sm' | 'md' | 'lg' = 'md') => {
+  const renderStars = (rating: number, interactive = false, size: 'sm' | 'md' | 'lg' = 'md') => {
     const sizeClasses = {
       sm: 'w-4 h-4',
       md: 'w-5 h-5',
-      lg: 'w-6 h-6'
+      lg: 'w-7 h-7'
     }
 
     return (
-      <div className="flex gap-1">
+      <div className="flex gap-0.5">
         {[1, 2, 3, 4, 5].map((star) => (
-          <svg
+          <button
             key={star}
-            className={`${sizeClasses[size]} ${
-              star <= rating ? 'text-yellow-400' : 'text-gray-300'
-            }`}
-            fill="currentColor"
-            viewBox="0 0 20 20"
+            type={interactive ? 'button' : undefined}
+            disabled={!interactive}
+            onClick={() => interactive && setNewRating(star)}
+            className={`focus:outline-none transition-transform ${interactive ? 'cursor-pointer hover:scale-110' : 'cursor-default'}`}
           >
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
+            <svg
+              className={`${sizeClasses[size]} ${
+                star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
+              }`}
+              viewBox="0 0 20 20"
+            >
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+          </button>
         ))}
       </div>
     )
@@ -352,38 +368,41 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          <div className="h-6 bg-purple-100 rounded w-1/3"></div>
+          <div className="h-24 bg-purple-100 rounded-xl"></div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-        <h2 className="text-2xl font-bold text-gray-900">
-          ⭐ Отзывы и рейтинги
+    <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 pb-4 border-b border-purple-100 gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold gradient-text flex items-center gap-2">
+          <span className="text-2xl">⭐</span>
+          Отзывы и рейтинги
         </h2>
         
         {reviews.length > 0 && (
-          <div className="flex items-center gap-3">
-            <div className="text-3xl font-bold text-gray-900">
+          <div className="flex items-center gap-3 bg-purple-50/50 px-4 py-2 rounded-xl">
+            <div className="text-2xl font-bold text-gray-900">
               {averageRating.toFixed(1)}
             </div>
-            {renderStars(Math.round(averageRating), 'lg')}
-            <span className="text-sm text-gray-500">
-              ({reviews.length} {getReviewsWord(reviews.length)})
-            </span>
+            <div className="flex flex-col">
+              {renderStars(Math.round(averageRating), false, 'sm')}
+              <span className="text-xs text-gray-500 mt-0.5">
+                {reviews.length} {getReviewsWord(reviews.length)}
+              </span>
+            </div>
           </div>
         )}
       </div>
 
       {userId ? (
         isBanned ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
             <p className="text-red-800 font-medium">
               ⛔ Вы заблокированы до {banInfo ? new Date(banInfo.until).toLocaleString('ru-RU') : ''}
             </p>
@@ -392,57 +411,38 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
             </p>
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold text-gray-900 mb-3">
-              {userReview ? 'Редактировать отзыв' : 'Оставьте отзыв'}
+          <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl border border-purple-100 p-4 sm:p-5 mb-6">
+            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              {userReview ? '✏️ Редактировать отзыв' : '⭐ Оставьте отзыв'}
             </h3>
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ваша оценка
+                  Ваша оценка <span className="text-red-500">*</span>
                 </label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setNewRating(star)}
-                      className="focus:outline-none transition-transform hover:scale-110"
-                    >
-                      <svg
-                        className={`w-8 h-8 ${
-                          star <= newRating ? 'text-yellow-400' : 'text-gray-300'
-                        }`}
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    </button>
-                  ))}
-                </div>
+                {renderStars(newRating, true, 'lg')}
               </div>
 
               <div>
-                <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
-                  Комментарий (необязательно)
+                <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">
+                  Комментарий
                 </label>
                 <textarea
                   id="comment"
                   rows={3}
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all bg-white"
                   placeholder="Поделитесь впечатлениями..."
                 />
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                  className="gradient-btn text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all w-full sm:w-auto"
                 >
                   {submitting ? 'Сохранение...' : userReview ? '💾 Обновить отзыв' : '✅ Опубликовать отзыв'}
                 </button>
@@ -451,9 +451,9 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                   <button
                     type="button"
                     onClick={handleDelete}
-                    className="bg-red-100 text-red-600 px-6 py-2 rounded-lg font-medium hover:bg-red-200 transition-colors"
+                    className="bg-white border border-red-200 text-red-600 px-6 py-2.5 rounded-xl font-medium hover:bg-red-50 transition-colors w-full sm:w-auto"
                   >
-                    🗑️ Удалить отзыв
+                    🗑️ Удалить
                   </button>
                 )}
               </div>
@@ -461,11 +461,11 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
           </div>
         )
       ) : (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-          <p className="text-yellow-800">
-            <a href="/login" className="underline font-medium hover:text-yellow-900">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+          <p className="text-yellow-800 text-sm sm:text-base">
+            <Link href="/login" className="underline font-medium hover:text-yellow-900">
               Войдите
-            </a>
+            </Link>
             , чтобы оставить отзыв
           </p>
         </div>
@@ -476,33 +476,41 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
           {reviews.map((review) => (
             <div
               key={review.id}
-              className={`border rounded-lg p-4 ${
-                review.user_id === userId ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'
+              className={`border rounded-xl p-4 transition-all ${
+                review.user_id === userId 
+                  ? 'bg-purple-50/50 border-purple-200 shadow-sm' 
+                  : 'bg-gray-50/50 border-purple-100 hover:shadow-md'
               }`}
             >
-              <div className="flex items-start justify-between mb-2 flex-wrap gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 shadow-sm">
                     {getUserInitial(review)}
                   </div>
                   <div>
                     <Link
                       href={`/profile/${review.user_id}`}
-                      className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                      className="font-medium text-purple-600 hover:text-purple-700 hover:underline"
                     >
                       {getUserName(review)}
+                      {review.user_id === userId && (
+                        <span className="ml-2 text-xs text-purple-600 font-normal bg-purple-100 px-2 py-0.5 rounded-full">
+                          вы
+                        </span>
+                      )}
                     </Link>
-                    <p className="text-sm text-gray-500">
-                      {new Date(review.created_at).toLocaleDateString('ru-RU')}
-                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {renderStars(review.rating, false, 'sm')}
+                      <p className="text-xs text-gray-500">
+                        {new Date(review.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap justify-end">
-                  {renderStars(review.rating, 'sm')}
-                  
-                  {/* Счётчик жалоб */}
+                
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                   {review.report_count !== undefined && review.report_count > 0 && (
-                    <span className={`text-xs px-2 py-1 rounded font-medium ${
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                       review.report_count >= banThreshold 
                         ? 'bg-red-100 text-red-800' 
                         : 'bg-orange-100 text-orange-800'
@@ -511,23 +519,19 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                     </span>
                   )}
                   
-                  {/* Кнопка жалобы */}
                   {review.user_id !== userId && (
                     <button
-                      onClick={() => setReportingReviewId(
-                        reportingReviewId === review.id ? null : review.id
-                      )}
-                      className="text-gray-400 hover:text-orange-600 text-xs flex items-center gap-1"
+                      onClick={() => setReportingReviewId(reportingReviewId === review.id ? null : review.id)}
+                      className="text-gray-400 hover:text-orange-600 text-xs font-medium flex items-center gap-1 transition-colors"
                     >
                       🚩 Пожаловаться
                     </button>
                   )}
                   
-                  {/* Кнопка редактирования */}
                   {review.user_id === userId && (
                     <button
                       onClick={() => handleEdit(review)}
-                      className="text-blue-600 hover:text-blue-700 text-xs"
+                      className="text-purple-600 hover:text-purple-700 text-xs font-medium transition-colors"
                     >
                       ✏️ Редактировать
                     </button>
@@ -535,9 +539,8 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                 </div>
               </div>
               
-              {/* Форма жалобы */}
               {reportingReviewId === review.id && (
-                <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-xl">
                   <p className="text-sm font-medium text-orange-900 mb-2">
                     Причина жалобы:
                   </p>
@@ -545,14 +548,14 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                     rows={2}
                     value={reportReason}
                     onChange={(e) => setReportReason(e.target.value)}
-                    className="w-full px-3 py-2 border border-orange-300 rounded-md text-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                    className="w-full px-3 py-2 border border-orange-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400"
                     placeholder="Опишите причину жалобы..."
                   />
-                  <div className="flex gap-2 mt-2">
+                  <div className="flex flex-wrap gap-2 mt-2">
                     <button
                       onClick={() => handleReport(review.id, review.user_id)}
                       disabled={reporting}
-                      className="bg-orange-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-orange-700 disabled:bg-gray-400"
+                      className="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50 transition-colors"
                     >
                       {reporting ? 'Отправка...' : 'Отправить жалобу'}
                     </button>
@@ -561,7 +564,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                         setReportingReviewId(null)
                         setReportReason('')
                       }}
-                      className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm font-medium hover:bg-gray-200"
+                      className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                     >
                       Отмена
                     </button>
@@ -570,7 +573,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
               )}
               
               {review.comment && (
-                <p className="text-gray-700 mt-2 whitespace-pre-wrap">
+                <p className="text-gray-700 mt-2 whitespace-pre-wrap break-words text-sm sm:text-base leading-relaxed">
                   {review.comment}
                 </p>
               )}
@@ -578,9 +581,9 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
           ))}
         </div>
       ) : (
-        <div className="text-center py-8">
-          <div className="text-4xl mb-2">💬</div>
-          <p className="text-gray-600">
+        <div className="text-center py-10">
+          <div className="text-5xl mb-3">💬</div>
+          <p className="text-gray-600 font-medium">
             Пока нет отзывов. Будьте первым!
           </p>
         </div>
