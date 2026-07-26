@@ -59,8 +59,8 @@ export default function MessagesLayoutShell({ children, coaches }: { children: R
             </div>
           )}
 
-          {/* Контент чата */}
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Контент чата - overflow-y-auto для мобильного скролла */}
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden overflow-y-auto">
             {children}
           </div>
         </div>
