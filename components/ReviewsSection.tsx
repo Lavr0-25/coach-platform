@@ -82,7 +82,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         .select('*')
         .eq('user_id', userId)
         .gte('banned_until', new Date().toISOString())
-        .maybeSingle() // Возвращает null, если не найдено, вместо ошибки
+        .maybeSingle() // ✅ Возвращает null, если не найдено, вместо ошибки
       
       if (error && error.code !== 'PGRST116') { // PGRST116 = not found
         console.warn('Warning checking ban status:', error)
@@ -321,7 +321,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
       const reportCount = count || 0
 
       if (reportCount >= banThreshold) {
-        alert(`⚠️ Жалоба отправлена. Отзыв будет удалён автоматически (${reportCount}/${banThreshold})`)
+        alert(`️ Жалоба отправлена. Отзыв будет удалён автоматически (${reportCount}/${banThreshold})`)
       } else {
         alert(`✅ Жалоба отправлена (${reportCount}/${banThreshold})`)
       }
@@ -461,7 +461,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                   disabled={submitting}
                   className="gradient-btn text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all w-full sm:w-auto"
                 >
-                  {submitting ? 'Сохранение...' : userReview ? '💾 Обновить отзыв' : '✅ Опубликовать отзыв'}
+                  {submitting ? 'Сохранение...' : userReview ? ' Обновить отзыв' : '✅ Опубликовать отзыв'}
                 </button>
                 
                 {userReview && (
@@ -470,7 +470,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                     onClick={handleDelete}
                     className="bg-white border border-red-200 text-red-600 px-6 py-2.5 rounded-xl font-medium hover:bg-red-50 transition-colors w-full sm:w-auto"
                   >
-                    🗑️ Удалить
+                    ️ Удалить
                   </button>
                 )}
               </div>
