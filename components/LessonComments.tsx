@@ -151,7 +151,7 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
         query.eq('course_id', courseId)
       }
 
-      const { data } = await query.single()
+      const { data } = await query.maybeSingle()
       setUserHasReview(data || null)
     } catch (error) {
       setUserHasReview(null)
