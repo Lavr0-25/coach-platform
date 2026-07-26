@@ -28,13 +28,15 @@ export default function NotificationsBell() {
 
   const loadNotifications = useCallback(async () => {
     setIsLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      setIsLoading(false)
-      return
-    }
-
+    
     try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError || !user) {
+        setIsLoading(false)
+        return
+      }
+
       const { data: coachData } = await supabase
         .from('coaches')
         .select('id')
@@ -167,11 +169,9 @@ export default function NotificationsBell() {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
 
-      // Показываем только 10 последних в дропдауне для скорости
       const displayedNotifications = newNotifications.slice(0, 10)
       
       setNotifications(displayedNotifications)
-      // Считаем ВСЕ непрочитанные, не только отображаемые
       setUnreadCount(newNotifications.filter(n => !n.isRead).length)
       
     } catch (error) {
@@ -226,24 +226,12 @@ export default function NotificationsBell() {
 
   useEffect(() => {
     loadNotifications()
-
-    const lessonChannel = supabase
-      .channel('lesson-comments-notify')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => {
-        loadNotifications()
-      })
-      .subscribe()
-
-    const courseChannel = supabase
-      .channel('course-comments-notify')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'course_comments' }, () => {
-        loadNotifications()
-      })
-      .subscribe()
+    
+    //  УБРАЛИ Realtime подписки - они вызывают ошибки longpooling
+    // Вместо этого уведомления обновляются при открытии dropdown
 
     return () => {
-      supabase.removeChannel(lessonChannel)
-      supabase.removeChannel(courseChannel)
+      // Cleanup не нужен, так как нет подписок
     }
   }, [loadNotifications])
 
@@ -255,9 +243,9 @@ export default function NotificationsBell() {
   }
 
   const handleClick = () => {
-    // На мобильном переходим на страницу уведомлений
-    // На десктопе открываем dropdown
-    if (window.innerWidth < 640) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
+    
+    if (isMobile) {
       router.push('/notifications')
     } else {
       setIsOpen(!isOpen)
@@ -283,16 +271,12 @@ export default function NotificationsBell() {
         )}
       </button>
 
-      {/* Dropdown ТОЛЬКО для десктопа */}
       {isOpen && (
         <>
-          {/* Overlay для закрытия при клике вне */}
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
           
-          {/* Dropdown для десктопа */}
           <div className="absolute right-0 mt-2 w-96 max-h-[600px] bg-white rounded-2xl shadow-2xl border border-purple-100 z-50 overflow-hidden hidden sm:flex flex-col">
             
-            {/* Шапка */}
             <div className="p-4 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-blue-50 flex items-center justify-between flex-shrink-0">
               <h3 className="font-semibold text-gray-900">Уведомления</h3>
               {unreadCount > 0 && (
@@ -305,7 +289,6 @@ export default function NotificationsBell() {
               )}
             </div>
 
-            {/* Список уведомлений с прокруткой */}
             <div className="overflow-y-auto flex-1">
               {isLoading ? (
                 <div className="p-8 text-center text-gray-500">
@@ -359,7 +342,6 @@ export default function NotificationsBell() {
               )}
             </div>
 
-            {/* Подвал с ссылкой на все уведомления */}
             {notifications.length > 0 && (
               <div className="p-3 border-t border-purple-100 bg-gradient-to-r from-purple-50 to-blue-50 flex-shrink-0">
                 <Link
