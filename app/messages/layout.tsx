@@ -10,8 +10,9 @@ export default async function MessagesLayout({ children }: { children: React.Rea
     .order('display_name')
 
   return (
-    // Убрали pt-20 md:pt-[105px] - отступы теперь внутри компонентов
-    <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
+    // pt-16 md:pt-20 = высота навбара (64px / 80px)
+    // h-screen + overflow-hidden = запрет скролла страницы
+    <div className="h-screen overflow-hidden bg-gray-50 pt-16 md:pt-20">
       <MessagesLayoutShell coaches={allCoaches || []}>
         {children}
       </MessagesLayoutShell>

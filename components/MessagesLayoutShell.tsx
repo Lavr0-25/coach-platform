@@ -25,51 +25,41 @@ export default function MessagesLayoutShell({ children, coaches }: { children: R
 
   return (
     <MobileChatContext.Provider value={{ isMobileChatOpen, setIsMobileChatOpen }}>
-      <div className="flex flex-1 overflow-hidden relative min-h-0 bg-gray-50">
+      {/* flex-col на мобильном, flex-row на десктопе */}
+      <div className="flex flex-col md:flex-row h-full w-full overflow-hidden">
         
-        {/* ЛЕВАЯ ПАНЕЛЬ */}
+        {/* ЛЕВАЯ ПАНЕЛЬ (сайдбар) */}
         <div
           className={`
-            bg-white flex-shrink-0 transition-all duration-300 ease-in-out border-r border-purple-100 flex flex-col
+            flex-shrink-0 border-r border-purple-100 flex flex-col overflow-hidden
             ${isMobileChatOpen ? 'hidden md:flex' : 'flex w-full md:w-80'}
           `}
         >
-          <div className="w-full md:w-80 flex-1 flex flex-col min-h-0 bg-white">
-            <MessagesSidebar coaches={coaches} />
-          </div>
+          <MessagesSidebar coaches={coaches} />
         </div>
 
-        {/* ПРАВАЯ ПАНЕЛЬ */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-white md:rounded-r-2xl md:shadow-sm md:border md:border-l-0 md:border-purple-100">
+        {/* ПРАВАЯ ПАНЕЛЬ (чат) */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
           
-          {/* Мобильная шапка с ДВУМЯ кнопками: Назад и Поиск */}
-          <div className="md:hidden flex items-center justify-between gap-3 p-3 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-blue-50 sticky top-0 z-20">
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => setIsMobileChatOpen(false)}
-                className="p-2 -ml-2 text-gray-600 hover:text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
-                title="Список диалогов"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <span className="font-semibold text-gray-900">Чат</span>
+          {/* Мобильная шапка - показывается только когда чат открыт */}
+          {isMobileChatOpen && (
+            <div className="md:hidden flex items-center justify-between p-3 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-blue-50 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setIsMobileChatOpen(false)}
+                  className="p-2 -ml-2 text-gray-600 hover:text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
+                  title="Список диалогов"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="font-semibold text-gray-900">Чат</span>
+              </div>
             </div>
-            
-            {/* Кнопка поиска собеседников */}
-            <button 
-              onClick={() => setIsMobileChatOpen(false)}
-              className="p-2 text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
-              title="Поиск собеседников"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-          </div>
+          )}
 
-          {/* Контент */}
+          {/* Контент чата */}
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {children}
           </div>
