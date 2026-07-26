@@ -10,6 +10,7 @@ export default async function MessagesLayout({ children }: { children: React.Rea
     .order('display_name')
 
   return (
+    // Убрали pt-20 md:pt-[105px] - отступы теперь внутри компонентов
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
       <MessagesLayoutShell coaches={allCoaches || []}>
         {children}

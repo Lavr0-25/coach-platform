@@ -234,8 +234,8 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
   const hasAnyConversations = conversations.length > 0
 
   return (
-    // ДОБАВЛЕНО: pt-20 md:pt-24 чтобы навбар не перекрывал шапку сайдбара
-    <aside className="w-full md:w-80 bg-white border-r border-purple-100 flex flex-col h-full pt-20 md:pt-24">
+    // ДОБАВЛЕНО: pt-16 md:pt-20 чтобы навбар не перекрывал шапку сайдбара
+    <aside className="w-full md:w-80 bg-white border-r border-purple-100 flex flex-col h-full pt-16 md:pt-20">
       
       {/* Шапка сайдбара */}
       <div className="border-b border-purple-100 flex-shrink-0 bg-gradient-to-r from-purple-50 to-blue-50 flex flex-col justify-center px-4 gap-3 min-h-[80px] md:min-h-[72px]">

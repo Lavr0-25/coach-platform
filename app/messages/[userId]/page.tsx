@@ -276,8 +276,8 @@ export default function ChatPage() {
   }
 
   return (
-    // ДОБАВЛЕНО: pt-2 md:pt-4 чтобы шапка чата не прилипала к навбару
-    <div className="flex flex-col h-full pt-2 md:pt-4">
+    //  (убираем pt полностью):
+<div className="flex flex-col h-full">
       
       {/* Шапка чата */}
       <div className="bg-white border-b border-purple-100 px-4 flex items-center gap-4 flex-shrink-0 h-[72px]">
