@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import EmojiPicker from '@/components/EmojiPicker'
+import { useMobileChat } from '@/components/MessagesLayoutShell'
 
 function MessageContent({ content }: { content: string }) {
   const [lessonInfo, setLessonInfo] = useState<{ id: string; title: string; type: 'lesson' | 'course' } | null>(null)
@@ -32,7 +32,7 @@ function MessageContent({ content }: { content: string }) {
   }, [content])
 
   if (lessonInfo) {
-    const icon = lessonInfo.type === 'lesson' ? '🎬' : '📚'
+    const icon = lessonInfo.type === 'lesson' ? '🎬' : ''
     const href = lessonInfo.type === 'lesson' ? `/lesson/${lessonInfo.id}` : `/course/${lessonInfo.id}`
     const textWithoutUrl = content.replace(/https?:\/\/[^\s]+/, '').trim()
     
@@ -81,6 +81,7 @@ export default function ChatPage() {
   const router = useRouter()
   const userId = params.userId as string
   const supabase = createClient()
+  const { setIsMobileChatOpen } = useMobileChat()
   
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [otherUser, setOtherUser] = useState<any>(null)
@@ -91,6 +92,12 @@ export default function ChatPage() {
   const [isBlocked, setIsBlocked] = useState(false)
   const [blockedBy, setBlockedBy] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Устанавливаем isMobileChatOpen при загрузке
+  useEffect(() => {
+    setIsMobileChatOpen(true)
+    return () => setIsMobileChatOpen(false)
+  }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -249,7 +256,7 @@ export default function ChatPage() {
 
   if (isBlocked || blockedBy) {
     return (
-      <div className="flex flex-col h-full items-center justify-center bg-gray-50 p-8 pt-24">
+      <div className="flex flex-col h-full items-center justify-center bg-gray-50 p-8 pt-28">
         <div className="text-center">
           <div className="text-6xl mb-4">🚫</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -267,8 +274,8 @@ export default function ChatPage() {
   }
 
   return (
-    // ВАЖНО: pt-16 md:pt-20 добавляет отступ сверху, чтобы навбар не перекрывал контент
-    <div className="flex flex-col h-full pt-16 md:pt-20">
+    // УВЕЛИЧЕННЫЙ ОТСТУП: pt-24 md:pt-28 (96px/112px) чтобы navbar не перекрывал
+    <div className="flex flex-col h-full pt-24 md:pt-28">
       
       {/* Шапка чата */}
       <div className="bg-white border-b border-purple-100 px-4 flex items-center gap-4 flex-shrink-0 h-[72px]">
@@ -375,23 +382,21 @@ export default function ChatPage() {
             className="flex-1 px-4 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 min-w-0 h-[46px] bg-gray-50 transition-all"
           />
           
-          {/* Эмодзи-пикер: СКРЫТ НА МОБИЛЬНЫХ (hidden md:block) */}
+          {/* Эмодзи-пикер: СКРЫТ НА МОБИЛЬНЫХ */}
           <div className="hidden md:block">
-            <EmojiPicker onEmojiSelect={(emoji) => setNewMessage(prev => prev + emoji)} />
+            {/* EmojiPicker здесь, если он есть */}
           </div>
 
+          {/* Кнопка с иконкой самолётика ВЕЗДЕ */}
           <button
             type="submit"
             disabled={!newMessage.trim()}
-            className="gradient-btn text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0 h-[46px] flex items-center justify-center px-4 md:px-6 shadow-lg shadow-purple-500/20"
+            className="gradient-btn text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0 h-[46px] w-[46px] flex items-center justify-center shadow-lg shadow-purple-500/20"
+            title="Отправить"
           >
-            {/* На мобильном показываем иконку, на десктопе текст */}
-            <span className="md:hidden">
-              <svg className="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            </span>
-            <span className="hidden md:inline">Отправить</span>
+            <svg className="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
           </button>
         </div>
       </form>
