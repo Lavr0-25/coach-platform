@@ -6,10 +6,7 @@ export default async function AdminPage() {
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    redirect('/login')
-  }
+  if (!user) redirect('/login')
 
   const { data: coach } = await supabase
     .from('coaches')
@@ -17,11 +14,8 @@ export default async function AdminPage() {
     .eq('user_id', user.id)
     .single()
 
-  if (coach?.role !== 'admin') {
-    redirect('/')
-  }
+  if (coach?.role !== 'admin') redirect('/')
 
-  // Получаем реальную статистику
   const [
     { count: activeBansCount },
     { count: newReportsCount },
@@ -33,245 +27,113 @@ export default async function AdminPage() {
     { count: totalBansCount },
     { count: newFeedbackCount }
   ] = await Promise.all([
-    // Активные блокировки
-    supabase
-      .from('stop_list')
-      .select('*', { count: 'exact', head: true })
-      .gte('banned_until', new Date().toISOString()),
-    
-    // Новые жалобы за последние 24 часа
-    supabase
-      .from('reports')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
-    
-    // Всего пользователей
-    supabase
-      .from('coaches')
-      .select('*', { count: 'exact', head: true }),
-    
-    // Всего курсов
-    supabase
-      .from('courses')
-      .select('*', { count: 'exact', head: true }),
-    
-    // Всего уроков
-    supabase
-      .from('lessons')
-      .select('*', { count: 'exact', head: true }),
-    
-    // Жалоб на комментарии
-    supabase
-      .from('reports')
-      .select('*', { count: 'exact', head: true }),
-    
-    // Жалоб на отзывы
-    supabase
-      .from('review_reports')
-      .select('*', { count: 'exact', head: true }),
-    
-    // Всего блокировок
-    supabase
-      .from('stop_list')
-      .select('*', { count: 'exact', head: true }),
-    
-    // Новые обращения
-    supabase
-      .from('feedback')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'new')
+    supabase.from('stop_list').select('*', { count: 'exact', head: true }).gte('banned_until', new Date().toISOString()),
+    supabase.from('reports').select('*', { count: 'exact', head: true }).gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+    supabase.from('coaches').select('*', { count: 'exact', head: true }),
+    supabase.from('courses').select('*', { count: 'exact', head: true }),
+    supabase.from('lessons').select('*', { count: 'exact', head: true }),
+    supabase.from('reports').select('*', { count: 'exact', head: true }),
+    supabase.from('review_reports').select('*', { count: 'exact', head: true }),
+    supabase.from('stop_list').select('*', { count: 'exact', head: true }),
+    supabase.from('feedback').select('*', { count: 'exact', head: true }).eq('status', 'new')
   ])
 
   const totalNewReports = (commentReportsCount || 0) + (reviewReportsCount || 0)
 
   return (
-    <main className="min-h-screen bg-gray-50 py-6 overflow-y-auto">
-      <div className="container mx-auto px-3 max-w-7xl pb-8">
+    <main className="min-h-screen bg-gray-50 py-6 md:py-10">
+      <div className="container mx-auto px-4 max-w-7xl pb-8">
         {/* Заголовок */}
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold gradient-text mb-2">
             ⚙️ Админ-панель
           </h1>
-          <p className="text-gray-600 text-sm">
-            Добро пожаловать, {coach.display_name || 'Администратор'}!
+          <p className="text-gray-600">
+            Добро пожаловать, <span className="font-semibold text-purple-700">{coach.display_name || 'Администратор'}</span>!
           </p>
         </div>
 
-        {/* Статистика */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          <div className="bg-white rounded-lg shadow-sm border p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xl font-bold text-blue-600">{activeBansCount || 0}</div>
-                <div className="text-xs text-gray-600 mt-0.5">Активных блокировок</div>
-              </div>
-              <div className="text-2xl">🚫</div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xl font-bold text-orange-600">{totalNewReports || 0}</div>
-                <div className="text-xs text-gray-600 mt-0.5">Жалоб за 24 часа</div>
-              </div>
-              <div className="text-2xl">⚠️</div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xl font-bold text-green-600">{usersCount || 0}</div>
-                <div className="text-xs text-gray-600 mt-0.5">Пользователей</div>
-              </div>
-              <div className="text-2xl">👥</div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xl font-bold text-purple-600">{coursesCount || 0}</div>
-                <div className="text-xs text-gray-600 mt-0.5">Курсов</div>
-              </div>
-              <div className="text-2xl">📚</div>
-            </div>
-          </div>
+        {/* Основная статистика */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <StatCard title="Активных блокировок" value={activeBansCount || 0} icon="🚫" color="red" />
+          <StatCard title="Жалоб за 24 часа" value={totalNewReports || 0} icon="⚠️" color="orange" />
+          <StatCard title="Пользователей" value={usersCount || 0} icon="👥" color="green" />
+          <StatCard title="Курсов" value={coursesCount || 0} icon="📚" color="purple" />
         </div>
 
         {/* Дополнительная статистика */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-2.5">
-            <div className="flex items-center gap-2">
-              <div className="text-lg">📖</div>
-              <div>
-                <div className="text-lg font-bold text-indigo-700">{lessonsCount || 0}</div>
-                <div className="text-xs text-indigo-600">Всего уроков</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-orange-50 to-red-50 border border-orange-200 rounded-lg p-2.5">
-            <div className="flex items-center gap-2">
-              <div className="text-lg">💬</div>
-              <div>
-                <div className="text-lg font-bold text-orange-700">{commentReportsCount || 0}</div>
-                <div className="text-xs text-orange-600">Жалоб на комментарии</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-2.5">
-            <div className="flex items-center gap-2">
-              <div className="text-lg">⭐</div>
-              <div>
-                <div className="text-lg font-bold text-pink-700">{reviewReportsCount || 0}</div>
-                <div className="text-xs text-pink-600">Жалоб на отзывы</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-2.5">
-            <div className="flex items-center gap-2">
-              <div className="text-lg">📋</div>
-              <div>
-                <div className="text-lg font-bold text-blue-700">{newFeedbackCount || 0}</div>
-                <div className="text-xs text-blue-600">Новых обращений</div>
-              </div>
-            </div>
-          </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <MiniStatCard title="Всего уроков" value={lessonsCount || 0} icon="📖" gradient="from-indigo-50 to-blue-50" border="border-indigo-200" text="text-indigo-700" />
+          <MiniStatCard title="Жалоб на комментарии" value={commentReportsCount || 0} icon="💬" gradient="from-orange-50 to-red-50" border="border-orange-200" text="text-orange-700" />
+          <MiniStatCard title="Жалоб на отзывы" value={reviewReportsCount || 0} icon="⭐" gradient="from-pink-50 to-purple-50" border="border-pink-200" text="text-pink-700" />
+          <MiniStatCard title="Новых обращений" value={newFeedbackCount || 0} icon="📋" gradient="from-blue-50 to-cyan-50" border="border-blue-200" text="text-blue-700" />
         </div>
 
-        {/* Сетка меню - Иконка и заголовок на одной строке */}
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Управление</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {/* Стоп-лист */}
-          <Link
-            href="/admin/stop-list"
-            className="block p-3 bg-white rounded-lg shadow-sm border hover:shadow-md transition-all"
-          >
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="text-xl">🚫</div>
-              <h3 className="text-sm font-semibold text-gray-900">Стоп-лист</h3>
-            </div>
-            <p className="text-gray-600 text-xs mb-1.5">
-              Управление заблокированными пользователями
-            </p>
-            {activeBansCount ? (
-              <div className="inline-block bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded font-medium">
-                {activeBansCount} активных
-              </div>
-            ) : null}
-          </Link>
-
-          {/* Запрещённые слова */}
-          <Link
-            href="/admin/banned-words"
-            className="block p-3 bg-white rounded-lg shadow-sm border hover:shadow-md transition-all"
-          >
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="text-xl">🚫</div>
-              <h3 className="text-sm font-semibold text-gray-900">Запрещённые слова</h3>
-            </div>
-            <p className="text-gray-600 text-xs mb-1.5">
-              Управление списком запрещённых слов
-            </p>
-          </Link>
-
-          {/* Жалобы */}
-          <Link
-            href="/admin/reports"
-            className="block p-3 bg-white rounded-lg shadow-sm border hover:shadow-md transition-all"
-          >
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="text-xl">️</div>
-              <h3 className="text-sm font-semibold text-gray-900">Жалобы</h3>
-            </div>
-            <p className="text-gray-600 text-xs mb-1.5">
-              Просмотр жалоб на комментарии и отзывы
-            </p>
-            {totalNewReports ? (
-              <div className="inline-block bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded font-medium">
-                {totalNewReports} всего
-              </div>
-            ) : null}
-          </Link>
-
-          {/* Обратная связь */}
-          <Link
-            href="/admin/feedback"
-            className="block p-3 bg-white rounded-lg shadow-sm border hover:shadow-md transition-all"
-          >
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="text-xl">📋</div>
-              <h3 className="text-sm font-semibold text-gray-900">Обратная связь</h3>
-            </div>
-            <p className="text-gray-600 text-xs mb-1.5">
-              Баги и предложения пользователей
-            </p>
-            {newFeedbackCount ? (
-              <div className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded font-medium">
-                {newFeedbackCount} новых
-              </div>
-            ) : null}
-          </Link>
-
-          {/* Настройки */}
-          <Link
-            href="/admin/settings"
-            className="block p-3 bg-white rounded-lg shadow-sm border hover:shadow-md transition-all"
-          >
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="text-xl">⚙️</div>
-              <h3 className="text-sm font-semibold text-gray-900">Настройки</h3>
-            </div>
-            <p className="text-gray-600 text-xs mb-1.5">
-              Параметры автоматической модерации
-            </p>
-          </Link>
+        {/* Меню управления */}
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <span className="w-2 h-6 bg-gradient-to-b from-purple-600 to-blue-600 rounded-full"></span>
+          Управление
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <AdminLink href="/admin/stop-list" title="Стоп-лист" desc="Управление заблокированными пользователями" icon="🚫" badge={activeBansCount} badgeColor="bg-red-100 text-red-700" />
+          <AdminLink href="/admin/reports" title="Жалобы" desc="Просмотр жалоб на комментарии и отзывы" icon="🚩" badge={totalNewReports} badgeColor="bg-orange-100 text-orange-700" />
+          <AdminLink href="/admin/banned-words" title="Запрещённые слова" desc="Управление списком запрещённых слов" icon="🔤" />
+          <AdminLink href="/admin/feedback" title="Обратная связь" desc="Баги и предложения пользователей" icon="📋" badge={newFeedbackCount} badgeColor="bg-blue-100 text-blue-700" />
+          <AdminLink href="/admin/settings" title="Настройки" desc="Параметры автоматической модерации" icon="⚙️" />
         </div>
       </div>
     </main>
+  )
+}
+
+// Вспомогательные компоненты для чистоты кода
+function StatCard({ title, value, icon, color }: any) {
+  const colors: any = {
+    red: 'text-red-600',
+    orange: 'text-orange-600',
+    green: 'text-green-600',
+    purple: 'text-purple-600',
+  }
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 md:p-5 hover:shadow-md transition-all">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className={`text-2xl md:text-3xl font-bold ${colors[color]}`}>{value}</div>
+          <div className="text-xs md:text-sm text-gray-600 mt-1 font-medium">{title}</div>
+        </div>
+        <div className="text-3xl md:text-4xl opacity-80">{icon}</div>
+      </div>
+    </div>
+  )
+}
+
+function MiniStatCard({ title, value, icon, gradient, border, text }: any) {
+  return (
+    <div className={`bg-gradient-to-br ${gradient} border ${border} rounded-xl p-3 md:p-4`}>
+      <div className="flex items-center gap-3">
+        <div className="text-xl md:text-2xl">{icon}</div>
+        <div>
+          <div className={`text-lg md:text-xl font-bold ${text}`}>{value}</div>
+          <div className={`text-xs ${text.replace('700', '600')} opacity-80`}>{title}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AdminLink({ href, title, desc, icon, badge, badgeColor }: any) {
+  return (
+    <Link href={href} className="group block p-5 bg-white rounded-2xl shadow-sm border border-purple-100 hover:shadow-lg hover:border-purple-300 transition-all">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="text-2xl group-hover:scale-110 transition-transform">{icon}</div>
+        <h3 className="text-base font-bold text-gray-900">{title}</h3>
+      </div>
+      <p className="text-sm text-gray-600 mb-3">{desc}</p>
+      {badge ? (
+        <div className={`inline-block ${badgeColor} text-xs px-2.5 py-1 rounded-full font-semibold`}>
+          {badge} {badgeColor.includes('red') ? 'активных' : badgeColor.includes('orange') ? 'всего' : 'новых'}
+        </div>
+      ) : null}
+    </Link>
   )
 }

@@ -8,9 +8,6 @@ interface Report {
   id: string
   reporter_id: string
   reported_user_id: string
-  comment_id?: string
-  review_id?: string
-  lesson_id?: string
   reason: string
   created_at: string
   reporter_name?: string
@@ -24,82 +21,26 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'comments' | 'reviews'>('comments')
 
-  useEffect(() => {
-    loadReports()
-  }, [])
+  useEffect(() => { loadReports() }, [])
 
   const loadReports = async () => {
     try {
-      console.log('🔄 Загрузка жалоб...')
-      
-      // Загружаем жалобы на комментарии
-      const { data: commentData, error: commentError } = await supabase
-        .from('reports')
-        .select('*')
-        .order('created_at', { ascending: false })
+      const { data: commentData } = await supabase.from('reports').select('*').order('created_at', { ascending: false })
+      const { data: reviewData } = await supabase.from('review_reports').select('*').order('created_at', { ascending: false })
 
-      if (commentError) {
-        console.error('❌ Ошибка загрузки жалоб на комментарии:', commentError)
-        throw commentError
-      }
-
-      console.log('📥 Жалоб на комментарии:', commentData?.length || 0)
-
-      // Загружаем жалобы на отзывы
-      const { data: reviewData, error: reviewError } = await supabase
-        .from('review_reports')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (reviewError) {
-        console.error('❌ Ошибка загрузки жалоб на отзывы:', reviewError)
-        throw reviewError
-      }
-
-      console.log(' Жалоб на отзывы:', reviewData?.length || 0)
-
-      // Собираем все user_id
       const userIds = new Set<string>()
-      ;(commentData || []).forEach(r => {
-        userIds.add(r.reporter_id)
-        userIds.add(r.reported_user_id)
-      })
-      ;(reviewData || []).forEach(r => {
-        userIds.add(r.reporter_id)
-        userIds.add(r.reported_user_id)
-      })
+      ;(commentData || []).forEach(r => { userIds.add(r.reporter_id); userIds.add(r.reported_user_id) })
+      ;(reviewData || []).forEach(r => { userIds.add(r.reporter_id); userIds.add(r.reported_user_id) })
 
-      console.log('🔍 Загружаем имена для', userIds.size, 'пользователей')
-
-      // Загружаем имена
-      const namesMap: Record<string, string> = {}
-      for (const uid of userIds) {
-        const { data: coach } = await supabase
-          .from('coaches')
-          .select('display_name')
-          .eq('user_id', uid)
-          .single()
-        
-        namesMap[uid] = coach?.display_name || uid.substring(0, 8)
-        console.log(`  ${uid.substring(0, 8)}... → ${namesMap[uid]}`)
+      // 🔥 ОПТИМИЗАЦИЯ: Один запрос вместо цикла
+      let namesMap = new Map<string, string>()
+      if (userIds.size > 0) {
+        const { data: usersData } = await supabase.from('coaches').select('user_id, display_name').in('user_id', Array.from(userIds))
+        usersData?.forEach((u: any) => namesMap.set(u.user_id, u.display_name || u.user_id.substring(0, 8)))
       }
 
-      const commentsWithNames = (commentData || []).map(r => ({
-        ...r,
-        reporter_name: namesMap[r.reporter_id] || 'Неизвестно',
-        reported_name: namesMap[r.reported_user_id] || 'Неизвестно',
-      }))
-
-      const reviewsWithNames = (reviewData || []).map(r => ({
-        ...r,
-        reporter_name: namesMap[r.reporter_id] || 'Неизвестно',
-        reported_name: namesMap[r.reported_user_id] || 'Неизвестно',
-      }))
-
-      setCommentReports(commentsWithNames)
-      setReviewReports(reviewsWithNames)
-      
-      console.log('✅ Загрузка завершена')
+      setCommentReports((commentData || []).map(r => ({ ...r, reporter_name: namesMap.get(r.reporter_id), reported_name: namesMap.get(r.reported_user_id) })))
+      setReviewReports((reviewData || []).map(r => ({ ...r, reporter_name: namesMap.get(r.reporter_id), reported_name: namesMap.get(r.reported_user_id) })))
     } catch (error) {
       console.error('Error loading reports:', error)
     } finally {
@@ -109,166 +50,71 @@ export default function ReportsPage() {
 
   const handleDeleteReport = async (id: string, type: 'comment' | 'review') => {
     if (!confirm('Удалить эту жалобу?')) return
-
     try {
-      const table = type === 'comment' ? 'reports' : 'review_reports'
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-
+      await supabase.from(type === 'comment' ? 'reports' : 'review_reports').delete().eq('id', id)
       await loadReports()
     } catch (error) {
       console.error('Error deleting report:', error)
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
+  const formatDate = (dateString: string) => new Date(dateString).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
   return (
-    <main className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-6xl">
-        <div className="flex items-center justify-between mb-6">
+    <main className="min-h-screen bg-gray-50 py-6 md:py-10">
+      <div className="container mx-auto px-4 max-w-4xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">⚠️ Жалобы</h1>
-            <p className="text-gray-600 mt-1">
-              Просмотр всех жалоб на контент
-            </p>
+            <h1 className="text-2xl md:text-3xl font-bold gradient-text">⚠️ Жалобы</h1>
+            <p className="text-gray-600 text-sm mt-1">Просмотр и модерация жалоб на контент</p>
           </div>
-          <Link
-            href="/admin"
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-          >
-            ← Назад
-          </Link>
+          <Link href="/admin" className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm">← Назад</Link>
         </div>
 
-        {/* Табы */}
-        <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
-          <div className="flex gap-3">
-            <button
-              onClick={() => setTab('comments')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                tab === 'comments' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              На комментарии ({commentReports.length})
-            </button>
-            <button
-              onClick={() => setTab('reviews')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                tab === 'reviews' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              На отзывы ({reviewReports.length})
-            </button>
-          </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-2 mb-6 flex gap-1">
+          <button onClick={() => setTab('comments')} className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-all text-sm ${tab === 'comments' ? 'gradient-btn text-white shadow-md' : 'text-gray-600 hover:bg-purple-50'}`}>
+            На комментарии ({commentReports.length})
+          </button>
+          <button onClick={() => setTab('reviews')} className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-all text-sm ${tab === 'reviews' ? 'gradient-btn text-white shadow-md' : 'text-gray-600 hover:bg-purple-50'}`}>
+            На отзывы ({reviewReports.length})
+          </button>
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <div className="animate-pulse space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-20 bg-gray-200 rounded"></div>
-              ))}
-            </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-6 animate-pulse space-y-4">
+            {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-purple-100 rounded-xl"></div>)}
           </div>
         ) : (
-          <>
-            {tab === 'comments' ? (
-              commentReports.length > 0 ? (
-                <div className="bg-white rounded-xl shadow-sm border divide-y">
-                  {commentReports.map((report) => (
-                    <div key={report.id} className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <span className="text-sm font-medium text-gray-900">
-                              От: {report.reporter_name}
-                            </span>
-                            <span className="text-gray-400">→</span>
-                            <span className="text-sm font-medium text-red-600">
-                              На: {report.reported_name}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-700 mb-2">
-                            <strong>Причина:</strong> {report.reason}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {formatDate(report.created_at)}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleDeleteReport(report.id, 'comment')}
-                          className="px-3 py-1 bg-red-100 text-red-600 rounded text-sm font-medium hover:bg-red-200 transition-colors"
-                        >
-                          Удалить
-                        </button>
+          <div className="space-y-4">
+            {(tab === 'comments' ? commentReports : reviewReports).length > 0 ? (
+              (tab === 'comments' ? commentReports : reviewReports).map((report) => (
+                <div key={report.id} className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 md:p-5 hover:shadow-md transition-all">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap text-sm">
+                        <span className="font-medium text-gray-900 bg-gray-100 px-2 py-0.5 rounded">От: {report.reporter_name}</span>
+                        <span className="text-gray-400">→</span>
+                        <span className="font-medium text-red-700 bg-red-50 px-2 py-0.5 rounded">На: {report.reported_name}</span>
                       </div>
+                      <p className="text-sm text-gray-700 mb-2 bg-purple-50/50 p-3 rounded-xl border border-purple-100">
+                        <strong className="text-purple-700">Причина:</strong> {report.reason}
+                      </p>
+                      <p className="text-xs text-gray-500">{formatDate(report.created_at)}</p>
                     </div>
-                  ))}
+                    <button onClick={() => handleDeleteReport(report.id, tab === 'comments' ? 'comment' : 'review')} className="w-full sm:w-auto px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors">
+                      Удалить жалобу
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
-                  <div className="text-6xl mb-4">✅</div>
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                    Жалоб на комментарии нет
-                  </h2>
-                </div>
-              )
+              ))
             ) : (
-              reviewReports.length > 0 ? (
-                <div className="bg-white rounded-xl shadow-sm border divide-y">
-                  {reviewReports.map((report) => (
-                    <div key={report.id} className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <span className="text-sm font-medium text-gray-900">
-                              От: {report.reporter_name}
-                            </span>
-                            <span className="text-gray-400">→</span>
-                            <span className="text-sm font-medium text-red-600">
-                              На: {report.reported_name}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-700 mb-2">
-                            <strong>Причина:</strong> {report.reason}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {formatDate(report.created_at)}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleDeleteReport(report.id, 'review')}
-                          className="px-3 py-1 bg-red-100 text-red-600 rounded text-sm font-medium hover:bg-red-200 transition-colors"
-                        >
-                          Удалить
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
-                  <div className="text-6xl mb-4">✅</div>
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                    Жалоб на отзывы нет
-                  </h2>
-                </div>
-              )
+              <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-12 text-center">
+                <div className="text-5xl mb-3">✅</div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-1">Жалоб нет</h2>
+                <p className="text-gray-600 text-sm">В этой категории пока нет жалоб</p>
+              </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </main>
