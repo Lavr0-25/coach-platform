@@ -149,7 +149,6 @@ export default function StopListPage() {
   const formatDate = (dateString: string) => new Date(dateString).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   const formatShortDate = (dateString: string) => new Date(dateString).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-  const filteredEntries = filterActive ? entries.filter(e => !isExpired(e.banned_until)) : entries
   const totalPages = Math.ceil((entries.length || 0) / itemsPerPage)
 
   return (
@@ -194,7 +193,6 @@ export default function StopListPage() {
                   setCurrentPage(1)
                 }}
                 className="w-full px-3 py-2 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400"
-                placeholder="Выберите дату"
               />
               <button
                 onClick={() => {
@@ -208,7 +206,7 @@ export default function StopListPage() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4 text-xs text-gray-500">
-            <span>Всего: {entries.length} | Показано: {filteredEntries.length}</span>
+            <span>Всего: {entries.length} | Показано: {entries.length}</span>
             <span>Страница {currentPage} из {totalPages}</span>
           </div>
         </div>
@@ -218,9 +216,9 @@ export default function StopListPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-6 animate-pulse space-y-4">
             {[1, 2, 3].map((i) => <div key={i} className="h-24 bg-purple-100 rounded-xl"></div>)}
           </div>
-        ) : filteredEntries.length > 0 ? (
+        ) : entries.length > 0 ? (
           <div className="space-y-4">
-            {filteredEntries.map((entry) => {
+            {entries.map((entry) => {
               const expired = isExpired(entry.banned_until)
               return (
                 <div key={entry.id} className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-md transition-all">
@@ -243,9 +241,20 @@ export default function StopListPage() {
                       <p className="text-xs text-gray-500">До: {formatShortDate(entry.banned_until)} {!expired && <span className="text-orange-600 font-medium ml-2">⏱️ Осталось: {getRemainingTime(entry.banned_until)}</span>}</p>
                     </div>
                   </div>
-                  <button onClick={() => handleRemoveBan(entry.id)} className="w-full sm:w-auto px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium hover:bg-red-100 transition-colors text-sm">
-                    Разблокировать
-                  </button>
+                  
+                  {/* Кнопка только для активных блокировок */}
+                  {!expired ? (
+                    <button 
+                      onClick={() => handleRemoveBan(entry.id)} 
+                      className="w-full sm:w-auto px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl font-medium hover:bg-red-100 transition-colors text-sm"
+                    >
+                      Разблокировать
+                    </button>
+                  ) : (
+                    <span className="text-xs text-gray-500 italic px-4 py-2">
+                      Блокировка истекла автоматически
+                    </span>
+                  )}
                 </div>
               )
             })}
@@ -255,7 +264,7 @@ export default function StopListPage() {
                 <button 
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm"
+                  className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   ← Предыдущая
                 </button>
@@ -263,7 +272,7 @@ export default function StopListPage() {
                 <button 
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm"
+                  className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Следующая →
                 </button>
