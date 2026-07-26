@@ -43,7 +43,6 @@ export default function NotificationsBell() {
       const newNotifications: Notification[] = []
       const userIds = new Set<string>()
 
-      // Загружаем только последние 50 комментариев для производительности
       const { data: lessonComments } = await supabase
         .from('comments')
         .select('*')
@@ -162,12 +161,11 @@ export default function NotificationsBell() {
         }
       }
 
-      // Сортируем и берем только первые 10 для быстрого отображения
       newNotifications.sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
 
-      // Показываем только 10 последних в дропдауне
+      // Показываем только 10 последних в дропдауне для скорости
       const displayedNotifications = newNotifications.slice(0, 10)
       
       setNotifications(displayedNotifications)
@@ -260,7 +258,6 @@ export default function NotificationsBell() {
       await markAsRead(notification.id)
     }
     setIsOpen(false)
-    // Редирект произойдет автоматически через Link
   }
 
   return (
@@ -276,7 +273,7 @@ export default function NotificationsBell() {
           </svg>
         </div>
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-md border-2 border-white animate-in fade-in zoom-in duration-200">
+          <span className="absolute -top-1 -right-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-md border-2 border-white">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -287,23 +284,40 @@ export default function NotificationsBell() {
           {/* Overlay для закрытия при клике вне */}
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
           
-          {/* Dropdown с адаптивной шириной и позиционированием */}
-          <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 max-h-[70vh] bg-white rounded-2xl shadow-2xl border border-purple-100 z-50 overflow-hidden flex flex-col">
-            {/* Шапка */}
+          {/* 
+            АДАПТИВНЫЙ DROPDOWN:
+            - На мобильном: fixed, занимает почти весь экран
+            - На десктопе (sm:): absolute, обычный dropdown справа
+          */}
+          <div className="fixed inset-x-4 top-20 bottom-4 sm:absolute sm:inset-auto sm:right-0 sm:mt-2 sm:w-96 sm:max-h-[600px] bg-white rounded-2xl shadow-2xl border border-purple-100 z-50 overflow-hidden flex flex-col">
+            
+            {/* Шапка с кнопкой закрытия на мобильном */}
             <div className="p-4 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-blue-50 flex items-center justify-between flex-shrink-0">
               <h3 className="font-semibold text-gray-900">Уведомления</h3>
-              {unreadCount > 0 && (
-                <button 
-                  onClick={loadNotifications} 
-                  className="text-xs text-purple-600 hover:text-purple-800 font-medium transition-colors"
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button 
+                    onClick={loadNotifications} 
+                    className="text-xs text-purple-600 hover:text-purple-800 font-medium transition-colors"
+                  >
+                    Обновить
+                  </button>
+                )}
+                {/* Кнопка закрытия только на мобильном */}
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="sm:hidden p-1 text-gray-500 hover:text-gray-700 hover:bg-purple-100 rounded-lg transition-colors"
+                  title="Закрыть"
                 >
-                  Обновить
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
-              )}
+              </div>
             </div>
 
             {/* Список уведомлений с прокруткой */}
-            <div className="overflow-y-auto flex-1 max-h-[50vh]">
+            <div className="overflow-y-auto flex-1">
               {isLoading ? (
                 <div className="p-8 text-center text-gray-500">
                   <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mb-2"></div>
