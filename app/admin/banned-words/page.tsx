@@ -18,7 +18,12 @@ export default function BannedWordsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [fileUploading, setFileUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<{ added: number; exists: number; errors: number } | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [showClearModal, setShowClearModal] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const itemsPerPage = 20
 
   useEffect(() => {
     loadWords()
@@ -55,9 +60,7 @@ export default function BannedWordsPage() {
     try {
       const { error } = await supabase
         .from('banned_words')
-        .insert({
-          word: newWord.trim().toLowerCase(),
-        })
+        .insert({ word: newWord.trim().toLowerCase() })
 
       if (error) {
         if (error.code === '23505') {
@@ -69,6 +72,7 @@ export default function BannedWordsPage() {
       }
 
       setNewWord('')
+      setCurrentPage(1)
       await loadWords()
       alert('✅ Слово добавлено в список запрещённых')
     } catch (error: any) {
@@ -83,7 +87,6 @@ export default function BannedWordsPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Проверяем расширение
     if (!file.name.endsWith('.txt') && !file.name.endsWith('.csv')) {
       alert('Поддерживаются только файлы .txt и .csv')
       return
@@ -95,7 +98,6 @@ export default function BannedWordsPage() {
     try {
       const text = await file.text()
       
-      // Разбиваем по строкам, запятым, точкам с запятой
       const wordsList = text
         .split(/[\n,;\r]+/)
         .map(w => w.trim().toLowerCase())
@@ -107,14 +109,12 @@ export default function BannedWordsPage() {
         return
       }
 
-      // Убираем дубликаты внутри файла
       const uniqueWords = [...new Set(wordsList)]
 
       let added = 0
       let exists = 0
       let errors = 0
 
-      // Добавляем каждое слово
       for (const word of uniqueWords) {
         const { error } = await supabase
           .from('banned_words')
@@ -133,9 +133,9 @@ export default function BannedWordsPage() {
       }
 
       setUploadResult({ added, exists, errors })
+      setCurrentPage(1)
       await loadWords()
       
-      // Очищаем input
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
@@ -148,8 +148,7 @@ export default function BannedWordsPage() {
   }
 
   const handleDeleteWord = async (id: string) => {
-    if (!confirm('Удалить это слово из списка?')) return
-
+    setDeletingId(id)
     try {
       const { error } = await supabase
         .from('banned_words')
@@ -159,17 +158,15 @@ export default function BannedWordsPage() {
       if (error) throw error
 
       await loadWords()
-      alert('Слово удалено')
     } catch (error: any) {
       console.error('Error deleting word:', error)
       alert('Ошибка при удалении')
+    } finally {
+      setDeletingId(null)
     }
   }
 
   const handleClearAll = async () => {
-    if (!confirm('⚠️ Вы уверены? Это удалит ВСЕ запрещённые слова!')) return
-    if (!confirm('Это действие нельзя отменить. Продолжить?')) return
-
     try {
       const { error } = await supabase
         .from('banned_words')
@@ -178,8 +175,10 @@ export default function BannedWordsPage() {
 
       if (error) throw error
 
+      setShowClearModal(false)
+      setCurrentPage(1)
       await loadWords()
-      alert('Все слова удалены')
+      alert('✅ Все слова удалены')
     } catch (error: any) {
       console.error('Error clearing all:', error)
       alert('Ошибка при очистке')
@@ -196,36 +195,47 @@ export default function BannedWordsPage() {
     })
   }
 
+  // Фильтрация и пагинация
+  const filteredWords = words.filter(w => 
+    w.word.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+  const totalPages = Math.max(1, Math.ceil(filteredWords.length / itemsPerPage))
+  const paginatedWords = filteredWords.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
   return (
-    <main className="min-h-screen bg-gray-50 py-8">
+    <main className="py-6 md:py-10">
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Заголовок */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">🚫 Запрещённые слова</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-2xl md:text-3xl font-bold gradient-text"> Запрещённые слова</h1>
+            <p className="text-gray-600 text-sm mt-1">
               Управление списком запрещённых слов для комментариев и отзывов
             </p>
           </div>
           <Link
             href="/admin"
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+            className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm"
           >
             ← Назад
           </Link>
         </div>
 
-        {/* Загрузка из файла */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">
-            📁 Массовая загрузка из файла
+        {/* Массовая загрузка из файла */}
+        <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-2xl p-5 md:p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
+            <span className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white text-sm"></span>
+            Массовая загрузка из файла
           </h2>
           <p className="text-sm text-gray-600 mb-4">
             Загрузите файл <strong>.txt</strong> или <strong>.csv</strong> со списком запрещённых слов. 
             Каждое слово должно быть на новой строке или разделено запятой/точкой с запятой.
           </p>
 
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <input
               ref={fileInputRef}
               type="file"
@@ -236,8 +246,8 @@ export default function BannedWordsPage() {
             />
             <label
               htmlFor="file-upload"
-              className={`inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg font-medium cursor-pointer transition-colors ${
-                fileUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+              className={`inline-flex items-center gap-2 px-5 py-2.5 gradient-btn text-white rounded-xl font-medium shadow-lg shadow-purple-500/30 cursor-pointer transition-all ${
+                fileUploading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-xl'
               }`}
             >
               {fileUploading ? (
@@ -260,8 +270,8 @@ export default function BannedWordsPage() {
 
             {words.length > 0 && (
               <button
-                onClick={handleClearAll}
-                className="px-4 py-2 bg-red-100 text-red-600 rounded-lg font-medium hover:bg-red-200 transition-colors"
+                onClick={() => setShowClearModal(true)}
+                className="px-4 py-2.5 bg-white border border-red-200 text-red-700 rounded-xl font-medium hover:bg-red-50 transition-colors text-sm"
               >
                 🗑️ Очистить всё
               </button>
@@ -270,17 +280,19 @@ export default function BannedWordsPage() {
 
           {/* Результат загрузки */}
           {uploadResult && (
-            <div className="mt-4 p-3 bg-white rounded-lg border border-blue-200">
-              <p className="font-medium text-gray-900 mb-1">✅ Загрузка завершена:</p>
-              <div className="flex gap-4 text-sm">
-                <span className="text-green-600">
+            <div className="mt-4 p-4 bg-white rounded-xl border border-purple-200 shadow-sm">
+              <p className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                <span className="text-green-600">✅</span> Загрузка завершена:
+              </p>
+              <div className="flex flex-wrap gap-4 text-sm">
+                <span className="text-green-700 bg-green-50 px-3 py-1 rounded-full font-medium">
                   ➕ Добавлено: <strong>{uploadResult.added}</strong>
                 </span>
-                <span className="text-yellow-600">
+                <span className="text-yellow-700 bg-yellow-50 px-3 py-1 rounded-full font-medium">
                   ⚠️ Уже было: <strong>{uploadResult.exists}</strong>
                 </span>
                 {uploadResult.errors > 0 && (
-                  <span className="text-red-600">
+                  <span className="text-red-700 bg-red-50 px-3 py-1 rounded-full font-medium">
                     ❌ Ошибок: <strong>{uploadResult.errors}</strong>
                   </span>
                 )}
@@ -289,9 +301,9 @@ export default function BannedWordsPage() {
           )}
 
           {/* Пример формата */}
-          <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200">
-            <p className="text-xs font-medium text-gray-700 mb-2">📝 Пример формата файла:</p>
-            <pre className="text-xs text-gray-600 bg-gray-50 p-2 rounded overflow-x-auto">
+          <div className="mt-4 p-3 bg-white/80 rounded-xl border border-gray-200">
+            <p className="text-xs font-semibold text-gray-700 mb-2"> Пример формата файла:</p>
+            <pre className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg overflow-x-auto font-mono">
 {`спам
 реклама
 мат
@@ -302,87 +314,163 @@ export default function BannedWordsPage() {
         </div>
 
         {/* Форма добавления одного слова */}
-        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-5 md:p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white text-sm">➕</span>
             Добавить одно слово
           </h2>
           
-          <form onSubmit={handleAddWord} className="flex gap-3">
+          <form onSubmit={handleAddWord} className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
               value={newWord}
               onChange={(e) => setNewWord(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="flex-1 px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
               placeholder="Введите слово или фразу..."
               disabled={submitting}
             />
             <button
               type="submit"
-              disabled={submitting}
-              className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:bg-gray-400"
+              disabled={submitting || !newWord.trim()}
+              className="gradient-btn text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {submitting ? 'Добавление...' : 'Добавить'}
             </button>
           </form>
         </div>
 
+        {/* Поиск и статистика */}
+        {words.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-md">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="w-full pl-10 pr-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                placeholder="Поиск по словам..."
+              />
+            </div>
+            <p className="text-sm text-gray-600 whitespace-nowrap">
+              Всего: <strong className="text-purple-700">{words.length}</strong>
+              {searchQuery && <> | Найдено: <strong className="text-purple-700">{filteredWords.length}</strong></>}
+            </p>
+          </div>
+        )}
+
         {/* Список слов */}
         {loading ? (
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <div className="animate-pulse space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded"></div>
-              ))}
-            </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-6 animate-pulse space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-16 bg-purple-100 rounded-xl"></div>)}
           </div>
-        ) : words.length > 0 ? (
+        ) : paginatedWords.length > 0 ? (
           <>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm text-gray-600">
-                Всего слов: <strong>{words.length}</strong>
-              </p>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border divide-y max-h-[600px] overflow-y-auto">
-              {words.map((item) => (
-                <div key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                  <div>
-                    <p className="font-semibold text-gray-900 text-lg">
+            <div className="bg-white rounded-2xl shadow-sm border border-purple-100 divide-y divide-purple-50 overflow-hidden">
+              {paginatedWords.map((item) => (
+                <div key={item.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-purple-50/30 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-base md:text-lg break-all">
                       {item.word}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs text-gray-500 mt-0.5">
                       Добавлено: {formatDate(item.created_at)}
                     </p>
                   </div>
                   <button
                     onClick={() => handleDeleteWord(item.id)}
-                    className="px-4 py-2 bg-red-100 text-red-600 rounded-lg font-medium hover:bg-red-200 transition-colors"
+                    disabled={deletingId === item.id}
+                    className="w-full sm:w-auto px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl font-medium hover:bg-red-100 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Удалить
+                    {deletingId === item.id ? '⏳...' : '🗑️ Удалить'}
                   </button>
                 </div>
               ))}
             </div>
+
+            {/* Пагинация */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6">
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ← Предыдущая
+                </button>
+                <div className="text-gray-600 text-sm">Страница {currentPage} из {totalPages}</div>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Следующая →
+                </button>
+              </div>
+            )}
           </>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
-            <div className="text-6xl mb-4">✅</div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-              Список пуст
+          <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-12 text-center">
+            <div className="text-5xl mb-3">✅</div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-1">
+              {searchQuery ? 'Ничего не найдено' : 'Список пуст'}
             </h2>
-            <p className="text-gray-600">
-              Нет запрещённых слов. Добавьте первое слово выше или загрузите файл.
+            <p className="text-gray-600 text-sm">
+              {searchQuery 
+                ? 'Попробуйте изменить поисковый запрос' 
+                : 'Нет запрещённых слов. Добавьте первое слово выше или загрузите файл.'}
             </p>
           </div>
         )}
 
         {/* Информация */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <p className="text-sm text-blue-800">
-            <strong>ℹ️ Как это работает:</strong> Когда пользователь пытается оставить комментарий или отзыв, 
-            система проверяет текст на наличие запрещённых слов. Если найдено совпадение — 
-            публикация блокируется с сообщением об ошибке.
+        <div className="mt-6 bg-purple-50 border border-purple-200 rounded-2xl p-5">
+          <p className="text-sm font-semibold text-purple-900 mb-2 flex items-center gap-2">
+            <span className="text-lg">ℹ️</span> Как это работает:
+          </p>
+          <p className="text-sm text-purple-800 leading-relaxed">
+            Когда пользователь пытается оставить комментарий или отзыв, система проверяет текст на наличие запрещённых слов. 
+            Если найдено совпадение — публикация блокируется с сообщением об ошибке.
           </p>
         </div>
+
+        {/* Модальное окно очистки */}
+        {showClearModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-red-200">
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Очистить весь список?</h2>
+                <p className="text-sm text-gray-600">
+                  Будут удалены все <strong className="text-red-600">{words.length}</strong> запрещённых слов. Это действие нельзя отменить.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowClearModal(false)}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleClearAll}
+                  className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30"
+                >
+                  Да, удалить всё
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   )
