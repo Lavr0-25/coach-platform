@@ -1,13 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import MessagesLayoutShell from '@/components/MessagesLayoutShell'
 
-interface Coach {
-  user_id: string
-  display_name: string | null
-  avatar_url: string | null
-  specialization: string | null
-}
-
 export default async function MessagesLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
 
@@ -17,7 +10,8 @@ export default async function MessagesLayout({ children }: { children: React.Rea
     .order('display_name')
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-white pt-[105px]">
+    // Убрали pt-[105px], заменили на адаптивный padding
+    <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
       <MessagesLayoutShell coaches={allCoaches || []}>
         {children}
       </MessagesLayoutShell>
