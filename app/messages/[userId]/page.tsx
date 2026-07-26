@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import EmojiPicker from '@/components/EmojiPicker'
 import { useMobileChat } from '@/components/MessagesLayoutShell'
 
 function MessageContent({ content }: { content: string }) {
@@ -32,7 +33,7 @@ function MessageContent({ content }: { content: string }) {
   }, [content])
 
   if (lessonInfo) {
-    const icon = lessonInfo.type === 'lesson' ? '🎬' : ''
+    const icon = lessonInfo.type === 'lesson' ? '' : '📚'
     const href = lessonInfo.type === 'lesson' ? `/lesson/${lessonInfo.id}` : `/course/${lessonInfo.id}`
     const textWithoutUrl = content.replace(/https?:\/\/[^\s]+/, '').trim()
     
@@ -93,12 +94,13 @@ export default function ChatPage() {
   const [blockedBy, setBlockedBy] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Устанавливаем isMobileChatOpen при загрузке
+  // Устанавливаем isMobileChatOpen при загрузке чата
   useEffect(() => {
     setIsMobileChatOpen(true)
     return () => setIsMobileChatOpen(false)
   }, [])
 
+  // Автопрокрутка вниз при новых сообщениях
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -256,7 +258,7 @@ export default function ChatPage() {
 
   if (isBlocked || blockedBy) {
     return (
-      <div className="flex flex-col h-full items-center justify-center bg-gray-50 p-8 pt-28">
+      <div className="flex flex-col h-full items-center justify-center bg-gray-50 p-8">
         <div className="text-center">
           <div className="text-6xl mb-4">🚫</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -274,8 +276,8 @@ export default function ChatPage() {
   }
 
   return (
-    // УВЕЛИЧЕННЫЙ ОТСТУП: pt-24 md:pt-28 (96px/112px) чтобы navbar не перекрывал
-    <div className="flex flex-col h-full pt-24 md:pt-28">
+    // УБРАЛИ pt-24 md:pt-28 - отступ теперь только у сайдбара в LayoutShell
+    <div className="flex flex-col h-full">
       
       {/* Шапка чата */}
       <div className="bg-white border-b border-purple-100 px-4 flex items-center gap-4 flex-shrink-0 h-[72px]">
@@ -384,7 +386,7 @@ export default function ChatPage() {
           
           {/* Эмодзи-пикер: СКРЫТ НА МОБИЛЬНЫХ */}
           <div className="hidden md:block">
-            {/* EmojiPicker здесь, если он есть */}
+            <EmojiPicker onEmojiSelect={(emoji) => setNewMessage(prev => prev + emoji)} />
           </div>
 
           {/* Кнопка с иконкой самолётика ВЕЗДЕ */}
