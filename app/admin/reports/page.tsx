@@ -20,6 +20,10 @@ export default function ReportsPage() {
   const [reviewReports, setReviewReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'comments' | 'reviews'>('comments')
+  const [showBanModal, setShowBanModal] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState('')
+  const [banReason, setBanReason] = useState('')
+  const [banDuration, setBanDuration] = useState('')
 
   useEffect(() => { loadReports() }, [])
 
@@ -32,7 +36,6 @@ export default function ReportsPage() {
       ;(commentData || []).forEach(r => { userIds.add(r.reporter_id); userIds.add(r.reported_user_id) })
       ;(reviewData || []).forEach(r => { userIds.add(r.reporter_id); userIds.add(r.reported_user_id) })
 
-      // 🔥 ОПТИМИЗАЦИЯ: Один запрос вместо цикла
       let namesMap = new Map<string, string>()
       if (userIds.size > 0) {
         const { data: usersData } = await supabase.from('coaches').select('user_id, display_name').in('user_id', Array.from(userIds))
@@ -58,10 +61,48 @@ export default function ReportsPage() {
     }
   }
 
+  const handleBanUser = (userId: string, userName: string) => {
+    setSelectedUserId(userId)
+    setBanReason(`Нарушение правил платформы (жалобы от пользователей)`)
+    setShowBanModal(true)
+  }
+
+  const submitBan = async () => {
+    if (!selectedUserId || !banReason || !banDuration) {
+      alert('Заполните все поля')
+      return
+    }
+
+    const days = parseInt(banDuration)
+    const date = new Date()
+    date.setDate(date.getDate() + days)
+    const bannedUntil = date.toISOString()
+
+    try {
+      const { error } = await supabase
+        .from('stop_list')
+        .upsert({
+          user_id: selectedUserId,
+          reason: banReason,
+          banned_until: bannedUntil,
+        }, { onConflict: 'user_id' })
+
+      if (error) throw error
+
+      alert('✅ Пользователь заблокирован')
+      setShowBanModal(false)
+      setSelectedUserId('')
+      setBanReason('')
+      setBanDuration('')
+    } catch (error: any) {
+      alert('Ошибка: ' + (error.message || 'Не удалось заблокировать'))
+    }
+  }
+
   const formatDate = (dateString: string) => new Date(dateString).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
   return (
-    <main className="min-h-screen bg-gray-50 py-6 md:py-10">
+    <main className="py-6 md:py-10">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
@@ -101,9 +142,20 @@ export default function ReportsPage() {
                       </p>
                       <p className="text-xs text-gray-500">{formatDate(report.created_at)}</p>
                     </div>
-                    <button onClick={() => handleDeleteReport(report.id, tab === 'comments' ? 'comment' : 'review')} className="w-full sm:w-auto px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors">
-                      Удалить жалобу
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                      <button 
+                        onClick={() => handleBanUser(report.reported_user_id, report.reported_name || '')} 
+                        className="w-full sm:w-auto px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors"
+                      >
+                         Забанить
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteReport(report.id, tab === 'comments' ? 'comment' : 'review')} 
+                        className="w-full sm:w-auto px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
+                      >
+                        Удалить жалобу
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -114,6 +166,57 @@ export default function ReportsPage() {
                 <p className="text-gray-600 text-sm">В этой категории пока нет жалоб</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Модальное окно бана */}
+        {showBanModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-purple-100">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Заблокировать пользователя</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Причина блокировки</label>
+                  <textarea 
+                    rows={3} 
+                    value={banReason} 
+                    onChange={(e) => setBanReason(e.target.value)} 
+                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400" 
+                    placeholder="Опишите причину..." 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Срок блокировки (дней)</label>
+                  <input 
+                    type="number" 
+                    value={banDuration} 
+                    onChange={(e) => setBanDuration(e.target.value)} 
+                    min="1"
+                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400" 
+                    placeholder="Например: 7" 
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    onClick={submitBan} 
+                    className="flex-1 gradient-btn text-white py-2.5 rounded-xl font-medium shadow-lg shadow-purple-500/30"
+                  >
+                    Заблокировать
+                  </button>
+                  <button 
+                    onClick={() => { 
+                      setShowBanModal(false)
+                      setSelectedUserId('')
+                      setBanReason('')
+                      setBanDuration('')
+                    }} 
+                    className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
