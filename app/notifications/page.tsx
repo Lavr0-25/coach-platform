@@ -42,82 +42,63 @@ export default function NotificationsPage() {
     setIsLoading(true)
 
     try {
-      const { data: coachData } = await supabase
-        .from('coaches')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
+      // 🔥 ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА ВСЕХ ДАННЫХ ОДНОВРЕМЕННО
+      const [
+        coachData,
+        lessonComments,
+        courseComments
+      ] = await Promise.all([
+        supabase.from('coaches').select('id').eq('user_id', user.id).single(),
+        supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(50),
+        supabase.from('course_comments').select('*').order('created_at', { ascending: false }).limit(50)
+      ])
 
-      const currentCoachId = coachData?.id
+      const currentCoachId = coachData.data?.id
       const newNotifications: Notification[] = []
       const userIds = new Set<string>()
       const lessonIds = new Set<string>()
       const courseIds = new Set<string>()
 
-      // 1. Загружаем комментарии к урокам
-      const { data: lessonComments } = await supabase
-        .from('comments')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200)
-
-      for (const comment of lessonComments || []) {
+      // Собираем все ID
+      for (const comment of lessonComments.data || []) {
         if (comment.user_id) userIds.add(comment.user_id)
         if (comment.lesson_id) lessonIds.add(comment.lesson_id)
       }
-
-      // 2. Загружаем комментарии к курсам
-      const { data: courseComments } = await supabase
-        .from('course_comments')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200)
-
-      for (const comment of courseComments || []) {
+      for (const comment of courseComments.data || []) {
         if (comment.user_id) userIds.add(comment.user_id)
         if (comment.course_id) courseIds.add(comment.course_id)
       }
 
-      // 3. Загружаем ВСЕ имена пользователей ОДНИМ запросом
-      const { data: usersData } = await supabase
-        .from('coaches')
-        .select('user_id, display_name')
-        .in('user_id', Array.from(userIds))
+      // 🔥 ПАРАЛЛЕЛЬНАЯ ЗАГРУЗКА ВСЕХ СПРАВОЧНИКОВ
+      const [usersData, lessonsData, coursesData] = await Promise.all([
+        supabase.from('coaches').select('user_id, display_name').in('user_id', Array.from(userIds)),
+        lessonIds.size > 0 ? supabase.from('lessons').select('id, title, coach_id').in('id', Array.from(lessonIds)) : Promise.resolve({ data: [] }),
+        courseIds.size > 0 ? supabase.from('courses').select('id, title, coach_id').in('id', Array.from(courseIds)) : Promise.resolve({ data: [] })
+      ])
 
+      // Создаём Map для быстрого доступа
       const userNames = new Map<string, string>()
-      usersData?.forEach((u: any) => {
+      usersData.data?.forEach((u: any) => {
         userNames.set(u.user_id, u.display_name || 'Пользователь')
       })
 
-      // 4. Загружаем ВСЕ уроки ОДНИМ запросом
-      const { data: lessonsData } = await supabase
-        .from('lessons')
-        .select('id, title, coach_id')
-        .in('id', Array.from(lessonIds))
-
       const lessonsMap = new Map<string, any>()
-      lessonsData?.forEach((l: any) => {
+      lessonsData.data?.forEach((l: any) => {
         lessonsMap.set(l.id, l)
       })
 
-      // 5. Загружаем ВСЕ курсы ОДНИМ запросом
-      const { data: coursesData } = await supabase
-        .from('courses')
-        .select('id, title, coach_id')
-        .in('id', Array.from(courseIds))
-
       const coursesMap = new Map<string, any>()
-      coursesData?.forEach((c: any) => {
+      coursesData.data?.forEach((c: any) => {
         coursesMap.set(c.id, c)
       })
 
-      // 6. Обрабатываем комментарии к урокам (БЕЗ дополнительных запросов!)
-      for (const comment of lessonComments || []) {
+      // Обрабатываем комментарии к урокам (БЕЗ запросов к БД!)
+      for (const comment of lessonComments.data || []) {
         if (comment.user_id === user.id) continue
 
         let parentUserId = null
         if (comment.parent_id) {
-          const parentComment = lessonComments?.find(c => c.id === comment.parent_id)
+          const parentComment = lessonComments.data?.find(c => c.id === comment.parent_id)
           parentUserId = parentComment?.user_id
         }
 
@@ -150,13 +131,13 @@ export default function NotificationsPage() {
         }
       }
 
-      // 7. Обрабатываем комментарии к курсам (БЕЗ дополнительных запросов!)
-      for (const comment of courseComments || []) {
+      // Обрабатываем комментарии к курсам (БЕЗ запросов к БД!)
+      for (const comment of courseComments.data || []) {
         if (comment.user_id === user.id) continue
 
         let parentUserId = null
         if (comment.parent_id) {
-          const parentComment = courseComments?.find(c => c.id === comment.parent_id)
+          const parentComment = courseComments.data?.find(c => c.id === comment.parent_id)
           parentUserId = parentComment?.user_id
         }
 
@@ -189,7 +170,6 @@ export default function NotificationsPage() {
         }
       }
 
-      // Сортируем по дате
       newNotifications.sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
@@ -207,7 +187,6 @@ export default function NotificationsPage() {
     loadNotifications()
   }, [loadNotifications])
 
-  // Фильтрация
   useEffect(() => {
     if (filter === 'all') {
       setFilteredNotifications(notifications)
@@ -292,15 +271,10 @@ export default function NotificationsPage() {
       const date = new Date(notification.createdAt)
       let group = ''
 
-      if (date >= today) {
-        group = 'Сегодня'
-      } else if (date >= yesterday) {
-        group = 'Вчера'
-      } else if (date >= weekAgo) {
-        group = 'На этой неделе'
-      } else {
-        group = 'Ранее'
-      }
+      if (date >= today) group = 'Сегодня'
+      else if (date >= yesterday) group = 'Вчера'
+      else if (date >= weekAgo) group = 'На этой неделе'
+      else group = 'Ранее'
 
       if (!groups[group]) groups[group] = []
       groups[group].push(notification)
@@ -325,7 +299,6 @@ export default function NotificationsPage() {
 
   return (
     <main className="container mx-auto px-4 py-8 max-w-4xl pt-24 md:pt-28">
-      {/* Хлебные крошки и Шапка */}
       <div className="mb-6">
         <Link href="/" className="text-purple-600 hover:text-purple-700 font-medium inline-flex items-center gap-2 mb-4 transition-colors">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -357,7 +330,6 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Фильтры */}
       <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-2 mb-6 flex gap-1 overflow-x-auto">
         {(['all', 'lesson_comment', 'course_comment'] as FilterType[]).map((f) => {
           const count = f === 'all' ? notifications.length : notifications.filter(n => n.type === f).length
@@ -378,7 +350,6 @@ export default function NotificationsPage() {
         })}
       </div>
 
-      {/* Список уведомлений */}
       {filteredNotifications.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-12 text-center">
           <div className="w-16 h-16 mx-auto mb-4 gradient-icon rounded-full p-3 opacity-80">
