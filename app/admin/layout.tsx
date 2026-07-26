@@ -14,7 +14,6 @@ export default async function AdminLayout({
     redirect('/login')
   }
 
-  // Проверяем, является ли пользователь админом
   const { data: coach } = await supabase
     .from('coaches')
     .select('role')
@@ -25,5 +24,9 @@ export default async function AdminLayout({
     redirect('/')
   }
 
-  return <>{children}</>
-}
+  return (
+    <div className="min-h-screen bg-gray-50 pt-20 md:pt-24">
+      {children}
+    </div>
+  )
+} 
