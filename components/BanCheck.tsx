@@ -7,16 +7,40 @@ import { useRouter } from 'next/navigation'
 export default function BanCheck() {
   const [isBanned, setIsBanned] = useState(false)
   const [banInfo, setBanInfo] = useState<{ until: string; reason: string } | null>(null)
+  const [checking, setChecking] = useState(true)
   const supabase = createClient()
   const router = useRouter()
 
   useEffect(() => {
     checkBan()
+
+    // 🔥 Слушаем изменения авторизации
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        // Пользователь вышел — сбрасываем бан
+        setIsBanned(false)
+        setBanInfo(null)
+        setChecking(false)
+      } else {
+        // Пользователь вошёл — проверяем бан
+        checkBan()
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   const checkBan = async () => {
+    setChecking(true)
+    
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    
+    if (!user) {
+      setChecking(false)
+      return
+    }
 
     try {
       const { data, error } = await supabase
@@ -28,7 +52,6 @@ export default function BanCheck() {
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error checking ban:', error)
-        return
       }
 
       if (data) {
@@ -37,17 +60,25 @@ export default function BanCheck() {
           until: data.banned_until,
           reason: data.reason,
         })
+      } else {
+        setIsBanned(false)
+        setBanInfo(null)
       }
     } catch (error) {
       console.error('Error checking ban:', error)
+    } finally {
+      setChecking(false)
     }
   }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
+    // 🔥 Полный редирект после выхода
+    window.location.href = '/login'
   }
+
+  // Пока проверяем — ничего не показываем
+  if (checking) return null
 
   if (!isBanned || !banInfo) return null
 
