@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface Notification {
   id: string
@@ -22,6 +23,7 @@ export default function NotificationsBell() {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const supabase = createClient()
+  const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const loadNotifications = useCallback(async () => {
@@ -239,17 +241,9 @@ export default function NotificationsBell() {
       })
       .subscribe()
 
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-
     return () => {
       supabase.removeChannel(lessonChannel)
       supabase.removeChannel(courseChannel)
-      document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [loadNotifications])
 
@@ -260,10 +254,20 @@ export default function NotificationsBell() {
     setIsOpen(false)
   }
 
+  const handleClick = () => {
+    // На мобильном переходим на страницу уведомлений
+    // На десктопе открываем dropdown
+    if (window.innerWidth < 640) {
+      router.push('/notifications')
+    } else {
+      setIsOpen(!isOpen)
+    }
+  }
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleClick}
         className="relative p-2 rounded-xl hover:bg-purple-50 transition-all group"
         title="Уведомления"
       >
@@ -279,31 +283,26 @@ export default function NotificationsBell() {
         )}
       </button>
 
+      {/* Dropdown ТОЛЬКО для десктопа */}
       {isOpen && (
         <>
           {/* Overlay для закрытия при клике вне */}
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
           
-          {/* 
-            АДАПТИВНЫЙ DROPDOWN:
-            - На мобильном: fixed на весь экран (как модалка)
-            - На десктопе (sm:): absolute dropdown справа
-          */}
-          <div className="fixed top-0 left-0 right-0 bottom-0 sm:absolute sm:top-auto sm:left-auto sm:right-0 sm:bottom-auto sm:mt-2 sm:w-96 sm:max-h-[600px] sm:rounded-2xl bg-white sm:shadow-2xl sm:border sm:border-purple-100 z-50 overflow-hidden flex flex-col">
+          {/* Dropdown для десктопа */}
+          <div className="absolute right-0 mt-2 w-96 max-h-[600px] bg-white rounded-2xl shadow-2xl border border-purple-100 z-50 overflow-hidden hidden sm:flex flex-col">
             
-            {/* Шапка с кнопкой закрытия на мобильном */}
-            <div className="p-4 pt-16 sm:pt-4 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-blue-50 flex items-center justify-between flex-shrink-0">
+            {/* Шапка */}
+            <div className="p-4 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-blue-50 flex items-center justify-between flex-shrink-0">
               <h3 className="font-semibold text-gray-900">Уведомления</h3>
-              <div className="flex items-center gap-2">
-                {unreadCount > 0 && (
-                  <button 
-                    onClick={loadNotifications} 
-                    className="text-xs text-purple-600 hover:text-purple-800 font-medium transition-colors"
-                  >
-                    Обновить
-                  </button>
-                )}
-              </div>
+              {unreadCount > 0 && (
+                <button 
+                  onClick={loadNotifications} 
+                  className="text-xs text-purple-600 hover:text-purple-800 font-medium transition-colors"
+                >
+                  Обновить
+                </button>
+              )}
             </div>
 
             {/* Список уведомлений с прокруткой */}
@@ -374,19 +373,6 @@ export default function NotificationsBell() {
             )}
           </div>
         </>
-      )}
-
-      {/* КНОПКА ЗАКРЫТИЯ ТОЛЬКО НА МОБИЛЬНОМ */}
-      {isOpen && (
-        <button
-          onClick={() => setIsOpen(false)}
-          className="fixed top-4 right-4 sm:hidden p-1 text-gray-500 hover:text-gray-700 hover:bg-purple-100 rounded-lg transition-colors z-50"
-          title="Закрыть"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
       )}
     </div>
   )
