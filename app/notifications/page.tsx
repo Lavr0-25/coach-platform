@@ -42,78 +42,158 @@ export default function NotificationsPage() {
     setIsLoading(true)
 
     try {
+      const { data: coachData } = await supabase
+        .from('coaches')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+      const currentCoachId = coachData?.id
       const newNotifications: Notification[] = []
       const userIds = new Set<string>()
-      const { data: coachData } = await supabase.from('coaches').select('id').eq('user_id', user.id).single()
-      const currentCoachId = coachData?.id
+      const lessonIds = new Set<string>()
+      const courseIds = new Set<string>()
 
-      const { data: lessonComments } = await supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(200)
-      for (const comment of lessonComments || []) { if (comment.user_id) userIds.add(comment.user_id) }
-
-      const { data: courseComments } = await supabase.from('course_comments').select('*').order('created_at', { ascending: false }).limit(200)
-      for (const comment of courseComments || []) { if (comment.user_id) userIds.add(comment.user_id) }
-
-      const { data: usersData } = await supabase.from('coaches').select('user_id, display_name').in('user_id', Array.from(userIds))
-      const userNames = new Map<string, string>()
-      usersData?.forEach((u: any) => { userNames.set(u.user_id, u.display_name || 'Пользователь') })
+      // 1. Загружаем комментарии к урокам
+      const { data: lessonComments } = await supabase
+        .from('comments')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200)
 
       for (const comment of lessonComments || []) {
+        if (comment.user_id) userIds.add(comment.user_id)
+        if (comment.lesson_id) lessonIds.add(comment.lesson_id)
+      }
+
+      // 2. Загружаем комментарии к курсам
+      const { data: courseComments } = await supabase
+        .from('course_comments')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200)
+
+      for (const comment of courseComments || []) {
+        if (comment.user_id) userIds.add(comment.user_id)
+        if (comment.course_id) courseIds.add(comment.course_id)
+      }
+
+      // 3. Загружаем ВСЕ имена пользователей ОДНИМ запросом
+      const { data: usersData } = await supabase
+        .from('coaches')
+        .select('user_id, display_name')
+        .in('user_id', Array.from(userIds))
+
+      const userNames = new Map<string, string>()
+      usersData?.forEach((u: any) => {
+        userNames.set(u.user_id, u.display_name || 'Пользователь')
+      })
+
+      // 4. Загружаем ВСЕ уроки ОДНИМ запросом
+      const { data: lessonsData } = await supabase
+        .from('lessons')
+        .select('id, title, coach_id')
+        .in('id', Array.from(lessonIds))
+
+      const lessonsMap = new Map<string, any>()
+      lessonsData?.forEach((l: any) => {
+        lessonsMap.set(l.id, l)
+      })
+
+      // 5. Загружаем ВСЕ курсы ОДНИМ запросом
+      const { data: coursesData } = await supabase
+        .from('courses')
+        .select('id, title, coach_id')
+        .in('id', Array.from(courseIds))
+
+      const coursesMap = new Map<string, any>()
+      coursesData?.forEach((c: any) => {
+        coursesMap.set(c.id, c)
+      })
+
+      // 6. Обрабатываем комментарии к урокам (БЕЗ дополнительных запросов!)
+      for (const comment of lessonComments || []) {
         if (comment.user_id === user.id) continue
+
         let parentUserId = null
         if (comment.parent_id) {
-          const { data: parentData } = await supabase.from('comments').select('user_id').eq('id', comment.parent_id).single()
-          parentUserId = parentData?.user_id
+          const parentComment = lessonComments?.find(c => c.id === comment.parent_id)
+          parentUserId = parentComment?.user_id
         }
+
         const authorName = userNames.get(comment.user_id) || 'Пользователь'
         const isReplyToMe = parentUserId === user.id
 
         if (comment.lesson_id) {
-          const { data: lessonData } = await supabase.from('lessons').select('title, coach_id').eq('id', comment.lesson_id).single()
+          const lessonData = lessonsMap.get(comment.lesson_id)
+
           if (lessonData) {
             const isMyLesson = lessonData.coach_id === currentCoachId
+
             if (isReplyToMe || (isMyLesson && !comment.parent_id)) {
               newNotifications.push({
-                id: `lesson_${comment.id}`, type: 'lesson_comment',
+                id: `lesson_${comment.id}`,
+                type: 'lesson_comment',
                 title: isReplyToMe ? 'Новый ответ на ваш комментарий' : `Новый комментарий к уроку "${lessonData.title}"`,
-                content: comment.content, authorName, authorId: comment.user_id,
-                createdAt: comment.created_at, isRead: comment.is_read || false,
-                link: `/lesson/${comment.lesson_id}`, anchorId: `comment-${comment.id}`,
-                tableName: 'comments', commentId: comment.id
+                content: comment.content,
+                authorName,
+                authorId: comment.user_id,
+                createdAt: comment.created_at,
+                isRead: comment.is_read || false,
+                link: `/lesson/${comment.lesson_id}`,
+                anchorId: `comment-${comment.id}`,
+                tableName: 'comments',
+                commentId: comment.id
               })
             }
           }
         }
       }
 
+      // 7. Обрабатываем комментарии к курсам (БЕЗ дополнительных запросов!)
       for (const comment of courseComments || []) {
         if (comment.user_id === user.id) continue
+
         let parentUserId = null
         if (comment.parent_id) {
-          const { data: parentData } = await supabase.from('course_comments').select('user_id').eq('id', comment.parent_id).single()
-          parentUserId = parentData?.user_id
+          const parentComment = courseComments?.find(c => c.id === comment.parent_id)
+          parentUserId = parentComment?.user_id
         }
+
         const authorName = userNames.get(comment.user_id) || 'Пользователь'
         const isReplyToMe = parentUserId === user.id
 
         if (comment.course_id) {
-          const { data: courseData } = await supabase.from('courses').select('title, coach_id').eq('id', comment.course_id).single()
+          const courseData = coursesMap.get(comment.course_id)
+
           if (courseData) {
             const isMyCourse = courseData.coach_id === currentCoachId
+
             if (isReplyToMe || (isMyCourse && !comment.parent_id)) {
               newNotifications.push({
-                id: `course_${comment.id}`, type: 'course_comment',
+                id: `course_${comment.id}`,
+                type: 'course_comment',
                 title: isReplyToMe ? 'Новый ответ на ваш комментарий' : `Новый комментарий к курсу "${courseData.title}"`,
-                content: comment.content, authorName, authorId: comment.user_id,
-                createdAt: comment.created_at, isRead: comment.is_read || false,
-                link: `/course/${comment.course_id}`, anchorId: `comment-${comment.id}`,
-                tableName: 'course_comments', commentId: comment.id
+                content: comment.content,
+                authorName,
+                authorId: comment.user_id,
+                createdAt: comment.created_at,
+                isRead: comment.is_read || false,
+                link: `/course/${comment.course_id}`,
+                anchorId: `comment-${comment.id}`,
+                tableName: 'course_comments',
+                commentId: comment.id
               })
             }
           }
         }
       }
 
-      newNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      // Сортируем по дате
+      newNotifications.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+
       setNotifications(newNotifications)
       setFilteredNotifications(newNotifications)
     } catch (error) {
@@ -123,66 +203,109 @@ export default function NotificationsPage() {
     }
   }, [supabase, router])
 
-  useEffect(() => { loadNotifications() }, [loadNotifications])
-
   useEffect(() => {
-    setFilteredNotifications(filter === 'all' ? notifications : notifications.filter(n => n.type === filter))
+    loadNotifications()
+  }, [loadNotifications])
+
+  // Фильтрация
+  useEffect(() => {
+    if (filter === 'all') {
+      setFilteredNotifications(notifications)
+    } else {
+      setFilteredNotifications(notifications.filter(n => n.type === filter))
+    }
   }, [filter, notifications])
 
   const markAsRead = async (notification: Notification) => {
-    await supabase.from(notification.tableName).update({ is_read: true }).eq('id', notification.commentId)
-    setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n))
+    await supabase
+      .from(notification.tableName)
+      .update({ is_read: true })
+      .eq('id', notification.commentId)
+
+    setNotifications(prev =>
+      prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n)
+    )
   }
 
   const markAllAsRead = async () => {
-    const unread = notifications.filter(n => !n.isRead)
-    for (const n of unread) {
-      await supabase.from(n.tableName).update({ is_read: true }).eq('id', n.commentId)
+    const unreadNotifications = notifications.filter(n => !n.isRead)
+    
+    for (const notification of unreadNotifications) {
+      await supabase
+        .from(notification.tableName)
+        .update({ is_read: true })
+        .eq('id', notification.commentId)
     }
+
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
   }
 
   const deleteNotification = async (notification: Notification) => {
     if (!confirm('Удалить это уведомление?')) return
-    await supabase.from(notification.tableName).delete().eq('id', notification.commentId)
+
+    await supabase
+      .from(notification.tableName)
+      .delete()
+      .eq('id', notification.commentId)
+
     setNotifications(prev => prev.filter(n => n.id !== notification.id))
   }
 
   const deleteAllRead = async () => {
     if (!confirm('Удалить все прочитанные уведомления?')) return
-    const read = notifications.filter(n => n.isRead)
-    for (const n of read) {
-      await supabase.from(n.tableName).delete().eq('id', n.commentId)
+
+    const readNotifications = notifications.filter(n => n.isRead)
+    
+    for (const notification of readNotifications) {
+      await supabase
+        .from(notification.tableName)
+        .delete()
+        .eq('id', notification.commentId)
     }
+
     setNotifications(prev => prev.filter(n => !n.isRead))
   }
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr)
-    const diff = new Date().getTime() - date.getTime()
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
     const minutes = Math.floor(diff / (1000 * 60))
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
     if (minutes < 1) return 'Только что'
     if (minutes < 60) return `${minutes} мин. назад`
     if (hours < 24) return `${hours} ч. назад`
     if (days < 7) return `${days} дн. назад`
-    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
   }
 
-  const groupByDate = (notifs: Notification[]) => {
+  const groupByDate = (notifications: Notification[]) => {
     const groups: { [key: string]: Notification[] } = {}
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
     const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-    for (const n of notifs) {
-      const date = new Date(n.createdAt)
-      let group = date >= today ? 'Сегодня' : date >= yesterday ? 'Вчера' : date >= weekAgo ? 'На этой неделе' : 'Ранее'
+    for (const notification of notifications) {
+      const date = new Date(notification.createdAt)
+      let group = ''
+
+      if (date >= today) {
+        group = 'Сегодня'
+      } else if (date >= yesterday) {
+        group = 'Вчера'
+      } else if (date >= weekAgo) {
+        group = 'На этой неделе'
+      } else {
+        group = 'Ранее'
+      }
+
       if (!groups[group]) groups[group] = []
-      groups[group].push(n)
+      groups[group].push(notification)
     }
+
     return groups
   }
 
