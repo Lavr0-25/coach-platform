@@ -286,13 +286,13 @@ export default function NotificationsBell() {
           
           {/* 
             АДАПТИВНЫЙ DROPDOWN:
-            - На мобильном: fixed, занимает почти весь экран
-            - На десктопе (sm:): absolute, обычный dropdown справа
+            - На мобильном: fixed на весь экран (как модалка)
+            - На десктопе (sm:): absolute dropdown справа
           */}
-          <div className="fixed inset-x-4 top-20 bottom-4 sm:absolute sm:inset-auto sm:right-0 sm:mt-2 sm:w-96 sm:max-h-[600px] bg-white rounded-2xl shadow-2xl border border-purple-100 z-50 overflow-hidden flex flex-col">
+          <div className="fixed top-0 left-0 right-0 bottom-0 sm:absolute sm:top-auto sm:left-auto sm:right-0 sm:bottom-auto sm:mt-2 sm:w-96 sm:max-h-[600px] sm:rounded-2xl bg-white sm:shadow-2xl sm:border sm:border-purple-100 z-50 overflow-hidden flex flex-col">
             
             {/* Шапка с кнопкой закрытия на мобильном */}
-            <div className="p-4 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-blue-50 flex items-center justify-between flex-shrink-0">
+            <div className="p-4 pt-16 sm:pt-4 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-blue-50 flex items-center justify-between flex-shrink-0">
               <h3 className="font-semibold text-gray-900">Уведомления</h3>
               <div className="flex items-center gap-2">
                 {unreadCount > 0 && (
