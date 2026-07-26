@@ -45,8 +45,6 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
   const supabase = createClient()
   const pathname = usePathname()
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
-  
-  // Хук для управления открытием чата на мобильных устройствах
   const { setIsMobileChatOpen } = useMobileChat()
 
   const loadConversations = async () => {
@@ -236,7 +234,8 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
   const hasAnyConversations = conversations.length > 0
 
   return (
-    <aside className="w-full md:w-80 bg-white border-r border-purple-100 flex flex-col h-full">
+    // ДОБАВЛЕНО: pt-20 md:pt-24 чтобы навбар не перекрывал шапку сайдбара
+    <aside className="w-full md:w-80 bg-white border-r border-purple-100 flex flex-col h-full pt-20 md:pt-24">
       
       {/* Шапка сайдбара */}
       <div className="border-b border-purple-100 flex-shrink-0 bg-gradient-to-r from-purple-50 to-blue-50 flex flex-col justify-center px-4 gap-3 min-h-[80px] md:min-h-[72px]">
@@ -284,7 +283,6 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
                     onClick={() => setIsMobileChatOpen(true)}
                     className="group flex items-start gap-3 p-4 border-b border-purple-50 transition-colors relative"
                   >
-                    {/* Фон активного/непрочитанного диалога */}
                     <div className={`absolute inset-0 transition-colors ${
                       isActive 
                         ? 'bg-purple-50 border-l-4 border-l-purple-600' 
@@ -327,7 +325,6 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
                       </div>
                     </div>
                     
-                    {/* ИСПРАВЛЕННАЯ КНОПКА СКРЫТИЯ: видна всегда на мобильном, только при наведении на десктопе */}
                     <button
                       onClick={(e) => hideConversation(conv.userId, e)}
                       className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all flex-shrink-0 z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"

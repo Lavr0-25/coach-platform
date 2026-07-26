@@ -25,15 +25,14 @@ export default function MessagesLayoutShell({ children, coaches }: { children: R
 
   return (
     <MobileChatContext.Provider value={{ isMobileChatOpen, setIsMobileChatOpen }}>
-      {/* Убрали pt-16 md:pt-20 */}
+      {/* Убрали pt-20 md:pt-24 - отступы будут внутри компонентов */}
       <div className="flex flex-1 overflow-hidden relative min-h-0 bg-gray-50">
         
-        {/* ЛЕВАЯ ПАНЕЛЬ - добавили pt-20 md:pt-24 чтобы навбар не перекрывал */}
+        {/* ЛЕВАЯ ПАНЕЛЬ - БЕЗ pt-20 md:pt-24 */}
         <div
           className={`
             bg-white flex-shrink-0 transition-all duration-300 ease-in-out border-r border-purple-100 flex flex-col
             ${isMobileChatOpen ? 'hidden md:flex' : 'flex w-full md:w-80'}
-            pt-20 md:pt-24
           `}
         >
           <div className="w-full md:w-80 flex-1 flex flex-col min-h-0 bg-white">
@@ -41,7 +40,7 @@ export default function MessagesLayoutShell({ children, coaches }: { children: R
           </div>
         </div>
 
-        {/* ПРАВАЯ ПАНЕЛЬ - убрали mt-4 mb-4 mr-4 чтобы не было лишнего отступа */}
+        {/* ПРАВАЯ ПАНЕЛЬ */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-white md:rounded-r-2xl md:shadow-sm md:border md:border-l-0 md:border-purple-100">
           
           {/* Мобильная шапка */}
@@ -57,7 +56,7 @@ export default function MessagesLayoutShell({ children, coaches }: { children: R
             <span className="font-semibold text-gray-900">Чат</span>
           </div>
 
-          {/* Контент - БЕЗ pt-24 md:pt-28 */}
+          {/* Контент */}
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {children}
           </div>

@@ -33,7 +33,7 @@ function MessageContent({ content }: { content: string }) {
   }, [content])
 
   if (lessonInfo) {
-    const icon = lessonInfo.type === 'lesson' ? '' : '📚'
+    const icon = lessonInfo.type === 'lesson' ? '' : ''
     const href = lessonInfo.type === 'lesson' ? `/lesson/${lessonInfo.id}` : `/course/${lessonInfo.id}`
     const textWithoutUrl = content.replace(/https?:\/\/[^\s]+/, '').trim()
     
@@ -276,8 +276,8 @@ export default function ChatPage() {
   }
 
   return (
-    // УБРАЛИ pt-24 md:pt-28 - отступ теперь только у сайдбара в LayoutShell
-    <div className="flex flex-col h-full">
+    // ДОБАВЛЕНО: pt-2 md:pt-4 чтобы шапка чата не прилипала к навбару
+    <div className="flex flex-col h-full pt-2 md:pt-4">
       
       {/* Шапка чата */}
       <div className="bg-white border-b border-purple-100 px-4 flex items-center gap-4 flex-shrink-0 h-[72px]">
@@ -389,7 +389,7 @@ export default function ChatPage() {
             <EmojiPicker onEmojiSelect={(emoji) => setNewMessage(prev => prev + emoji)} />
           </div>
 
-          {/* Кнопка с иконкой самолётика ВЕЗДЕ */}
+          {/* Кнопка-самолётик ВЕЗДЕ */}
           <button
             type="submit"
             disabled={!newMessage.trim()}
