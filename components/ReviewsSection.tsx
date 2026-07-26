@@ -57,40 +57,58 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
   }
 
   const loadSettings = async () => {
-    const { data } = await supabase
-      .from('system_settings')
-      .select('key, value')
-      .eq('key', 'auto_ban_threshold')
-      .single()
-    
-    if (data?.value) {
-      setBanThreshold(parseInt(data.value))
+    try {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('key, value')
+        .eq('key', 'auto_ban_threshold')
+        .single()
+      
+      if (data?.value) {
+        setBanThreshold(parseInt(data.value))
+      }
+    } catch (error) {
+      // Игнорируем, если таблицы настроек нет
     }
   }
 
+  // 🔥 ИСПРАВЛЕНИЕ: Безопасная проверка бана без ошибок 406
   const checkBanStatus = async () => {
     if (!userId) return
     
-    const { data } = await supabase
-      .from('stop_list')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('banned_until', new Date().toISOString())
-      .single()
-    
-    if (data) {
-      setIsBanned(true)
-      setBanInfo({
-        until: data.banned_until,
-        reason: data.reason,
-      })
-    } else {
+    try {
+      const { data, error } = await supabase
+        .from('stop_list')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('banned_until', new Date().toISOString())
+        .maybeSingle() // Возвращает null, если не найдено, вместо ошибки
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+        console.warn('Warning checking ban status:', error)
+        setIsBanned(false)
+        setBanInfo(null)
+        return
+      }
+      
+      if (data) {
+        setIsBanned(true)
+        setBanInfo({
+          until: data.banned_until,
+          reason: data.reason || 'Нарушение правил',
+        })
+      } else {
+        setIsBanned(false)
+        setBanInfo(null)
+      }
+    } catch (error) {
+      console.error('Error checking ban status:', error)
+      // При любой ошибке считаем, что пользователь не забанен
       setIsBanned(false)
       setBanInfo(null)
     }
   }
 
-  // 🔥 ОПТИМИЗАЦИЯ: Один запрос вместо цикла
   const loadUserNames = async (userIds: string[]) => {
     if (userIds.length === 0) return
 
@@ -109,7 +127,6 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         })
       }
       
-      // Заполняем тех, кого нет в таблице coaches
       uniqueIds.forEach(uid => {
         if (!namesMap[uid]) namesMap[uid] = 'Пользователь'
       })
@@ -128,6 +145,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         .from('reviews')
         .select('*')
         .order('created_at', { ascending: false })
+        .limit(50) // 🔥 ОПТИМИЗАЦИЯ: загружаем только последние 50 отзывов для скорости
 
       if (courseId) {
         query = query.eq('course_id', courseId)
@@ -140,7 +158,6 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
 
       const reviewsList = data || []
       
-      // Загружаем количество жалоб для каждого отзыва
       const reviewsWithReports = await Promise.all(
         reviewsList.map(async (review) => {
           const { count } = await supabase
