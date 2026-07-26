@@ -62,20 +62,18 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     }
   }, [userId])
 
-  // 🔥 НОВЫЙ ЭФФЕКТ: Прокрутка к якорю (комментарию) при переходе из уведомлений
+  // 🔥 Прокрутка к якорю (комментарию) при переходе из уведомлений
   useEffect(() => {
     const hash = window.location.hash
     if (hash && comments.length > 0) {
-      // Небольшая задержка, чтобы DOM успел полностью отрисоваться
       setTimeout(() => {
         const element = document.querySelector(hash)
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          // Добавляем плавную подсветку
-          element.classList.add('ring-2', 'ring-blue-400', 'bg-blue-50', 'transition-all', 'duration-500')
-          // Убираем подсветку через 2.5 секунды
+          // Фиолетовая подсветка вместо синей
+          element.classList.add('ring-2', 'ring-purple-400', 'bg-purple-50', 'transition-all', 'duration-500')
           setTimeout(() => {
-            element.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-50')
+            element.classList.remove('ring-2', 'ring-purple-400', 'bg-purple-50')
           }, 2500)
         }
       }, 300)
@@ -167,8 +165,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
   const loadComments = async () => {
     try {
-      console.log('🔄 Загрузка комментариев для урока:', lessonId)
-      
       const { data, error } = await supabase
         .from('comments')
         .select('*')
@@ -177,11 +173,9 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('❌ Ошибка загрузки комментариев:', error)
+        console.error('Error loading comments:', error)
         throw error
       }
-
-      console.log('📥 Найдено комментариев:', data?.length || 0)
 
       const commentsWithReplies = await Promise.all(
         (data || []).map(async (comment: Comment) => {
@@ -192,7 +186,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
             .order('created_at', { ascending: true })
           
           const reportCount = await getReportCount(comment.id)
-          console.log(`  💬 Комментарий ${comment.id.substring(0, 8)}... — жалоб: ${reportCount}`)
           
           const repliesWithCounts = await Promise.all(
             (replies || []).map(async (reply) => {
@@ -209,7 +202,6 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
         })
       )
 
-      console.log('✅ Загружено комментариев:', commentsWithReplies.length)
       setComments(commentsWithReplies)
 
       const allUserIds: string[] = [
@@ -218,7 +210,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
       ]
       await loadUserInfo(allUserIds)
     } catch (error) {
-      console.error('❌ Error loading comments:', error)
+      console.error('Error loading comments:', error)
     } finally {
       setLoading(false)
     }
@@ -231,7 +223,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     if (!content.trim() || !userId) return
 
     if (isBanned) {
-      alert('⛔ Вам запрещено оставлять комментарии. Попробуйте позже.')
+      alert(' Вам запрещено оставлять комментарии. Попробуйте позже.')
       return
     }
 
@@ -421,24 +413,24 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 sm:p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-20 bg-gray-200 rounded"></div>
+          <div className="h-6 bg-purple-100 rounded w-1/3"></div>
+          <div className="h-20 bg-purple-100 rounded-2xl"></div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
+    <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 sm:p-6">
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">
         💬 Комментарии ({comments.length})
       </h2>
 
       {userId ? (
         isBanned ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-8">
             <p className="text-red-800 font-medium">
               ⛔ Вам запрещено оставлять комментарии. Попробуйте позже.
             </p>
@@ -454,29 +446,29 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                 rows={4}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
                 placeholder="Задайте вопрос или оставьте комментарий..."
                 required
               />
             </div>
 
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isPrivate}
                   onChange={(e) => setIsPrivate(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  className="w-4 h-4 text-purple-600 rounded border-purple-300 focus:ring-purple-500"
                 />
                 <span className="text-sm text-gray-700">
-                   Личное сообщение (видит только ментор)
+                  🔒 Личное сообщение (видит только ментор)
                 </span>
               </label>
 
               <button
                 type="submit"
                 disabled={submitting}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                className="gradient-btn text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all w-full sm:w-auto"
               >
                 {submitting ? 'Отправка...' : 'Отправить'}
               </button>
@@ -484,7 +476,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
           </form>
         )
       ) : (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-8">
           <p className="text-yellow-800">
             <Link href="/login" className="underline font-medium hover:text-yellow-900">
               Войдите
@@ -500,43 +492,42 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
           const hasReplies = comment.replies && comment.replies.length > 0
           
           return (
-            // 🔥 ДОБАВЛЕН ID И TRANSITION ДЛЯ ПОДСВЕТКИ
             <div 
               key={comment.id} 
               id={`comment-${comment.id}`}
-              className="border-b pb-6 last:border-0 transition-all duration-500"
+              className="border-b border-purple-100 pb-6 last:border-0 transition-all duration-500"
             >
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 shadow-md">
                   {getUserInitial(comment.user_id)}
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                       <Link
                         href={`/profile/${comment.user_id}`}
-                        className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                        className="font-medium text-purple-600 hover:text-purple-700 hover:underline"
                       >
                         {getUserName(comment.user_id)}
                       </Link>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-xs sm:text-sm text-gray-500">
                         {formatDate(comment.created_at)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex flex-wrap items-center gap-2">
                       {comment.is_private && (
-                        <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">
+                        <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-medium">
                           🔒 Личное
                         </span>
                       )}
                       
                       {comment.report_count !== undefined && comment.report_count > 0 && (
-                        <span className={`text-xs px-2 py-1 rounded font-medium ${
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                           comment.report_count >= banThreshold 
                             ? 'bg-red-100 text-red-800' 
                             : 'bg-orange-100 text-orange-800'
                         }`}>
-                          ⚠️ {comment.report_count}/{banThreshold}
+                          ️ {comment.report_count}/{banThreshold}
                         </span>
                       )}
                       
@@ -544,13 +535,13 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                         <>
                           <button
                             onClick={() => handleEditComment(comment)}
-                            className="text-blue-600 hover:text-blue-700 text-xs"
+                            className="text-purple-600 hover:text-purple-700 text-xs font-medium"
                           >
                             ✏️ Редактировать
                           </button>
                           <button
                             onClick={() => handleDelete(comment.id)}
-                            className="text-red-600 hover:text-red-700 text-xs"
+                            className="text-red-600 hover:text-red-700 text-xs font-medium"
                           >
                             🗑️ Удалить
                           </button>
@@ -561,7 +552,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                           onClick={() => setReportingCommentId(
                             reportingCommentId === comment.id ? null : comment.id
                           )}
-                          className="text-gray-400 hover:text-orange-600 text-xs flex items-center gap-1"
+                          className="text-gray-400 hover:text-orange-600 text-xs font-medium"
                         >
                           🚩 Жалоба
                         </button>
@@ -570,18 +561,18 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                   </div>
                   
                   {editingCommentId === comment.id ? (
-                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-xl">
                       <textarea
                         rows={3}
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
-                        className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400"
                       />
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex flex-wrap gap-2 mt-2">
                         <button
                           onClick={() => handleUpdateComment(comment.id)}
                           disabled={updating}
-                          className="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400"
+                          className="gradient-btn text-white px-4 py-1.5 rounded-lg text-sm font-medium shadow-md disabled:opacity-50"
                         >
                           {updating ? 'Сохранение...' : '💾 Сохранить'}
                         </button>
@@ -590,20 +581,20 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                             setEditingCommentId(null)
                             setEditContent('')
                           }}
-                          className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm font-medium hover:bg-gray-200"
+                          className="bg-gray-100 text-gray-700 px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                         >
                           Отмена
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-gray-700 mt-2 whitespace-pre-wrap">
+                    <p className="text-gray-700 mt-2 whitespace-pre-wrap break-words text-sm sm:text-base">
                       {comment.content}
                     </p>
                   )}
 
                   {reportingCommentId === comment.id && (
-                    <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-xl">
                       <p className="text-sm font-medium text-orange-900 mb-2">
                         Причина жалобы:
                       </p>
@@ -611,14 +602,14 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                         rows={2}
                         value={reportReason}
                         onChange={(e) => setReportReason(e.target.value)}
-                        className="w-full px-3 py-2 border border-orange-300 rounded-md text-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                        className="w-full px-3 py-2 border border-orange-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400"
                         placeholder="Опишите причину жалобы..."
                       />
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex flex-wrap gap-2 mt-2">
                         <button
                           onClick={() => handleReport(comment.id, comment.user_id)}
                           disabled={reporting}
-                          className="bg-orange-600 text-white px-3 py-1 rounded text-sm font-medium hover:bg-orange-700 disabled:bg-gray-400"
+                          className="bg-orange-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50 transition-colors"
                         >
                           {reporting ? 'Отправка...' : 'Отправить жалобу'}
                         </button>
@@ -627,7 +618,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                             setReportingCommentId(null)
                             setReportReason('')
                           }}
-                          className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm font-medium hover:bg-gray-200"
+                          className="bg-gray-100 text-gray-700 px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                         >
                           Отмена
                         </button>
@@ -640,7 +631,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
               {userId && !isBanned && (
                 <button
                   onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium ml-13"
+                  className="text-sm text-purple-600 hover:text-purple-700 font-medium ml-13 transition-colors"
                 >
                   {replyTo === comment.id ? 'Отмена' : '↩️ Ответить'}
                 </button>
@@ -649,21 +640,21 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
               {replyTo === comment.id && userId && (
                 <form
                   onSubmit={(e) => handleSubmit(e, comment.id)}
-                  className="mt-4 ml-13 space-y-3"
+                  className="mt-4 ml-0 sm:ml-13 space-y-3"
                 >
                   <textarea
                     rows={3}
                     value={replyContent}
                     onChange={(e) => setReplyContent(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400"
                     placeholder="Ваш ответ..."
                     required
                   />
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                      className="gradient-btn text-white px-4 py-2 rounded-lg text-sm font-medium shadow-md disabled:opacity-50"
                     >
                       {submitting ? 'Отправка...' : 'Ответить'}
                     </button>
@@ -682,10 +673,10 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
               )}
 
               {hasReplies && (
-                <div className="mt-4 ml-13 pl-4 border-l-2 border-gray-200">
+                <div className="mt-4 ml-0 sm:ml-13 pl-0 sm:pl-4 border-l-2 border-purple-100">
                   <button
                     onClick={() => toggleExpand(comment.id)}
-                    className="text-sm text-gray-500 hover:text-gray-700 mb-2 flex items-center gap-1"
+                    className="text-sm text-gray-500 hover:text-gray-700 mb-2 flex items-center gap-1 font-medium"
                   >
                     {isExpanded ? '▼' : '▶'} 
                     Ответы ({comment.replies!.length})
@@ -694,21 +685,20 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                   {isExpanded && (
                     <div className="space-y-4">
                       {comment.replies!.map((reply: Comment) => (
-                        // 🔥 ДОБАВЛЕН ID И TRANSITION ДЛЯ ПОДСВЕТКИ ОТВЕТА
                         <div 
                           key={reply.id} 
                           id={`comment-${reply.id}`}
                           className="flex items-start gap-3 transition-all duration-500"
                         >
-                          <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                          <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
                             {getUserInitial(reply.user_id)}
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                               <div>
                                 <Link
                                   href={`/profile/${reply.user_id}`}
-                                  className="font-medium text-blue-600 hover:text-blue-700 hover:underline text-sm"
+                                  className="font-medium text-purple-600 hover:text-purple-700 hover:underline text-sm"
                                 >
                                   {getUserName(reply.user_id)}
                                 </Link>
@@ -718,12 +708,12 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                               </div>
                               <div className="flex items-center gap-2">
                                 {reply.report_count !== undefined && reply.report_count > 0 && (
-                                  <span className={`text-xs px-2 py-1 rounded font-medium ${
+                                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                                     reply.report_count >= banThreshold 
                                       ? 'bg-red-100 text-red-800' 
                                       : 'bg-orange-100 text-orange-800'
                                   }`}>
-                                    ⚠️ {reply.report_count}/{banThreshold}
+                                    ️ {reply.report_count}/{banThreshold}
                                   </span>
                                 )}
                                 
@@ -731,7 +721,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                   <>
                                     <button
                                       onClick={() => handleEditComment(reply)}
-                                      className="text-blue-600 hover:text-blue-700 text-xs"
+                                      className="text-purple-600 hover:text-purple-700 text-xs"
                                     >
                                       ✏️
                                     </button>
@@ -757,18 +747,18 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                             </div>
                             
                             {editingCommentId === reply.id ? (
-                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                              <div className="mt-2 p-2 bg-purple-50 border border-purple-200 rounded-xl">
                                 <textarea
                                   rows={2}
                                   value={editContent}
                                   onChange={(e) => setEditContent(e.target.value)}
-                                  className="w-full px-2 py-1 border border-blue-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                  className="w-full px-2 py-1 border border-purple-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400"
                                 />
-                                <div className="flex gap-2 mt-2">
+                                <div className="flex flex-wrap gap-2 mt-2">
                                   <button
                                     onClick={() => handleUpdateComment(reply.id)}
                                     disabled={updating}
-                                    className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-blue-700 disabled:bg-gray-400"
+                                    className="gradient-btn text-white px-3 py-1 rounded text-xs font-medium shadow-sm disabled:opacity-50"
                                   >
                                     {updating ? '...' : '💾 Сохранить'}
                                   </button>
@@ -777,32 +767,32 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                       setEditingCommentId(null)
                                       setEditContent('')
                                     }}
-                                    className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium hover:bg-gray-200"
+                                    className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs font-medium hover:bg-gray-200"
                                   >
                                     Отмена
                                   </button>
                                 </div>
                               </div>
                             ) : (
-                              <p className="text-gray-700 mt-1 text-sm whitespace-pre-wrap">
+                              <p className="text-gray-700 mt-1 text-sm whitespace-pre-wrap break-words">
                                 {reply.content}
                               </p>
                             )}
 
                             {reportingCommentId === reply.id && (
-                              <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                              <div className="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-xl">
                                 <textarea
                                   rows={2}
                                   value={reportReason}
                                   onChange={(e) => setReportReason(e.target.value)}
-                                  className="w-full px-2 py-1 border border-orange-300 rounded-md text-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                                  className="w-full px-2 py-1 border border-orange-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400"
                                   placeholder="Причина жалобы..."
                                 />
-                                <div className="flex gap-2 mt-2">
+                                <div className="flex flex-wrap gap-2 mt-2">
                                   <button
                                     onClick={() => handleReport(reply.id, reply.user_id)}
                                     disabled={reporting}
-                                    className="bg-orange-600 text-white px-2 py-1 rounded text-xs font-medium hover:bg-orange-700 disabled:bg-gray-400"
+                                    className="bg-orange-600 text-white px-3 py-1 rounded text-xs font-medium hover:bg-orange-700 disabled:opacity-50"
                                   >
                                     {reporting ? '...' : 'Отправить'}
                                   </button>
@@ -811,7 +801,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                       setReportingCommentId(null)
                                       setReportReason('')
                                     }}
-                                    className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium hover:bg-gray-200"
+                                    className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs font-medium hover:bg-gray-200"
                                   >
                                     Отмена
                                   </button>
@@ -831,7 +821,8 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
         {comments.length === 0 && (
           <div className="text-center py-8 text-gray-500">
-            💬 Пока нет комментариев. Будьте первым!
+            <div className="text-4xl mb-2">💬</div>
+            <p className="text-sm sm:text-base">Пока нет комментариев. Будьте первым!</p>
           </div>
         )}
       </div>
