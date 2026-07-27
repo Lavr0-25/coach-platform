@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useToast } from '@/components/Toast'
+import Breadcrumbs from '@/components/Breadcrumbs'
 
 interface StopListEntry {
   id: string
@@ -15,6 +17,7 @@ interface StopListEntry {
 
 export default function StopListPage() {
   const supabase = createClient()
+  const { showToast } = useToast()
   const [entries, setEntries] = useState<StopListEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -49,7 +52,6 @@ export default function StopListPage() {
 
       if (error) throw error
 
-      // 🔥 ОПТИМИЗАЦИЯ: Собираем все user_id и делаем ОДИН запрос
       const userIds = (data || []).map((entry: any) => entry.user_id)
       
       let usersMap = new Map<string, string>()
@@ -69,13 +71,13 @@ export default function StopListPage() {
         display_name: usersMap.get(entry.user_id) || 'Неизвестно',
       }))
 
-      // Пагинация
       const startIndex = (currentPage - 1) * itemsPerPage
       const paginatedEntries = entriesWithUsers.slice(startIndex, startIndex + itemsPerPage)
       
       setEntries(paginatedEntries)
     } catch (error) {
       console.error('Error loading stop list:', error)
+      showToast('Ошибка при загрузке стоп-листа', 'error')
     } finally {
       setLoading(false)
     }
@@ -101,7 +103,7 @@ export default function StopListPage() {
 
   const handleAddBan = async () => {
     if (!newBan.user_id || !newBan.reason || !newBan.banned_until) {
-      alert('Заполните все поля')
+      showToast('Заполните все поля', 'error')
       return
     }
     try {
@@ -113,14 +115,14 @@ export default function StopListPage() {
           banned_until: newBan.banned_until 
         }, { onConflict: 'user_id' })
       if (error) throw error
-      alert('✅ Пользователь добавлен в стоп-лист')
+      showToast('Пользователь добавлен в стоп-лист', 'success')
       setShowAddModal(false)
       setNewBan({ user_id: '', reason: '', banned_until: '' })
       setSearchQuery('')
       setCurrentPage(1)
       await loadStopList()
     } catch (error: any) {
-      alert('Ошибка: ' + (error.message || 'Не удалось добавить'))
+      showToast('Ошибка: ' + (error.message || 'Не удалось добавить'), 'error')
     }
   }
 
@@ -129,10 +131,11 @@ export default function StopListPage() {
     try {
       const { error } = await supabase.from('stop_list').delete().eq('id', id)
       if (error) throw error
+      showToast('Пользователь разблокирован', 'success')
       setCurrentPage(1)
       await loadStopList()
     } catch (error) {
-      console.error('Error removing ban:', error)
+      showToast('Ошибка при разблокировке', 'error')
     }
   }
 
@@ -154,6 +157,8 @@ export default function StopListPage() {
   return (
     <main className="py-6 md:py-10">
       <div className="container mx-auto px-4 max-w-5xl">
+        <Breadcrumbs />
+        
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold gradient-text">🚫 Стоп-лист</h1>
@@ -242,7 +247,6 @@ export default function StopListPage() {
                     </div>
                   </div>
                   
-                  {/* Кнопка только для активных блокировок */}
                   {!expired ? (
                     <button 
                       onClick={() => handleRemoveBan(entry.id)} 
