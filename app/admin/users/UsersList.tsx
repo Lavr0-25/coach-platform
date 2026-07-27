@@ -80,6 +80,22 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
     setLoading(null)
   }
 
+  // 🔥 Вспомогательная функция для получения имени
+  const getDisplayName = (user: any) => {
+    return user.coaches?.[0]?.display_name || user.full_name || 'Без имени'
+  }
+
+  // 🔥 Вспомогательная функция для получения инициалов
+  const getInitials = (user: any) => {
+    const name = getDisplayName(user)
+    if (name === 'Без имени') return (user.email || 'U').charAt(0).toUpperCase()
+    const parts = name.split(' ')
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
+  }
+
   return (
     <>
       <div className="bg-white rounded-2xl shadow-sm border border-purple-100 overflow-hidden">
@@ -95,6 +111,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
               const coachInfo = user.coaches?.[0]
               const activeBan = user.user_bans?.find((b: any) => b.is_active)
               const isBanned = !!activeBan
+              const displayName = getDisplayName(user)
               
               return (
                 <div key={user.id} className="p-4 md:p-6 hover:bg-purple-50/30 transition-colors">
@@ -104,11 +121,11 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 shadow-sm">
-                          {(user.full_name || user.email || 'U').charAt(0).toUpperCase()}
+                          {getInitials(user)}
                         </div>
                         <div className="min-w-0">
                           <h3 className="text-base md:text-lg font-semibold text-gray-900 truncate">
-                            {user.full_name || 'Без имени'}
+                            {displayName}
                           </h3>
                           <p className="text-sm text-gray-500 truncate">📧 {user.email}</p>
                         </div>
@@ -265,4 +282,4 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
       )}
     </>
   )
-} 
+}
