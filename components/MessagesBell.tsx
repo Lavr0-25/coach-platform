@@ -31,20 +31,17 @@ export default function MessagesBell() {
   useEffect(() => {
     loadUnreadCount()
 
-    const channel = supabase
-      .channel('messages-bell-unread')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', 
-          schema: 'public',
-          table: 'messages'
-        },
-        () => {
-          loadUnreadCount()
-        }
-      )
-      .subscribe()
+    //  УБРАЛИ Realtime-подписку - она вызывает ошибки WebSocket
+    // Вместо этого просто обновляем счётчик при монтировании
+    // и при возврате на страницу (visibilitychange)
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadUnreadCount()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     const handleMessagesRead = () => {
       loadUnreadCount()
@@ -53,7 +50,7 @@ export default function MessagesBell() {
     window.addEventListener('messages-read', handleMessagesRead)
 
     return () => {
-      supabase.removeChannel(channel)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('messages-read', handleMessagesRead)
     }
   }, [loadUnreadCount])
