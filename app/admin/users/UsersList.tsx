@@ -80,12 +80,10 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
     setLoading(null)
   }
 
-  // 🔥 Вспомогательная функция для получения имени
   const getDisplayName = (user: any) => {
     return user.coaches?.[0]?.display_name || user.full_name || 'Без имени'
   }
 
-  // 🔥 Вспомогательная функция для получения инициалов
   const getInitials = (user: any) => {
     const name = getDisplayName(user)
     if (name === 'Без имени') return (user.email || 'U').charAt(0).toUpperCase()
@@ -115,7 +113,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
               
               return (
                 <div key={user.id} className="p-4 md:p-6 hover:bg-purple-50/30 transition-colors">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                     
                     {/* Левая часть: Информация о пользователе */}
                     <div className="flex-1 min-w-0">
@@ -138,22 +136,12 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                           user.role === 'mentor' ? 'bg-green-100 text-green-700' :
                           'bg-purple-100 text-purple-700'
                         }`}>
-                          {user.role === 'admin' ? 'Админ' : user.role === 'mentor' ? 'Наставник' : 'Студент'}
+                          {user.role === 'admin' ? 'Админ' : user.role === 'mentor' ? 'Автор' : 'Студент'}
                         </span>
 
                         {isBanned && (
                           <span className="bg-red-50 text-red-700 border border-red-200 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
                             🚫 Заблокирован
-                          </span>
-                        )}
-
-                        {coachInfo && !isBanned && (
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 ${
-                            coachInfo.is_verified 
-                              ? 'bg-green-50 text-green-700 border border-green-200' 
-                              : 'bg-orange-50 text-orange-700 border border-orange-200'
-                          }`}>
-                            {coachInfo.is_verified ? '✓ Проверен' : '⏳ Ожидает'}
                           </span>
                         )}
                       </div>
@@ -169,8 +157,30 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                       </p>
                     </div>
 
+                    {/*  Статистика: Уроки / Курсы / Подписчики */}
+                    <div className="grid grid-cols-3 gap-3 lg:gap-6 lg:min-w-[280px]">
+                      <div className="text-center p-3 bg-purple-50/50 rounded-xl border border-purple-100">
+                        <div className="text-2xl font-bold text-purple-700">
+                          {user.lessons_count || 0}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">Уроков</div>
+                      </div>
+                      <div className="text-center p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                        <div className="text-2xl font-bold text-blue-700">
+                          {user.courses_count || 0}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">Курсов</div>
+                      </div>
+                      <div className="text-center p-3 bg-green-50/50 rounded-xl border border-green-100">
+                        <div className="text-2xl font-bold text-green-700">
+                          {user.subscribers_count || 0}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">Подписчиков</div>
+                      </div>
+                    </div>
+
                     {/* Правая часть: Кнопки действий */}
-                    <div className="flex flex-col sm:flex-row gap-2 sm:ml-4 w-full sm:w-auto">
+                    <div className="flex flex-col sm:flex-row gap-2 lg:ml-4 w-full sm:w-auto">
                       {coachInfo && !isBanned && (
                         <Link
                           href={`/mentor/${coachInfo.id}`}
@@ -187,7 +197,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                             disabled={loading === user.id}
                             className="w-full sm:w-auto px-4 py-2.5 bg-green-50 text-green-700 border border-green-200 rounded-xl text-sm font-medium hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {loading === user.id ? '⏳...' : '✓ Разблокировать'}
+                            {loading === user.id ? '...' : '✓ Разблокировать'}
                           </button>
                         ) : (
                           <button
