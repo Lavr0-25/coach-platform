@@ -14,58 +14,61 @@ export default async function AdminUsersPage({
   const searchQuery = typeof params.search === 'string' ? params.search : ''
   const filterRole = typeof params.role === 'string' ? params.role : 'all'
 
-  // Получаем всех пользователей с их данными
-  let query = supabase
+  // 1. Получаем всех пользователей из profiles
+  let profilesQuery = supabase
     .from('profiles')
-    .select(`
-      id,
-      full_name,
-      email,
-      role,
-      created_at,
-      coaches (
-        id,
-        display_name,
-        is_verified
-      ),
-      user_bans (
-        id,
-        reason,
-        banned_at,
-        unbanned_at,
-        is_active
-      )
-    `)
+    .select('*')
 
-  // Фильтр по роли
   if (filterRole !== 'all') {
-    query = query.eq('role', filterRole)
+    profilesQuery = profilesQuery.eq('role', filterRole)
   }
 
-  // Поиск
   if (searchQuery) {
-    query = query.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+    profilesQuery = profilesQuery.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
   }
 
-  const { data: users, error } = await query
+  const { data: profiles, error: profilesError } = await profilesQuery
     .order('created_at', { ascending: false })
 
-  if (error) {
-    console.error('Error fetching users:', error)
+  if (profilesError) {
+    console.error('Error fetching profiles:', profilesError)
   }
 
-  // 🔥 Исправленная статистика
-  const allUsers = users || []
-  
+  // 2. Получаем всех coaches (для связи с пользователями)
+  const { data: coaches } = await supabase
+    .from('coaches')
+    .select('id, user_id, display_name, role, is_verified')
+
+  // 3. Получаем все активные баны
+  const { data: userBans } = await supabase
+    .from('user_bans')
+    .select('id, user_id, reason, is_active, banned_at, unbanned_at')
+    .eq('is_active', true)
+
+  // 🔥 Объединяем данные
+  const coachesMap = new Map<string, any>()
+  coaches?.forEach(c => {
+    coachesMap.set(c.user_id, c)
+  })
+
+  const bansMap = new Map<string, any[]>()
+  userBans?.forEach(b => {
+    if (!bansMap.has(b.user_id)) {
+      bansMap.set(b.user_id, [])
+    }
+    bansMap.get(b.user_id)!.push(b)
+  })
+
+  const allUsers = (profiles || []).map(profile => ({
+    ...profile,
+    coaches: coachesMap.has(profile.id) ? [coachesMap.get(profile.id)] : [],
+    user_bans: bansMap.has(profile.id) ? bansMap.get(profile.id) : [],
+  }))
+
+  // 🔥 Статистика
   const adminCount = allUsers.filter(u => u.role === 'admin').length
-  const mentorCount = allUsers.filter(u => {
-    // Проверяем и роль, и наличие в таблице coaches
-    return u.role === 'mentor' || (u.coaches && u.coaches.length > 0)
-  }).length
-  const bannedCount = allUsers.filter(u => {
-    // Проверяем наличие активных банов
-    return u.user_bans && u.user_bans.some((b: any) => b.is_active === true)
-  }).length
+  const mentorCount = allUsers.filter(u => u.role === 'mentor').length
+  const bannedCount = allUsers.filter(u => u.user_bans && u.user_bans.length > 0).length
 
   const stats = [
     { title: 'Всего пользователей', value: allUsers.length, color: 'gray' as const },
@@ -77,27 +80,23 @@ export default async function AdminUsersPage({
   return (
     <main className="py-6 md:py-10">
       <div className="container mx-auto px-4 max-w-7xl">
-        {/* Хлебные крошки */}
         <Breadcrumbs />
 
-        {/* Заголовок */}
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold gradient-text mb-2">
-            👥 Управление пользователями
+             Управление пользователями
           </h1>
           <p className="text-gray-600 text-sm">
             Просмотр, поиск и управление учетными записями платформы
           </p>
         </div>
 
-        {/* Статистика */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
           {stats.map((stat, index) => (
             <StatCard key={index} title={stat.title} value={stat.value} color={stat.color} />
           ))}
         </div>
 
-        {/* Поиск и фильтры */}
         <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 md:p-6 mb-6">
           <form className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -145,14 +144,12 @@ export default async function AdminUsersPage({
           </form>
         </div>
 
-        {/* Список пользователей (Client Component) */}
         <UsersList initialUsers={allUsers} />
       </div>
     </main>
   )
 }
 
-// Вспомогательный компонент для карточек статистики
 function StatCard({ title, value, color }: { title: string; value: number; color: 'gray' | 'red' | 'green' | 'orange' }) {
   const styles = {
     gray: 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 text-gray-700',
