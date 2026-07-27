@@ -217,4 +217,4 @@ function StatCard({ title, value, color }: { title: string; value: number; color
       <div className="text-xs md:text-sm opacity-80 mt-1 font-medium">{title}</div>
     </div>
   )
-} 
+}
