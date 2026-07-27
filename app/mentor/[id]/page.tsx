@@ -47,6 +47,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [uniqueStudents, setUniqueStudents] = useState(0)
   const [experienceYears, setExperienceYears] = useState(0)
+  const [totalLessonsCount, setTotalLessonsCount] = useState(0) // 🔥 Новое: все уроки автора
 
   useEffect(() => {
     params.then(p => setId(p.id))
@@ -95,7 +96,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
 
       setCourses(coursesData || [])
 
-      // Получаем отдельные уроки
+      // Получаем отдельные уроки (не входящие в курсы)
       const { data: lessonsData } = await supabase
         .from('lessons')
         .select('id, title, description, price, is_free_preview, created_at, cover_image')
@@ -105,19 +106,36 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
 
       setLessons(lessonsData || [])
 
+      // 🔥 Подсчёт ВСЕХ уроков автора (включая те, что в курсах)
+      const { data: allLessonsData } = await supabase
+        .from('lessons')
+        .select('id')
+        .eq('coach_id', coachData.id)
+
+      const lessonsInCourses = coursesData?.reduce((sum, c) => sum + (c.lessons?.length || 0), 0) || 0
+      const standaloneLessons = lessonsData?.length || 0
+      const allLessonsTotal = allLessonsData?.length || 0
+      
+      // Используем прямой подсчёт из БД (надёжнее)
+      setTotalLessonsCount(allLessonsTotal)
+
       // Считаем уникальных студентов
       const allLessonIds = [
         ...(coursesData?.flatMap(c => c.lessons || []) || []),
         ...(lessonsData || [])
       ].map(l => l.id)
 
-      const { data: progressData } = await supabase
-        .from('lesson_progress')
-        .select('user_id', { count: 'exact' })
-        .in('lesson_id', allLessonIds)
+      if (allLessonIds.length > 0) {
+        const { data: progressData } = await supabase
+          .from('lesson_progress')
+          .select('user_id', { count: 'exact' })
+          .in('lesson_id', allLessonIds)
 
-      const uniqueIds = new Set(progressData?.map(p => p.user_id) || [])
-      setUniqueStudents(uniqueIds.size)
+        const uniqueIds = new Set(progressData?.map(p => p.user_id) || [])
+        setUniqueStudents(uniqueIds.size)
+      } else {
+        setUniqueStudents(0)
+      }
 
       setLoading(false)
     }
@@ -152,6 +170,25 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
     if (!name) return 'A'
     const parts = name.split(' ')
     return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
+  }
+
+  //  Склонение слова "урок"
+  const getLessonsWord = (count: number) => {
+    if (count === 1) return 'урок'
+    if (count < 5) return 'урока'
+    return 'уроков'
+  }
+
+  const getCoursesWord = (count: number) => {
+    if (count === 1) return 'курс'
+    if (count < 5) return 'курса'
+    return 'курсов'
+  }
+
+  const getStudentsWord = (count: number) => {
+    if (count === 1) return 'подписчик'
+    if (count < 5) return 'подписчика'
+    return 'подписчиков'
   }
 
   if (loading || !coach) {
@@ -209,19 +246,20 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
               <div className="text-center p-3 bg-purple-50 rounded-xl">
                 <div className="text-2xl sm:text-3xl font-bold gradient-text">{courses.length}</div>
                 <div className="text-sm text-gray-600">
-                  {courses.length === 1 ? 'курс' : courses.length < 5 ? 'курса' : 'курсов'}
+                  {getCoursesWord(courses.length)}
                 </div>
               </div>
+              {/* 🔥 Теперь показываем ВСЕ уроки автора */}
               <div className="text-center p-3 bg-purple-50 rounded-xl">
-                <div className="text-2xl sm:text-3xl font-bold gradient-text">{lessons.length}</div>
+                <div className="text-2xl sm:text-3xl font-bold gradient-text">{totalLessonsCount}</div>
                 <div className="text-sm text-gray-600">
-                  {lessons.length === 1 ? 'урок' : lessons.length < 5 ? 'урока' : 'уроков'}
+                  {getLessonsWord(totalLessonsCount)}
                 </div>
               </div>
               <div className="text-center p-3 bg-purple-50 rounded-xl">
                 <div className="text-2xl sm:text-3xl font-bold gradient-text">{uniqueStudents}</div>
                 <div className="text-sm text-gray-600">
-                  {uniqueStudents === 1 ? 'подписчик' : uniqueStudents < 5 ? 'подписчика' : 'подписчиков'}
+                  {getStudentsWord(uniqueStudents)}
                 </div>
               </div>
               <div className="text-center p-3 bg-purple-50 rounded-xl">
@@ -350,7 +388,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <span>📖</span>
                           <span>
-                            {courseLessonsCount} {courseLessonsCount === 1 ? 'урок' : courseLessonsCount < 5 ? 'урока' : 'уроков'}
+                            {courseLessonsCount} {getLessonsWord(courseLessonsCount)}
                           </span>
                         </div>
                         
@@ -372,7 +410,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
       {filteredLessons.length > 0 && (
         <div className="mb-10">
           <h2 className="text-2xl font-bold gradient-text mb-6 flex items-center gap-2">
-            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📝</span>
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm"></span>
             Отдельные уроки
           </h2>
 
