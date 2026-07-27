@@ -19,7 +19,7 @@ export default async function AdminUsersPage({
     .from('profiles')
     .select('*')
 
-  // Фильтр по роли (теперь role обновляется автоматически триггерами)
+  // Фильтр по роли
   if (filterRole !== 'all') {
     if (filterRole === 'author') {
       profilesQuery = profilesQuery.eq('role', 'mentor')
@@ -47,18 +47,17 @@ export default async function AdminUsersPage({
     .from('coaches')
     .select('id, user_id, display_name, role, is_verified')
 
-  // 3. 🔥 Считаем ВСЕ курсы для каждого coach (включая черновики)
-  const { data: allCourses } = await supabase
-    .from('courses')
-    .select('coach_id')
-
-  // 4. Считаем ВСЕ уроки для каждого coach (включая черновики)
+  // 3. Считаем ВСЕ уроки для каждого coach
   const { data: allLessons } = await supabase
     .from('lessons')
     .select('coach_id')
 
-  // 5. 🔥 Считаем количество подписчиков для каждого coach
-  // subscriptions.coach_id ссылается на coaches.id
+  // 4. Считаем ВСЕ курсы для каждого coach
+  const { data: allCourses } = await supabase
+    .from('courses')
+    .select('coach_id')
+
+  // 5. 🔥 Считаем подписчиков для каждого coach через coaches.id
   const { data: subscriptions } = await supabase
     .from('subscriptions')
     .select('coach_id')
@@ -69,7 +68,7 @@ export default async function AdminUsersPage({
     .select('id, user_id, reason, is_active, banned_at, unbanned_at')
     .eq('is_active', true)
 
-  //  Агрегируем данные по coach_id
+  //  Агрегируем данные
   const lessonsCount = new Map<string, number>()
   allLessons?.forEach(l => {
     lessonsCount.set(l.coach_id, (lessonsCount.get(l.coach_id) || 0) + 1)
@@ -93,7 +92,7 @@ export default async function AdminUsersPage({
     bansMap.get(b.user_id)!.push(b)
   })
 
-  // 🔥 Создаём мапу: user_id → coach data с правильными счётчиками
+  //  Создаём мапу: user_id → coach data с правильными счётчиками
   const coachesMap = new Map<string, any>()
   coaches?.forEach(c => {
     coachesMap.set(c.user_id, {
