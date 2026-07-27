@@ -14,7 +14,7 @@ export default async function AdminUsersPage({
   const searchQuery = typeof params.search === 'string' ? params.search : ''
   const filterRole = typeof params.role === 'string' ? params.role : 'all'
 
-  // 1. Получаем всех пользователей из profiles
+  // 1. Получаем всех пользователей
   let profilesQuery = supabase
     .from('profiles')
     .select('*')
@@ -34,47 +34,79 @@ export default async function AdminUsersPage({
     console.error('Error fetching profiles:', profilesError)
   }
 
-  // 2. Получаем всех coaches (для связи с пользователями)
+  // 2. Получаем всех coaches
   const { data: coaches } = await supabase
     .from('coaches')
     .select('id, user_id, display_name, role, is_verified')
 
-  // 3. Получаем все активные баны
-  const { data: userBans } = await supabase
-    .from('user_bans')
-    .select('id, user_id, reason, is_active, banned_at, unbanned_at')
-    .eq('is_active', true)
+  // 3. Считаем количество уроков для каждого coach
+  const { data: lessons } = await supabase
+    .from('lessons')
+    .select('coach_id')
 
-  // 🔥 Объединяем данные
+  // 4. Считаем количество курсов для каждого coach
+  const { data: courses } = await supabase
+    .from('courses')
+    .select('coach_id')
+
+  // 5. Считаем количество подписчиков для каждого coach
+  const { data: subscriptions } = await supabase
+    .from('subscriptions')
+    .select('coach_id')
+
+  //  Агрегируем данные
+  const lessonsCount = new Map<string, number>()
+  lessons?.forEach(l => {
+    lessonsCount.set(l.coach_id, (lessonsCount.get(l.coach_id) || 0) + 1)
+  })
+
+  const coursesCount = new Map<string, number>()
+  courses?.forEach(c => {
+    coursesCount.set(c.coach_id, (coursesCount.get(c.coach_id) || 0) + 1)
+  })
+
+  const subscribersCount = new Map<string, number>()
+  subscriptions?.forEach(s => {
+    subscribersCount.set(s.coach_id, (subscribersCount.get(s.coach_id) || 0) + 1)
+  })
+
   const coachesMap = new Map<string, any>()
   coaches?.forEach(c => {
-    coachesMap.set(c.user_id, c)
+    coachesMap.set(c.user_id, {
+      ...c,
+      lessons_count: lessonsCount.get(c.id) || 0,
+      courses_count: coursesCount.get(c.id) || 0,
+      subscribers_count: subscribersCount.get(c.id) || 0,
+    })
   })
 
-  const bansMap = new Map<string, any[]>()
-  userBans?.forEach(b => {
-    if (!bansMap.has(b.user_id)) {
-      bansMap.set(b.user_id, [])
+  // 🔥 Объединяем профили с данными coaches
+  const allUsers = (profiles || []).map(profile => {
+    const coachData = coachesMap.get(profile.id)
+    const totalContent = (coachData?.lessons_count || 0) + (coachData?.courses_count || 0)
+    
+    return {
+      ...profile,
+      coaches: coachData ? [coachData] : [],
+      user_bans: [], // TODO: добавить баны если нужно
+      is_author: totalContent > 0, // Автор если есть хотя бы 1 урок или курс
+      lessons_count: coachData?.lessons_count || 0,
+      courses_count: coachData?.courses_count || 0,
+      subscribers_count: coachData?.subscribers_count || 0,
     }
-    bansMap.get(b.user_id)!.push(b)
   })
-
-  const allUsers = (profiles || []).map(profile => ({
-    ...profile,
-    coaches: coachesMap.has(profile.id) ? [coachesMap.get(profile.id)] : [],
-    user_bans: bansMap.has(profile.id) ? bansMap.get(profile.id) : [],
-  }))
 
   // 🔥 Статистика
+  const authorsCount = allUsers.filter(u => u.is_author).length
+  const studentsCount = allUsers.filter(u => !u.is_author).length
   const adminCount = allUsers.filter(u => u.role === 'admin').length
-  const mentorCount = allUsers.filter(u => u.role === 'mentor').length
-  const bannedCount = allUsers.filter(u => u.user_bans && u.user_bans.length > 0).length
+  const totalUsers = allUsers.length
 
   const stats = [
-    { title: 'Всего пользователей', value: allUsers.length, color: 'gray' as const },
+    { title: 'Всего пользователей', value: totalUsers, color: 'gray' as const },
     { title: 'Администраторов', value: adminCount, color: 'red' as const },
-    { title: 'Наставников', value: mentorCount, color: 'green' as const },
-    { title: 'Заблокировано', value: bannedCount, color: 'orange' as const },
+    { title: 'Авторов', value: authorsCount, color: 'green' as const },
+    { title: 'Студентов', value: studentsCount, color: 'blue' as const },
   ]
 
   return (
@@ -84,7 +116,7 @@ export default async function AdminUsersPage({
 
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold gradient-text mb-2">
-             Управление пользователями
+            👥 Управление пользователями
           </h1>
           <p className="text-gray-600 text-sm">
             Просмотр, поиск и управление учетными записями платформы
@@ -119,7 +151,7 @@ export default async function AdminUsersPage({
             >
               <option value="all">Все роли</option>
               <option value="admin">Администраторы</option>
-              <option value="mentor">Наставники</option>
+              <option value="author">Авторы</option>
               <option value="student">Студенты</option>
             </select>
             
@@ -150,12 +182,12 @@ export default async function AdminUsersPage({
   )
 }
 
-function StatCard({ title, value, color }: { title: string; value: number; color: 'gray' | 'red' | 'green' | 'orange' }) {
+function StatCard({ title, value, color }: { title: string; value: number; color: 'gray' | 'red' | 'green' | 'blue' }) {
   const styles = {
     gray: 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 text-gray-700',
     red: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 text-red-700',
     green: 'bg-gradient-to-br from-green-50 to-green-100 border-green-200 text-green-700',
-    orange: 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 text-orange-700',
+    blue: 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 text-blue-700',
   }
   
   return (
