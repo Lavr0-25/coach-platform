@@ -14,7 +14,7 @@ export default async function AdminUsersPage({
   const searchQuery = typeof params.search === 'string' ? params.search : ''
   const filterRole = typeof params.role === 'string' ? params.role : 'all'
 
-  // Получаем всех пользователей
+  // Получаем всех пользователей с их данными
   let query = supabase
     .from('profiles')
     .select(`
@@ -47,14 +47,25 @@ export default async function AdminUsersPage({
     query = query.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
   }
 
-  const { data: users } = await query
+  const { data: users, error } = await query
     .order('created_at', { ascending: false })
 
-  // Статистика
+  if (error) {
+    console.error('Error fetching users:', error)
+  }
+
+  // 🔥 Исправленная статистика
   const allUsers = users || []
+  
   const adminCount = allUsers.filter(u => u.role === 'admin').length
-  const mentorCount = allUsers.filter(u => u.role === 'mentor').length
-  const bannedCount = allUsers.filter(u => u.user_bans?.some((b: any) => b.is_active)).length
+  const mentorCount = allUsers.filter(u => {
+    // Проверяем и роль, и наличие в таблице coaches
+    return u.role === 'mentor' || (u.coaches && u.coaches.length > 0)
+  }).length
+  const bannedCount = allUsers.filter(u => {
+    // Проверяем наличие активных банов
+    return u.user_bans && u.user_bans.some((b: any) => b.is_active === true)
+  }).length
 
   const stats = [
     { title: 'Всего пользователей', value: allUsers.length, color: 'gray' as const },
