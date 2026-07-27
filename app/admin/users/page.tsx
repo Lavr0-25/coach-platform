@@ -19,10 +19,18 @@ export default async function AdminUsersPage({
     .from('profiles')
     .select('*')
 
+  // Фильтр по роли (теперь role обновляется автоматически триггерами)
   if (filterRole !== 'all') {
-    profilesQuery = profilesQuery.eq('role', filterRole)
+    if (filterRole === 'author') {
+      profilesQuery = profilesQuery.eq('role', 'mentor')
+    } else if (filterRole === 'student') {
+      profilesQuery = profilesQuery.eq('role', 'student')
+    } else {
+      profilesQuery = profilesQuery.eq('role', filterRole)
+    }
   }
 
+  // Текстовый поиск
   if (searchQuery) {
     profilesQuery = profilesQuery.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
   }
@@ -54,6 +62,12 @@ export default async function AdminUsersPage({
     .from('subscriptions')
     .select('coach_id')
 
+  // 6. Получаем баны
+  const { data: userBans } = await supabase
+    .from('user_bans')
+    .select('id, user_id, reason, is_active, banned_at, unbanned_at')
+    .eq('is_active', true)
+
   //  Агрегируем данные
   const lessonsCount = new Map<string, number>()
   lessons?.forEach(l => {
@@ -70,6 +84,14 @@ export default async function AdminUsersPage({
     subscribersCount.set(s.coach_id, (subscribersCount.get(s.coach_id) || 0) + 1)
   })
 
+  const bansMap = new Map<string, any[]>()
+  userBans?.forEach(b => {
+    if (!bansMap.has(b.user_id)) {
+      bansMap.set(b.user_id, [])
+    }
+    bansMap.get(b.user_id)!.push(b)
+  })
+
   const coachesMap = new Map<string, any>()
   coaches?.forEach(c => {
     coachesMap.set(c.user_id, {
@@ -81,26 +103,23 @@ export default async function AdminUsersPage({
   })
 
   // 🔥 Объединяем профили с данными coaches
-  const allUsers = (profiles || []).map(profile => {
-    const coachData = coachesMap.get(profile.id)
-    const totalContent = (coachData?.lessons_count || 0) + (coachData?.courses_count || 0)
-    
-    return {
-      ...profile,
-      coaches: coachData ? [coachData] : [],
-      user_bans: [], // TODO: добавить баны если нужно
-      is_author: totalContent > 0, // Автор если есть хотя бы 1 урок или курс
-      lessons_count: coachData?.lessons_count || 0,
-      courses_count: coachData?.courses_count || 0,
-      subscribers_count: coachData?.subscribers_count || 0,
-    }
-  })
+  const allUsers = (profiles || []).map(profile => ({
+    ...profile,
+    coaches: coachesMap.has(profile.id) ? [coachesMap.get(profile.id)] : [],
+    user_bans: bansMap.has(profile.id) ? bansMap.get(profile.id) : [],
+    lessons_count: coachesMap.get(profile.id)?.lessons_count || 0,
+    courses_count: coachesMap.get(profile.id)?.courses_count || 0,
+    subscribers_count: coachesMap.get(profile.id)?.subscribers_count || 0,
+  }))
 
-  // 🔥 Статистика
-  const authorsCount = allUsers.filter(u => u.is_author).length
-  const studentsCount = allUsers.filter(u => !u.is_author).length
-  const adminCount = allUsers.filter(u => u.role === 'admin').length
-  const totalUsers = allUsers.length
+  //  Статистика (всегда по всем пользователям)
+  const allProfilesQuery = await supabase.from('profiles').select('role')
+  const allProfiles = allProfilesQuery.data || []
+  
+  const authorsCount = allProfiles.filter(p => p.role === 'mentor').length
+  const studentsCount = allProfiles.filter(p => p.role === 'student').length
+  const adminCount = allProfiles.filter(p => p.role === 'admin').length
+  const totalUsers = allProfiles.length
 
   const stats = [
     { title: 'Всего пользователей', value: totalUsers, color: 'gray' as const },
