@@ -50,19 +50,25 @@ export default async function AdminUsersPage({
   // 3. Считаем ВСЕ уроки для каждого coach
   const { data: allLessons } = await supabase
     .from('lessons')
-    .select('coach_id')
+    .select('id, coach_id')
 
   // 4. Считаем ВСЕ курсы для каждого coach
   const { data: allCourses } = await supabase
     .from('courses')
-    .select('coach_id')
+    .select('id, coach_id')
 
-  // 5. 🔥 Считаем подписчиков для каждого coach через coaches.id
-  const { data: subscriptions } = await supabase
+  // 5. 🔥 Считаем подписчиков для каждого coach
+  // subscriptions.coach_id ссылается на coaches.user_id (а не на coaches.id!)
+  const { data: allSubscriptions } = await supabase
     .from('subscriptions')
     .select('coach_id')
 
-  // 6. Получаем баны
+  // 6. Получаем весь прогресс для подсчёта уникальных студентов
+  const { data: allProgress } = await supabase
+    .from('lesson_progress')
+    .select('lesson_id, user_id')
+
+  // 7. Получаем баны
   const { data: userBans } = await supabase
     .from('user_bans')
     .select('id, user_id, reason, is_active, banned_at, unbanned_at')
@@ -79,9 +85,31 @@ export default async function AdminUsersPage({
     coursesCount.set(c.coach_id, (coursesCount.get(c.coach_id) || 0) + 1)
   })
 
-  const subscribersCount = new Map<string, number>()
-  subscriptions?.forEach(s => {
-    subscribersCount.set(s.coach_id, (subscribersCount.get(s.coach_id) || 0) + 1)
+  // 🔥 Подсчёт подписчиков по coach.user_id
+  const subscribersCountByUserId = new Map<string, number>()
+  allSubscriptions?.forEach(s => {
+    subscribersCountByUserId.set(s.coach_id, (subscribersCountByUserId.get(s.coach_id) || 0) + 1)
+  })
+
+  //  Подсчёт уникальных студентов по lesson_progress
+  const lessonToCoachMap = new Map<string, string>()
+  allLessons?.forEach(l => {
+    lessonToCoachMap.set(l.id, l.coach_id)
+  })
+
+  const studentsCountByCoach = new Map<string, number>()
+  const coachUserPairs = new Set<string>()
+  
+  allProgress?.forEach(p => {
+    const coachId = lessonToCoachMap.get(p.lesson_id)
+    if (coachId) {
+      const pairKey = `${coachId}-${p.user_id}`
+      if (!coachUserPairs.has(pairKey)) {
+        coachUserPairs.add(pairKey)
+        const currentCount = studentsCountByCoach.get(coachId) || 0
+        studentsCountByCoach.set(coachId, currentCount + 1)
+      }
+    }
   })
 
   const bansMap = new Map<string, any[]>()
@@ -99,7 +127,7 @@ export default async function AdminUsersPage({
       ...c,
       lessons_count: lessonsCount.get(c.id) || 0,
       courses_count: coursesCount.get(c.id) || 0,
-      subscribers_count: subscribersCount.get(c.id) || 0,
+      subscribers_count: subscribersCountByUserId.get(c.user_id) || 0, // 🔥 Используем c.user_id
     })
   })
 
