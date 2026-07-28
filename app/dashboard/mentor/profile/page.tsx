@@ -40,6 +40,7 @@ export default function MentorProfilePage() {
     totalCourses: 0,
     inCoursesLessons: 0,
     freeLessons: 0,
+    subscribers: 0, // 🔥 Добавили подписчиков
   })
   
   // Контент
@@ -93,7 +94,8 @@ export default function MentorProfilePage() {
         setAvatarUrl(coach.avatar_url || '')
         setIsOwner(user.id === coach.user_id)
 
-        await loadContent(coach.id)
+        // 🔥 Передаём и coach.id, и coach.user_id
+        await loadContent(coach.id, coach.user_id)
       }
     } catch (error: any) {
       console.error('❌ Error loading profile:', error)
@@ -103,7 +105,7 @@ export default function MentorProfilePage() {
     }
   }
 
-  const loadContent = async (coachId: string) => {
+  const loadContent = async (coachId: string, coachUserId: string) => {
     try {
       // === 1. Загружаем ВСЕ уроки ===
       const { data: allLessons } = await supabase
@@ -142,6 +144,20 @@ export default function MentorProfilePage() {
         
         setMyCourses(allCourses)
       }
+
+      // === 3. 🔥 Загружаем количество подписчиков ===
+      const { data: subsData } = await supabase
+        .from('subscriptions')
+        .select('user_id')
+        .eq('coach_id', coachUserId)
+
+      const uniqueSubscribers = new Set(subsData?.map((s: any) => s.user_id) || [])
+      
+      setStats(prev => ({
+        ...prev,
+        subscribers: uniqueSubscribers.size,
+      }))
+
     } catch (error: any) {
       console.error('❌ Error loading content:', error)
     }
@@ -222,6 +238,13 @@ export default function MentorProfilePage() {
     if (!name) return 'A'
     const parts = name.split(' ')
     return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
+  }
+
+  // 🔥 Функция для склонения слова "подписчик"
+  const getSubscribersWord = (count: number) => {
+    if (count === 1) return 'подписчик'
+    if (count < 5) return 'подписчика'
+    return 'подписчиков'
   }
 
   // Фильтрация по поиску
@@ -337,6 +360,7 @@ export default function MentorProfilePage() {
                   <p className="text-lg text-gray-600 mb-3">{specialization}</p>
                 )}
                 
+                {/* 🔥 Обновлённая статистика с подписчиками */}
                 <div className="flex flex-wrap gap-6 mb-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold gradient-text">{stats.totalLessons}</div>
@@ -345,6 +369,12 @@ export default function MentorProfilePage() {
                   <div className="text-center">
                     <div className="text-2xl font-bold gradient-text">{stats.totalCourses}</div>
                     <div className="text-sm text-gray-600">курсов</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold gradient-text">{stats.subscribers}</div>
+                    <div className="text-sm text-gray-600">
+                      {getSubscribersWord(stats.subscribers)}
+                    </div>
                   </div>
                 </div>
 
