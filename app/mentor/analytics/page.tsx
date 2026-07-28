@@ -76,7 +76,7 @@ export default function AnalyticsPage() {
         .select('*', { count: 'exact', head: true })
         .eq('coach_id', coachData.id)
 
-      //  Подсчёт подписчиков через subscriptions
+      // 🔥 Подсчёт уникальных подписчиков через subscriptions
       const { data: subsData } = await supabase
         .from('subscriptions')
         .select('user_id, subscribed_at')
@@ -164,12 +164,12 @@ export default function AnalyticsPage() {
     
     setSubscribersLoading(true)
     try {
-      const { data: subsData } = await supabase
+      const { data: subsData, error } = await supabase
         .from('subscriptions')
         .select(`
           user_id,
           subscribed_at,
-          profile:profiles!subscriptions_user_id_fkey (
+          profiles (
             email,
             full_name,
             avatar_url
@@ -178,19 +178,25 @@ export default function AnalyticsPage() {
         .eq('coach_id', user.id)
         .order('subscribed_at', { ascending: false })
 
-      const formattedSubscribers: Subscriber[] = subsData?.map((s: any) => ({
-        id: s.user_id,
-        user_id: s.user_id,
-        email: s.profile?.email || '',
-        display_name: s.profile?.full_name || s.profile?.email?.split('@')[0] || 'Пользователь',
-        avatar_url: s.profile?.avatar_url,
-        subscribed_at: s.subscribed_at,
-      })) || []
+      if (error) throw error
+
+      const formattedSubscribers: Subscriber[] = subsData?.map((s: any) => {
+        const profile = s.profiles
+        return {
+          id: s.user_id,
+          user_id: s.user_id,
+          email: profile?.email || '',
+          display_name: profile?.full_name || profile?.email?.split('@')[0] || 'Пользователь',
+          avatar_url: profile?.avatar_url,
+          subscribed_at: s.subscribed_at,
+        }
+      }) || []
 
       setSubscribers(formattedSubscribers)
       setShowSubscribersModal(true)
     } catch (error) {
       console.error('Error loading subscribers:', error)
+      alert('Не удалось загрузить список подписчиков')
     } finally {
       setSubscribersLoading(false)
     }
@@ -272,7 +278,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* 🔥 Кликабельная карточка подписчиков */}
+        {/* 🔥 Кликабельная карточка подписчиков (открывает модальное окно) */}
         <button
           onClick={loadSubscribers}
           className="style-card p-6 text-left hover:shadow-lg transition-all group w-full"
@@ -600,6 +606,7 @@ export default function AnalyticsPage() {
                       <Link
                         href={`/mentor/${subscriber.user_id}`}
                         className="ml-4 px-4 py-2 bg-white text-purple-700 border border-purple-200 rounded-xl text-sm font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
+                        onClick={() => setShowSubscribersModal(false)}
                       >
                         Профиль
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
