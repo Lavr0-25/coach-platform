@@ -47,7 +47,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [uniqueStudents, setUniqueStudents] = useState(0)
   const [experienceYears, setExperienceYears] = useState(0)
-  const [totalLessonsCount, setTotalLessonsCount] = useState(0) // 🔥 Новое: все уроки автора
+  const [totalLessonsCount, setTotalLessonsCount] = useState(0)
 
   useEffect(() => {
     params.then(p => setId(p.id))
@@ -112,30 +112,17 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
         .select('id')
         .eq('coach_id', coachData.id)
 
-      const lessonsInCourses = coursesData?.reduce((sum, c) => sum + (c.lessons?.length || 0), 0) || 0
-      const standaloneLessons = lessonsData?.length || 0
-      const allLessonsTotal = allLessonsData?.length || 0
-      
-      // Используем прямой подсчёт из БД (надёжнее)
-      setTotalLessonsCount(allLessonsTotal)
+      setTotalLessonsCount(allLessonsData?.length || 0)
 
-      // Считаем уникальных студентов
-      const allLessonIds = [
-        ...(coursesData?.flatMap(c => c.lessons || []) || []),
-        ...(lessonsData || [])
-      ].map(l => l.id)
+      // 🔥 Подсчёт подписчиков через таблицу subscriptions
+      // subscriptions.coach_id ссылается на profiles.id (= coaches.user_id)
+      const { data: subsData } = await supabase
+        .from('subscriptions')
+        .select('user_id')
+        .eq('coach_id', coachData.user_id)
 
-      if (allLessonIds.length > 0) {
-        const { data: progressData } = await supabase
-          .from('lesson_progress')
-          .select('user_id', { count: 'exact' })
-          .in('lesson_id', allLessonIds)
-
-        const uniqueIds = new Set(progressData?.map(p => p.user_id) || [])
-        setUniqueStudents(uniqueIds.size)
-      } else {
-        setUniqueStudents(0)
-      }
+      const uniqueSubscribers = new Set(subsData?.map(s => s.user_id) || [])
+      setUniqueStudents(uniqueSubscribers.size)
 
       setLoading(false)
     }
@@ -172,7 +159,6 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
     return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
   }
 
-  //  Склонение слова "урок"
   const getLessonsWord = (count: number) => {
     if (count === 1) return 'урок'
     if (count < 5) return 'урока'
@@ -249,7 +235,6 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
                   {getCoursesWord(courses.length)}
                 </div>
               </div>
-              {/* 🔥 Теперь показываем ВСЕ уроки автора */}
               <div className="text-center p-3 bg-purple-50 rounded-xl">
                 <div className="text-2xl sm:text-3xl font-bold gradient-text">{totalLessonsCount}</div>
                 <div className="text-sm text-gray-600">
@@ -350,7 +335,6 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
               return (
                 <div key={course.id} className="style-card overflow-hidden hover:shadow-lg transition-all group border border-purple-100">
                   <Link href={`/course/${course.id}`} className="block">
-                    {/* Обложка с кнопкой избранного внизу */}
                     <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 relative overflow-hidden">
                       {course.cover_image ? (
                         <img 
@@ -362,12 +346,10 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
                         <div className="w-full h-full flex items-center justify-center text-white text-6xl opacity-50"></div>
                       )}
                       
-                      {/* Цена — ВЕРХНИЙ ПРАВЫЙ УГОЛ */}
                       <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-full">
                         {course.price === 0 ? 'Бесплатно' : `${course.price} ₽`}
                       </div>
 
-                      {/* Кнопка избранного — НИЖНИЙ ЛЕВЫЙ УГОЛ */}
                       <div className="absolute bottom-3 left-3 z-10">
                         <FavoriteButton itemId={course.id} itemType="course" size="sm" />
                       </div>
@@ -410,7 +392,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
       {filteredLessons.length > 0 && (
         <div className="mb-10">
           <h2 className="text-2xl font-bold gradient-text mb-6 flex items-center gap-2">
-            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm"></span>
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📝</span>
             Отдельные уроки
           </h2>
 
@@ -419,7 +401,6 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
               return (
                 <div key={lesson.id} className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100">
                   <Link href={`/lesson/${lesson.id}`} className="block">
-                    {/* Обложка с кнопкой избранного внизу */}
                     <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden relative">
                       {lesson.cover_image ? (
                         <img 
@@ -431,7 +412,6 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
                         <span className="opacity-50"></span>
                       )}
 
-                      {/* Кнопка избранного — НИЖНИЙ ЛЕВЫЙ УГОЛ */}
                       <div className="absolute bottom-3 left-3 z-10">
                         <FavoriteButton itemId={lesson.id} itemType="lesson" size="sm" />
                       </div>
