@@ -58,7 +58,7 @@ export default async function AdminUsersPage({
     .select('id, coach_id')
 
   // 5. 🔥 Считаем подписчиков для каждого coach
-  // subscriptions.coach_id ссылается на coaches.user_id (а не на coaches.id!)
+  // subscriptions.coach_id ссылается на profiles.id (а не на coaches.user_id!)
   const { data: allSubscriptions } = await supabase
     .from('subscriptions')
     .select('coach_id')
@@ -85,10 +85,10 @@ export default async function AdminUsersPage({
     coursesCount.set(c.coach_id, (coursesCount.get(c.coach_id) || 0) + 1)
   })
 
-  // 🔥 Подсчёт подписчиков по coach.user_id
-  const subscribersCountByUserId = new Map<string, number>()
+  // 🔥 Подсчёт подписчиков по profiles.id (так как subscriptions.coach_id = profiles.id)
+  const subscribersCountByProfileId = new Map<string, number>()
   allSubscriptions?.forEach(s => {
-    subscribersCountByUserId.set(s.coach_id, (subscribersCountByUserId.get(s.coach_id) || 0) + 1)
+    subscribersCountByProfileId.set(s.coach_id, (subscribersCountByProfileId.get(s.coach_id) || 0) + 1)
   })
 
   //  Подсчёт уникальных студентов по lesson_progress
@@ -127,7 +127,7 @@ export default async function AdminUsersPage({
       ...c,
       lessons_count: lessonsCount.get(c.id) || 0,
       courses_count: coursesCount.get(c.id) || 0,
-      subscribers_count: subscribersCountByUserId.get(c.user_id) || 0, // 🔥 Используем c.user_id
+      subscribers_count: subscribersCountByProfileId.get(c.user_id) || 0, // 🔥 c.user_id = profiles.id
     })
   })
 
@@ -138,7 +138,7 @@ export default async function AdminUsersPage({
     user_bans: bansMap.has(profile.id) ? bansMap.get(profile.id) : [],
     lessons_count: coachesMap.get(profile.id)?.lessons_count || 0,
     courses_count: coachesMap.get(profile.id)?.courses_count || 0,
-    subscribers_count: coachesMap.get(profile.id)?.subscribers_count || 0,
+    subscribers_count: subscribersCountByProfileId.get(profile.id) || 0, // 🔥 profile.id
   }))
 
   //  Статистика (всегда по всем пользователям)
