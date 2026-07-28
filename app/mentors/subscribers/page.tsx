@@ -18,7 +18,7 @@ const ITEMS_PER_PAGE = 10
 export default function SubscribersPage() {
   const supabase = createClient()
   const [user, setUser] = useState<any>(null)
-  const [coach, setCoach] = useState<any>(null)
+  const [coachId, setCoachId] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [subscribers, setSubscribers] = useState<Subscriber[]>([])
   const [totalSubscribers, setTotalSubscribers] = useState(0)
@@ -49,31 +49,38 @@ export default function SubscribersPage() {
 
   // Загрузка при изменении страницы или поиска
   useEffect(() => {
-    if (user && coach) {
+    if (user && coachId) {
       loadSubscribers()
     }
-  }, [user, coach, currentPage, debouncedSearch])
+  }, [user, coachId, currentPage, debouncedSearch])
 
   const loadData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError || !user) {
+        console.error('Auth error:', authError)
         redirect('/login')
         return
       }
+      
       setUser(user)
 
-      const { data: coachData } = await supabase
+      // Получаем coach record
+      const { data: coachData, error: coachError } = await supabase
         .from('coaches')
-        .select('id, display_name, user_id')
+        .select('id, user_id')
         .eq('user_id', user.id)
         .single()
 
-      if (!coachData) {
+      if (coachError || !coachData) {
+        console.error('Coach error:', coachError)
+        // Если coach не найден, перенаправляем на создание профиля
         redirect('/dashboard/mentor')
         return
       }
-      setCoach(coachData)
+      
+      setCoachId(coachData.id)
     } catch (error) {
       console.error('Error loading data:', error)
     } finally {
@@ -82,7 +89,7 @@ export default function SubscribersPage() {
   }
 
   const loadSubscribers = async () => {
-    if (!user || !coach) return
+    if (!user || !coachId) return
 
     setLoading(true)
     try {
@@ -93,7 +100,10 @@ export default function SubscribersPage() {
         .eq('coach_id', user.id)
         .order('subscribed_at', { ascending: false })
 
-      if (subsError) throw subsError
+      if (subsError) {
+        console.error('Subscriptions error:', subsError)
+        throw subsError
+      }
 
       if (!subsData || subsData.length === 0) {
         setSubscribers([])
@@ -111,7 +121,10 @@ export default function SubscribersPage() {
         .select('id, email, full_name, avatar_url')
         .in('id', userIds)
 
-      if (profilesError) throw profilesError
+      if (profilesError) {
+        console.error('Profiles error:', profilesError)
+        throw profilesError
+      }
 
       // 4. Объединяем данные в памяти
       const profilesMap = new Map(profilesData?.map((p: any) => [p.id, p]) || [])
