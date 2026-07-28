@@ -42,6 +42,11 @@ export default function SubscribersPage() {
     }
   }, [searchQuery])
 
+  // Сбрасываем страницу на 1 при изменении поиска
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [debouncedSearch])
+
   // Загрузка при изменении страницы или поиска
   useEffect(() => {
     if (user && coach) {
@@ -81,51 +86,66 @@ export default function SubscribersPage() {
 
     setLoading(true)
     try {
-      let query = supabase
+      // 1. Получаем все подписки этого автора
+      const { data: subsData, error: subsError } = await supabase
         .from('subscriptions')
-        .select(`
-          user_id,
-          subscribed_at,
-          profile:profiles!subscriptions_user_id_fkey (
-            email,
-            full_name,
-            avatar_url
-          ),
-          count,
-          order: count.id
-        `, { count: 'exact' })
+        .select('user_id, subscribed_at')
         .eq('coach_id', user.id)
+        .order('subscribed_at', { ascending: false })
 
-      // Поиск по email или имени
-      if (debouncedSearch) {
-        query = query.or(`
-          profile.full_name.ilike.%${debouncedSearch}%,
-          profile.email.ilike.%${debouncedSearch}%
-        `)
+      if (subsError) throw subsError
+
+      if (!subsData || subsData.length === 0) {
+        setSubscribers([])
+        setTotalSubscribers(0)
+        setLoading(false)
+        return
       }
 
-      // Сортировка по дате подписки
-      query = query.order('subscribed_at', { ascending: false })
+      // 2. Получаем уникальные user_id
+      const userIds = Array.from(new Set(subsData.map(s => s.user_id)))
 
-      // Пагинация
+      // 3. Получаем профили этих пользователей
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, avatar_url')
+        .in('id', userIds)
+
+      if (profilesError) throw profilesError
+
+      // 4. Объединяем данные в памяти
+      const profilesMap = new Map(profilesData?.map((p: any) => [p.id, p]) || [])
+
+      const allSubscribers: Subscriber[] = subsData.map(s => {
+        const profile = profilesMap.get(s.user_id)
+        return {
+          user_id: s.user_id,
+          email: profile?.email || '',
+          display_name: profile?.full_name || profile?.email?.split('@')[0] || 'Пользователь',
+          avatar_url: profile?.avatar_url,
+          subscribed_at: s.subscribed_at,
+        }
+      })
+
+      // 5. Фильтрация по поиску (на клиенте)
+      let filtered = allSubscribers
+      if (debouncedSearch) {
+        const query = debouncedSearch.toLowerCase()
+        filtered = filtered.filter(s => 
+          s.email.toLowerCase().includes(query) || 
+          (s.display_name && s.display_name.toLowerCase().includes(query))
+        )
+      }
+
+      // 6. Пагинация на клиенте
+      const total = filtered.length
+      setTotalSubscribers(total)
+      
       const from = (currentPage - 1) * ITEMS_PER_PAGE
-      const to = from + ITEMS_PER_PAGE - 1
-      query = query.range(from, to)
+      const to = from + ITEMS_PER_PAGE
+      const paginated = filtered.slice(from, to)
 
-      const { data, error, count } = await query
-
-      if (error) throw error
-
-      const formattedSubscribers: Subscriber[] = data?.map((s: any) => ({
-        user_id: s.user_id,
-        email: s.profile?.email || '',
-        display_name: s.profile?.full_name || s.profile?.email?.split('@')[0] || 'Пользователь',
-        avatar_url: s.profile?.avatar_url,
-        subscribed_at: s.subscribed_at,
-      })) || []
-
-      setSubscribers(formattedSubscribers)
-      setTotalSubscribers(count || 0)
+      setSubscribers(paginated)
     } catch (error) {
       console.error('Error loading subscribers:', error)
     } finally {
