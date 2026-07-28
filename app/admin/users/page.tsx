@@ -57,59 +57,34 @@ export default async function AdminUsersPage({
     .from('courses')
     .select('id, coach_id')
 
-  // 5. 🔥 Считаем подписчиков для каждого coach
+  // 5. 🔥 Считаем подписчиков
   // subscriptions.coach_id ссылается на profiles.id
   const { data: allSubscriptions } = await supabase
     .from('subscriptions')
-    .select('coach_id')
+    .select('coach_id, user_id')
 
-  // 6. Получаем весь прогресс для подсчёта уникальных студентов
-  const { data: allProgress } = await supabase
-    .from('lesson_progress')
-    .select('lesson_id, user_id')
-
-  // 7. Получаем баны
+  // 6. Получаем баны
   const { data: userBans } = await supabase
     .from('user_bans')
     .select('id, user_id, reason, is_active, banned_at, unbanned_at')
     .eq('is_active', true)
 
-  //  Агрегируем данные
+  //  Агрегируем уроки
   const lessonsCount = new Map<string, number>()
   allLessons?.forEach(l => {
     lessonsCount.set(l.coach_id, (lessonsCount.get(l.coach_id) || 0) + 1)
   })
 
+  //  Агрегируем курсы
   const coursesCount = new Map<string, number>()
   allCourses?.forEach(c => {
     coursesCount.set(c.coach_id, (coursesCount.get(c.coach_id) || 0) + 1)
   })
 
-  // 🔥 Подсчёт подписчиков по profiles.id
-  const subscribersCountByProfileId = new Map<string, number>()
+  // 🔥 Агрегируем подписчиков по coach_id (который = profiles.id)
+  const subscribersCount = new Map<string, number>()
   allSubscriptions?.forEach(s => {
-    subscribersCountByProfileId.set(s.coach_id, (subscribersCountByProfileId.get(s.coach_id) || 0) + 1)
-  })
-
-  //  Подсчёт уникальных студентов по lesson_progress
-  const lessonToCoachMap = new Map<string, string>()
-  allLessons?.forEach(l => {
-    lessonToCoachMap.set(l.id, l.coach_id)
-  })
-
-  const studentsCountByCoach = new Map<string, number>()
-  const coachUserPairs = new Set<string>()
-  
-  allProgress?.forEach(p => {
-    const coachId = lessonToCoachMap.get(p.lesson_id)
-    if (coachId) {
-      const pairKey = `${coachId}-${p.user_id}`
-      if (!coachUserPairs.has(pairKey)) {
-        coachUserPairs.add(pairKey)
-        const currentCount = studentsCountByCoach.get(coachId) || 0
-        studentsCountByCoach.set(coachId, currentCount + 1)
-      }
-    }
+    subscribersCount.set(s.coach_id, (subscribersCount.get(s.coach_id) || 0) + 1)
   })
 
   const bansMap = new Map<string, any[]>()
@@ -120,57 +95,27 @@ export default async function AdminUsersPage({
     bansMap.get(b.user_id)!.push(b)
   })
 
-  //  Создаём мапу: user_id → coach data с правильными счётчиками
+  //  Создаём мапу: user_id → coach data
   const coachesMap = new Map<string, any>()
   coaches?.forEach(c => {
     coachesMap.set(c.user_id, {
       ...c,
       lessons_count: lessonsCount.get(c.id) || 0,
       courses_count: coursesCount.get(c.id) || 0,
-      subscribers_count: subscribersCountByProfileId.get(c.user_id) || 0,
     })
   })
 
-  // 🔥 Отладка: смотрим что в allSubscriptions
-  console.log(' ВСЕ подписки из БД:', allSubscriptions)
-  console.log('🔍 subscribersCountByProfileId Map:', Array.from(subscribersCountByProfileId.entries()))
+  // 🔥 Объединяем профили с данными
+  const allUsers = (profiles || []).map(profile => ({
+    ...profile,
+    coaches: coachesMap.has(profile.id) ? [coachesMap.get(profile.id)] : [],
+    user_bans: bansMap.has(profile.id) ? bansMap.get(profile.id) : [],
+    lessons_count: coachesMap.get(profile.id)?.lessons_count || 0,
+    courses_count: coachesMap.get(profile.id)?.courses_count || 0,
+    subscribers_count: subscribersCount.get(profile.id) || 0, // 🔥 profile.id = coach_id в subscriptions
+  }))
 
-  // 🔥 Объединяем профили с данными coaches
-  const allUsers = (profiles || []).map(profile => {
-    const coachData = coachesMap.get(profile.id)
-    const subsCount = subscribersCountByProfileId.get(profile.id) || 0
-    
-    // 🔥 Лог для отладки - смотрим только для Дарины Богун
-    if (profile.email === 'd.v.bogun@gmail.com') {
-      console.log('🎯 Дарина Богун DEBUG:', {
-        profile_id: profile.id,
-        coachesMap_has: coachesMap.has(profile.id),
-        coachData,
-        subscribersCount_from_map: subsCount,
-        allSubscriptions_total: allSubscriptions?.length,
-        matching_subs: allSubscriptions?.filter(s => s.coach_id === profile.id)
-      })
-    }
-    
-    return {
-      ...profile,
-      coaches: coachData ? [coachData] : [],
-      user_bans: bansMap.has(profile.id) ? bansMap.get(profile.id) : [],
-      lessons_count: coachData?.lessons_count || 0,
-      courses_count: coachData?.courses_count || 0,
-      subscribers_count: subsCount,
-    }
-  })
-
-  //  Финальная отладка - выводим всех пользователей с их подписчиками
-  console.log('📊 ВСЕ пользователи и их подписчики:', 
-    allUsers.map(u => ({
-      email: u.email,
-      subscribers_count: u.subscribers_count
-    }))
-  )
-
-  //  Статистика (всегда по всем пользователям)
+  //  Статистика
   const allProfilesQuery = await supabase.from('profiles').select('role')
   const allProfiles = allProfilesQuery.data || []
   
