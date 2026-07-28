@@ -59,30 +59,28 @@ export default function SubscribersPage() {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       
       if (authError || !user) {
-        console.error('Auth error:', authError)
         redirect('/login')
         return
       }
       
       setUser(user)
 
-      // Получаем coach record
+      //  Максимально простой запрос - только id
       const { data: coachData, error: coachError } = await supabase
         .from('coaches')
-        .select('id, user_id')
+        .select('id')
         .eq('user_id', user.id)
         .single()
 
       if (coachError || !coachData) {
-        console.error('Coach error:', coachError)
-        // Если coach не найден, перенаправляем на создание профиля
+        console.error('Coach not found:', coachError)
         redirect('/dashboard/mentor')
         return
       }
       
       setCoachId(coachData.id)
     } catch (error) {
-      console.error('Error loading data:', error)
+      console.error('Error in loadData:', error)
     } finally {
       setLoading(false)
     }
@@ -93,17 +91,14 @@ export default function SubscribersPage() {
 
     setLoading(true)
     try {
-      // 1. Получаем все подписки этого автора
+      // 1. Получаем подписки
       const { data: subsData, error: subsError } = await supabase
         .from('subscriptions')
         .select('user_id, subscribed_at')
         .eq('coach_id', user.id)
         .order('subscribed_at', { ascending: false })
 
-      if (subsError) {
-        console.error('Subscriptions error:', subsError)
-        throw subsError
-      }
+      if (subsError) throw subsError
 
       if (!subsData || subsData.length === 0) {
         setSubscribers([])
@@ -115,18 +110,15 @@ export default function SubscribersPage() {
       // 2. Получаем уникальные user_id
       const userIds = Array.from(new Set(subsData.map(s => s.user_id)))
 
-      // 3. Получаем профили этих пользователей
+      // 3. Получаем профили
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, email, full_name, avatar_url')
         .in('id', userIds)
 
-      if (profilesError) {
-        console.error('Profiles error:', profilesError)
-        throw profilesError
-      }
+      if (profilesError) throw profilesError
 
-      // 4. Объединяем данные в памяти
+      // 4. Объединяем
       const profilesMap = new Map(profilesData?.map((p: any) => [p.id, p]) || [])
 
       const allSubscribers: Subscriber[] = subsData.map(s => {
@@ -140,7 +132,7 @@ export default function SubscribersPage() {
         }
       })
 
-      // 5. Фильтрация по поиску (на клиенте)
+      // 5. Фильтрация
       let filtered = allSubscribers
       if (debouncedSearch) {
         const query = debouncedSearch.toLowerCase()
@@ -150,7 +142,7 @@ export default function SubscribersPage() {
         )
       }
 
-      // 6. Пагинация на клиенте
+      // 6. Пагинация
       const total = filtered.length
       setTotalSubscribers(total)
       
@@ -375,4 +367,4 @@ export default function SubscribersPage() {
       )}
     </main>
   )
-} 
+}
