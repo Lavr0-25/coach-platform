@@ -209,9 +209,9 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/*  КЛИКАБЕЛЬНАЯ ССЫЛКА НА ОТДЕЛЬНУЮ СТРАНИЦУ */}
+        {/* 🔥 КЛИКАБЕЛЬНАЯ ССЫЛКА НА ОТДЕЛЬНУЮ СТРАНИЦУ (исправлен путь) */}
         <Link 
-          href="/mentor/subscribers" 
+          href="/dashboard/mentor/subscribers" 
           className="style-card p-6 hover:shadow-lg transition-all group block"
         >
           <div className="flex items-center gap-3">
@@ -228,7 +228,7 @@ export default function AnalyticsPage() {
         <div className="style-card p-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl">
-              ️
+              👁️
             </div>
             <div>
               <div className="text-2xl font-bold gradient-text">{stats.totalViews}</div>
