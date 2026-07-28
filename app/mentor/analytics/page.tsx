@@ -1,101 +1,226 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-export default async function AnalyticsPage() {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+interface Subscriber {
+  id: string
+  user_id: string
+  email: string
+  display_name: string | null
+  avatar_url: string | null
+  subscribed_at: string
+}
 
-  const { data: coach } = await supabase
-    .from('coaches')
-    .select('id, display_name')
-    .eq('user_id', user.id)
-    .single()
+export default function AnalyticsPage() {
+  const supabase = createClient()
+  const [user, setUser] = useState<any>(null)
+  const [coach, setCoach] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [showSubscribersModal, setShowSubscribersModal] = useState(false)
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([])
+  const [subscribersLoading, setSubscribersLoading] = useState(false)
 
-  if (!coach) {
-    redirect('/dashboard/mentor')
+  // Данные для статистики
+  const [stats, setStats] = useState({
+    totalLessons: 0,
+    totalCourses: 0,
+    subscribers: 0,
+    totalViews: 0,
+    totalCompleted: 0,
+  })
+  const [chartData, setChartData] = useState<any[]>([])
+  const [lessonsStats, setLessonsStats] = useState<any[]>([])
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        redirect('/login')
+        return
+      }
+      setUser(user)
+
+      const { data: coachData } = await supabase
+        .from('coaches')
+        .select('id, display_name, user_id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!coachData) {
+        redirect('/dashboard/mentor')
+        return
+      }
+      setCoach(coachData)
+
+      // Получаем все уроки автора
+      const { data: allLessons } = await supabase
+        .from('lessons')
+        .select('id, title, cover_image, price, is_free_preview, created_at')
+        .eq('coach_id', coachData.id)
+        .order('created_at', { ascending: false })
+
+      const lessonIds = allLessons?.map(l => l.id) || []
+
+      // Общая статистика
+      const totalLessons = allLessons?.length || 0
+
+      const { count: totalCourses } = await supabase
+        .from('courses')
+        .select('*', { count: 'exact', head: true })
+        .eq('coach_id', coachData.id)
+
+      //  Подсчёт подписчиков через subscriptions
+      const { data: subsData } = await supabase
+        .from('subscriptions')
+        .select('user_id, subscribed_at')
+        .eq('coach_id', user.id)
+
+      const uniqueSubscribers = new Set(subsData?.map(s => s.user_id) || [])
+      const subscribersCount = uniqueSubscribers.size
+
+      // Статистика просмотров из lesson_progress
+      const { data: allProgress } = await supabase
+        .from('lesson_progress')
+        .select('lesson_id, user_id, status, started_at, completed_at')
+        .in('lesson_id', lessonIds)
+
+      // Группировка по дням для графика (последние 30 дней)
+      const now = new Date()
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+      const activityByDay: { [key: string]: { views: number; completed: number } } = {}
+      allProgress?.forEach(p => {
+        const started = new Date(p.started_at)
+        if (started >= thirtyDaysAgo) {
+          const day = started.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+          if (!activityByDay[day]) {
+            activityByDay[day] = { views: 0, completed: 0 }
+          }
+          activityByDay[day].views++
+          if (p.status === 'completed') {
+            activityByDay[day].completed++
+          }
+        }
+      })
+
+      // Последние 30 дней для графика
+      const last30Days = Array.from({ length: 30 }, (_, i) => {
+        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
+        return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+      }).reverse()
+
+      const chart = last30Days.map(day => ({
+        day,
+        views: activityByDay[day]?.views || 0,
+        completed: activityByDay[day]?.completed || 0,
+      }))
+
+      const totalViews = allProgress?.length || 0
+      const totalCompleted = allProgress?.filter(p => p.status === 'completed').length || 0
+
+      // Статистика по каждому уроку
+      const lessons = allLessons?.map(lesson => {
+        const lessonProgress = allProgress?.filter(p => p.lesson_id === lesson.id) || []
+        const totalLessonViews = lessonProgress.length
+        const monthViews = lessonProgress.filter(p => new Date(p.started_at) >= oneMonthAgo).length
+        const dayViews = lessonProgress.filter(p => new Date(p.started_at) >= oneDayAgo).length
+        
+        return {
+          ...lesson,
+          totalViews: totalLessonViews,
+          monthViews,
+          dayViews,
+        }
+      }) || []
+
+      setStats({
+        totalLessons,
+        totalCourses: totalCourses || 0,
+        subscribers: subscribersCount,
+        totalViews,
+        totalCompleted,
+      })
+
+      setChartData(chart)
+      setLessonsStats(lessons)
+    } catch (error) {
+      console.error('Error loading analytics:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // Получаем все уроки автора
-  const { data: allLessons } = await supabase
-    .from('lessons')
-    .select('id, title, cover_image, price, is_free_preview, created_at')
-    .eq('coach_id', coach.id)
-    .order('created_at', { ascending: false })
-
-  const lessonIds = allLessons?.map(l => l.id) || []
-
-  // Общая статистика
-  const totalLessons = allLessons?.length || 0
-
-  const { count: totalCourses } = await supabase
-    .from('courses')
-    .select('*', { count: 'exact', head: true })
-    .eq('coach_id', coach.id)
-
-  // Статистика просмотров из lesson_progress
-  const { data: allProgress } = await supabase
-    .from('lesson_progress')
-    .select('lesson_id, user_id, status, started_at, completed_at')
-    .in('lesson_id', lessonIds)
-
-  // Уникальные студенты
-  const uniqueStudentIds = new Set(allProgress?.map(p => p.user_id) || [])
-
-  // Группировка по дням для графика (последние 30 дней)
-  const now = new Date()
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-  const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-
-  const activityByDay: { [key: string]: { views: number; completed: number } } = {}
-  allProgress?.forEach(p => {
-    const started = new Date(p.started_at)
-    if (started >= thirtyDaysAgo) {
-      const day = started.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
-      if (!activityByDay[day]) {
-        activityByDay[day] = { views: 0, completed: 0 }
-      }
-      activityByDay[day].views++
-      if (p.status === 'completed') {
-        activityByDay[day].completed++
-      }
-    }
-  })
-
-  // Последние 30 дней для графика
-  const last30Days = Array.from({ length: 30 }, (_, i) => {
-    const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
-    return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
-  }).reverse()
-
-  const chartData = last30Days.map(day => ({
-    day,
-    views: activityByDay[day]?.views || 0,
-    completed: activityByDay[day]?.completed || 0,
-  }))
-
-  const totalViews = allProgress?.length || 0
-  const totalCompleted = allProgress?.filter(p => p.status === 'completed').length || 0
-
-  // Статистика по каждому уроку
-  const lessonsStats = allLessons?.map(lesson => {
-    const lessonProgress = allProgress?.filter(p => p.lesson_id === lesson.id) || []
-    const totalLessonViews = lessonProgress.length
-    const monthViews = lessonProgress.filter(p => new Date(p.started_at) >= oneMonthAgo).length
-    const dayViews = lessonProgress.filter(p => new Date(p.started_at) >= oneDayAgo).length
+  const loadSubscribers = async () => {
+    if (!user || !coach) return
     
-    return {
-      ...lesson,
-      totalViews: totalLessonViews,
-      monthViews,
-      dayViews,
-    }
-  }) || []
+    setSubscribersLoading(true)
+    try {
+      const { data: subsData } = await supabase
+        .from('subscriptions')
+        .select(`
+          user_id,
+          subscribed_at,
+          profile:profiles!subscriptions_user_id_fkey (
+            email,
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('coach_id', user.id)
+        .order('subscribed_at', { ascending: false })
 
-  // Максимум для сетки графика
+      const formattedSubscribers: Subscriber[] = subsData?.map((s: any) => ({
+        id: s.user_id,
+        user_id: s.user_id,
+        email: s.profile?.email || '',
+        display_name: s.profile?.full_name || s.profile?.email?.split('@')[0] || 'Пользователь',
+        avatar_url: s.profile?.avatar_url,
+        subscribed_at: s.subscribed_at,
+      })) || []
+
+      setSubscribers(formattedSubscribers)
+      setShowSubscribersModal(true)
+    } catch (error) {
+      console.error('Error loading subscribers:', error)
+    } finally {
+      setSubscribersLoading(false)
+    }
+  }
+
+  const getInitials = (name?: string | null) => {
+    if (!name) return 'U'
+    const parts = name.split(' ')
+    return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
+  }
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Загрузка...</p>
+        </div>
+      </div>
+    )
+  }
+
   const maxChartValue = Math.max(...chartData.map(d => d.views), 1)
   const gridLines = 5
   const gridStep = Math.ceil(maxChartValue / gridLines)
@@ -114,10 +239,10 @@ export default async function AnalyticsPage() {
       {/* Заголовок */}
       <div className="mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-2">
-           Аналитика и статистика
+          Аналитика и статистика
         </h1>
         <p className="text-gray-600">
-          Отслеживайте прогресс обучения, просмотры и активность студентов
+          Отслеживайте прогресс обучения, просмотры и активность подписчиков
         </p>
       </div>
 
@@ -129,7 +254,7 @@ export default async function AnalyticsPage() {
               📚
             </div>
             <div>
-              <div className="text-2xl font-bold gradient-text">{totalLessons}</div>
+              <div className="text-2xl font-bold gradient-text">{stats.totalLessons}</div>
               <div className="text-sm text-gray-600">Всего уроков</div>
             </div>
           </div>
@@ -138,26 +263,30 @@ export default async function AnalyticsPage() {
         <div className="style-card p-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl">
-              
+              🎓
             </div>
             <div>
-              <div className="text-2xl font-bold gradient-text">{totalCourses || 0}</div>
+              <div className="text-2xl font-bold gradient-text">{stats.totalCourses}</div>
               <div className="text-sm text-gray-600">Всего курсов</div>
             </div>
           </div>
         </div>
 
-        <div className="style-card p-6">
+        {/* 🔥 Кликабельная карточка подписчиков */}
+        <button
+          onClick={loadSubscribers}
+          className="style-card p-6 text-left hover:shadow-lg transition-all group w-full"
+        >
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl">
-              
+            <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl group-hover:scale-110 transition-transform">
+              👥
             </div>
             <div>
-              <div className="text-2xl font-bold gradient-text">{uniqueStudentIds.size}</div>
-              <div className="text-sm text-gray-600">Студентов</div>
+              <div className="text-2xl font-bold gradient-text">{stats.subscribers}</div>
+              <div className="text-sm text-gray-600">Подписчиков</div>
             </div>
           </div>
-        </div>
+        </button>
 
         <div className="style-card p-6">
           <div className="flex items-center gap-3">
@@ -165,7 +294,7 @@ export default async function AnalyticsPage() {
               👁️
             </div>
             <div>
-              <div className="text-2xl font-bold gradient-text">{totalViews}</div>
+              <div className="text-2xl font-bold gradient-text">{stats.totalViews}</div>
               <div className="text-sm text-gray-600">Просмотров</div>
             </div>
           </div>
@@ -175,7 +304,7 @@ export default async function AnalyticsPage() {
       {/* График активности с сеткой */}
       <div className="style-card p-6 sm:p-8 mb-8">
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm"></span>
+          <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📊</span>
           Активность за последние 30 дней
         </h2>
         
@@ -266,16 +395,16 @@ export default async function AnalyticsPage() {
             {/* Итого */}
             <div className="flex items-center justify-between pt-6 border-t border-purple-100 mt-12">
               <div className="text-center">
-                <div className="text-2xl font-bold gradient-text">{totalViews}</div>
+                <div className="text-2xl font-bold gradient-text">{stats.totalViews}</div>
                 <div className="text-sm text-gray-600">Всего просмотров</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold gradient-text">{totalCompleted}</div>
+                <div className="text-2xl font-bold gradient-text">{stats.totalCompleted}</div>
                 <div className="text-sm text-gray-600">Завершено уроков</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold gradient-text">
-                  {totalViews > 0 ? Math.round((totalCompleted / totalViews) * 100) : 0}%
+                  {stats.totalViews > 0 ? Math.round((stats.totalCompleted / stats.totalViews) * 100) : 0}%
                 </div>
                 <div className="text-sm text-gray-600">Конверсия</div>
               </div>
@@ -283,10 +412,10 @@ export default async function AnalyticsPage() {
           </div>
         ) : (
           <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-8 text-center">
-            <div className="text-6xl mb-4"></div>
+            <div className="text-6xl mb-4">📭</div>
             <p className="text-gray-600 mb-2">Пока нет данных об активности</p>
             <p className="text-sm text-gray-500">
-              Когда студенты начнут смотреть ваши уроки, здесь появится график
+              Когда подписчики начнут смотреть ваши уроки, здесь появится график
             </p>
           </div>
         )}
@@ -403,6 +532,96 @@ export default async function AnalyticsPage() {
             </svg>
             Создать урок
           </Link>
+        </div>
+      )}
+
+      {/* 🔥 Модальное окно со списком подписчиков */}
+      {showSubscribersModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            {/* Заголовок */}
+            <div className="p-6 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-blue-50 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">👥</span>
+                Подписчики ({subscribers.length})
+              </h2>
+              <button
+                onClick={() => setShowSubscribersModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Список */}
+            <div className="overflow-y-auto flex-1 p-6">
+              {subscribersLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-3"></div>
+                  <p className="text-gray-600">Загрузка...</p>
+                </div>
+              ) : subscribers.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-5xl mb-3">👥</div>
+                  <p className="text-gray-600">Пока нет подписчиков</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {subscribers.map((subscriber) => (
+                    <div
+                      key={subscriber.user_id}
+                      className="flex items-center justify-between p-4 bg-purple-50/50 rounded-xl hover:bg-purple-50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                          {subscriber.avatar_url ? (
+                            <img 
+                              src={subscriber.avatar_url} 
+                              alt={subscriber.display_name || ''}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            getInitials(subscriber.display_name)
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 truncate group-hover:text-purple-600 transition-colors">
+                            {subscriber.display_name || 'Пользователь'}
+                          </h3>
+                          <p className="text-sm text-gray-500 truncate">{subscriber.email}</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Подписан {formatDate(subscriber.subscribed_at)}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <Link
+                        href={`/mentor/${subscriber.user_id}`}
+                        className="ml-4 px-4 py-2 bg-white text-purple-700 border border-purple-200 rounded-xl text-sm font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
+                      >
+                        Профиль
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Футер */}
+            <div className="p-4 border-t border-purple-100 bg-gray-50">
+              <button
+                onClick={() => setShowSubscribersModal(false)}
+                className="w-full px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>
