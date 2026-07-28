@@ -211,7 +211,7 @@ export default function AnalyticsPage() {
 
         {/* КЛИКАБЕЛЬНАЯ ССЫЛКА НА ОТДЕЛЬНУЮ СТРАНИЦУ ПОДПИСЧИКОВ */}
         <Link 
-          href="/mentor/subscribers-list" 
+        href="/dashboard/mentor/subscribers"
           className="style-card p-6 hover:shadow-lg transition-all group block"
         >
           <div className="flex items-center gap-3">
