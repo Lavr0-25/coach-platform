@@ -121,7 +121,7 @@ export default function SubscribersPage() {
         return {
           user_id: s.user_id,
           email: profile?.email || '',
-          display_name: profile?.full_name || profile?.email?.split('@')[0] || 'Пользователь',
+          display_name: profile?.full_name || profile?.email || 'Пользователь',
           avatar_url: profile?.avatar_url,
           subscribed_at: s.subscribed_at,
         }
