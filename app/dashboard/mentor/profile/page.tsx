@@ -80,7 +80,7 @@ export default function MentorProfilePage() {
         .single()
 
       if (coachError) {
-        console.error(' Coach error:', coachError)
+        console.error('❌ Coach error:', coachError)
         setError('Ошибка загрузки профиля: ' + coachError.message)
         return
       }
@@ -107,6 +107,8 @@ export default function MentorProfilePage() {
 
   const loadContent = async (coachId: string, coachUserId: string) => {
     try {
+      console.log('🔍 loadContent вызвана:', { coachId, coachUserId })
+
       // === 1. Загружаем ВСЕ уроки ===
       const { data: allLessons } = await supabase
         .from('lessons')
@@ -145,13 +147,24 @@ export default function MentorProfilePage() {
         setMyCourses(allCourses)
       }
 
-      // === 3. 🔥 Загружаем количество подписчиков ===
-      const { data: subsData } = await supabase
+      // === 3. 🔥 Загружаем количество подписчиков с отладкой ===
+      console.log('📊 Запрос подписок для coach_id (должен быть равен user_id):', coachUserId)
+      
+      const { data: subsData, error: subsError } = await supabase
         .from('subscriptions')
-        .select('user_id')
+        .select('user_id, coach_id')
         .eq('coach_id', coachUserId)
 
+      if (subsError) {
+        console.error('❌ Ошибка при загрузке подписок:', subsError)
+      }
+
+      console.log('📥 Получено записей подписок:', subsData?.length)
+      console.log('📋 Массив данных подписок:', subsData)
+
       const uniqueSubscribers = new Set(subsData?.map((s: any) => s.user_id) || [])
+      
+      console.log('✅ Уникальных подписчиков (размер Set):', uniqueSubscribers.size)
       
       setStats(prev => ({
         ...prev,
