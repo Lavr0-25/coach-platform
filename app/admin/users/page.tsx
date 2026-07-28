@@ -58,7 +58,7 @@ export default async function AdminUsersPage({
     .select('id, coach_id')
 
   // 5. 🔥 Считаем подписчиков для каждого coach
-  // subscriptions.coach_id ссылается на profiles.id (а не на coaches.user_id!)
+  // subscriptions.coach_id ссылается на profiles.id
   const { data: allSubscriptions } = await supabase
     .from('subscriptions')
     .select('coach_id')
@@ -85,7 +85,7 @@ export default async function AdminUsersPage({
     coursesCount.set(c.coach_id, (coursesCount.get(c.coach_id) || 0) + 1)
   })
 
-  // 🔥 Подсчёт подписчиков по profiles.id (так как subscriptions.coach_id = profiles.id)
+  // 🔥 Подсчёт подписчиков по profiles.id
   const subscribersCountByProfileId = new Map<string, number>()
   allSubscriptions?.forEach(s => {
     subscribersCountByProfileId.set(s.coach_id, (subscribersCountByProfileId.get(s.coach_id) || 0) + 1)
@@ -127,19 +127,48 @@ export default async function AdminUsersPage({
       ...c,
       lessons_count: lessonsCount.get(c.id) || 0,
       courses_count: coursesCount.get(c.id) || 0,
-      subscribers_count: subscribersCountByProfileId.get(c.user_id) || 0, // 🔥 c.user_id = profiles.id
+      subscribers_count: subscribersCountByProfileId.get(c.user_id) || 0,
     })
   })
 
+  // 🔥 Отладка: смотрим что в allSubscriptions
+  console.log(' ВСЕ подписки из БД:', allSubscriptions)
+  console.log('🔍 subscribersCountByProfileId Map:', Array.from(subscribersCountByProfileId.entries()))
+
   // 🔥 Объединяем профили с данными coaches
-  const allUsers = (profiles || []).map(profile => ({
-    ...profile,
-    coaches: coachesMap.has(profile.id) ? [coachesMap.get(profile.id)] : [],
-    user_bans: bansMap.has(profile.id) ? bansMap.get(profile.id) : [],
-    lessons_count: coachesMap.get(profile.id)?.lessons_count || 0,
-    courses_count: coachesMap.get(profile.id)?.courses_count || 0,
-    subscribers_count: subscribersCountByProfileId.get(profile.id) || 0, // 🔥 profile.id
-  }))
+  const allUsers = (profiles || []).map(profile => {
+    const coachData = coachesMap.get(profile.id)
+    const subsCount = subscribersCountByProfileId.get(profile.id) || 0
+    
+    // 🔥 Лог для отладки - смотрим только для Дарины Богун
+    if (profile.email === 'd.v.bogun@gmail.com') {
+      console.log('🎯 Дарина Богун DEBUG:', {
+        profile_id: profile.id,
+        coachesMap_has: coachesMap.has(profile.id),
+        coachData,
+        subscribersCount_from_map: subsCount,
+        allSubscriptions_total: allSubscriptions?.length,
+        matching_subs: allSubscriptions?.filter(s => s.coach_id === profile.id)
+      })
+    }
+    
+    return {
+      ...profile,
+      coaches: coachData ? [coachData] : [],
+      user_bans: bansMap.has(profile.id) ? bansMap.get(profile.id) : [],
+      lessons_count: coachData?.lessons_count || 0,
+      courses_count: coachData?.courses_count || 0,
+      subscribers_count: subsCount,
+    }
+  })
+
+  //  Финальная отладка - выводим всех пользователей с их подписчиками
+  console.log('📊 ВСЕ пользователи и их подписчики:', 
+    allUsers.map(u => ({
+      email: u.email,
+      subscribers_count: u.subscribers_count
+    }))
+  )
 
   //  Статистика (всегда по всем пользователям)
   const allProfilesQuery = await supabase.from('profiles').select('role')
