@@ -5,23 +5,11 @@ import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-interface Subscriber {
-  id: string
-  user_id: string
-  email: string
-  display_name: string | null
-  avatar_url: string | null
-  subscribed_at: string
-}
-
 export default function AnalyticsPage() {
   const supabase = createClient()
   const [user, setUser] = useState<any>(null)
   const [coach, setCoach] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [showSubscribersModal, setShowSubscribersModal] = useState(false)
-  const [subscribers, setSubscribers] = useState<Subscriber[]>([])
-  const [subscribersLoading, setSubscribersLoading] = useState(false)
 
   // Данные для статистики
   const [stats, setStats] = useState({
@@ -79,7 +67,7 @@ export default function AnalyticsPage() {
       // 🔥 Подсчёт уникальных подписчиков через subscriptions
       const { data: subsData } = await supabase
         .from('subscriptions')
-        .select('user_id, subscribed_at')
+        .select('user_id')
         .eq('coach_id', user.id)
 
       const uniqueSubscribers = new Set(subsData?.map(s => s.user_id) || [])
@@ -159,77 +147,6 @@ export default function AnalyticsPage() {
     }
   }
 
-  // 🔥 ИСПРАВЛЕННАЯ ФУНКЦИЯ: два отдельных запроса вместо JOIN
-  const loadSubscribers = async () => {
-    if (!user || !coach) return
-    
-    setSubscribersLoading(true)
-    try {
-      // 1. Сначала получаем все подписки
-      const { data: subsData, error: subsError } = await supabase
-        .from('subscriptions')
-        .select('user_id, subscribed_at')
-        .eq('coach_id', user.id)
-        .order('subscribed_at', { ascending: false })
-
-      if (subsError) throw subsError
-
-      // 2. Получаем уникальные user_id
-      const userIds = Array.from(new Set(subsData?.map(s => s.user_id) || []))
-      
-      if (userIds.length === 0) {
-        setSubscribers([])
-        setShowSubscribersModal(true)
-        return
-      }
-
-      // 3. Получаем профили этих пользователей
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, avatar_url')
-        .in('id', userIds)
-
-      if (profilesError) throw profilesError
-
-      // 4. Объединяем данные в памяти
-      const profilesMap = new Map(profilesData?.map((p: any) => [p.id, p]) || [])
-      
-      const formattedSubscribers: Subscriber[] = subsData.map(s => {
-        const profile = profilesMap.get(s.user_id)
-        return {
-          id: s.user_id,
-          user_id: s.user_id,
-          email: profile?.email || '',
-          display_name: profile?.full_name || profile?.email?.split('@')[0] || 'Пользователь',
-          avatar_url: profile?.avatar_url,
-          subscribed_at: s.subscribed_at,
-        }
-      })
-
-      setSubscribers(formattedSubscribers)
-      setShowSubscribersModal(true)
-    } catch (error) {
-      console.error('Error loading subscribers:', error)
-      alert('Не удалось загрузить список подписчиков')
-    } finally {
-      setSubscribersLoading(false)
-    }
-  }
-
-  const getInitials = (name?: string | null) => {
-    if (!name) return 'U'
-    const parts = name.split(' ')
-    return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
-  }
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    })
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -292,10 +209,10 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* 🔥 Кликабельная карточка подписчиков (открывает модальное окно) */}
-        <button
-          onClick={loadSubscribers}
-          className="style-card p-6 text-left hover:shadow-lg transition-all group w-full"
+        {/*  КЛИКАБЕЛЬНАЯ ССЫЛКА НА ОТДЕЛЬНУЮ СТРАНИЦУ */}
+        <Link 
+          href="/mentor/subscribers" 
+          className="style-card p-6 hover:shadow-lg transition-all group block"
         >
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl group-hover:scale-110 transition-transform">
@@ -306,12 +223,12 @@ export default function AnalyticsPage() {
               <div className="text-sm text-gray-600">Подписчиков</div>
             </div>
           </div>
-        </button>
+        </Link>
 
         <div className="style-card p-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl">
-              👁️
+              ️
             </div>
             <div>
               <div className="text-2xl font-bold gradient-text">{stats.totalViews}</div>
@@ -552,97 +469,6 @@ export default function AnalyticsPage() {
             </svg>
             Создать урок
           </Link>
-        </div>
-      )}
-
-      {/* 🔥 Модальное окно со списком подписчиков */}
-      {showSubscribersModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-            {/* Заголовок */}
-            <div className="p-6 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-blue-50 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">👥</span>
-                Подписчики ({subscribers.length})
-              </h2>
-              <button
-                onClick={() => setShowSubscribersModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Список */}
-            <div className="overflow-y-auto flex-1 p-6">
-              {subscribersLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-3"></div>
-                  <p className="text-gray-600">Загрузка...</p>
-                </div>
-              ) : subscribers.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="text-5xl mb-3">👥</div>
-                  <p className="text-gray-600">Пока нет подписчиков</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {subscribers.map((subscriber) => (
-                    <div
-                      key={subscriber.user_id}
-                      className="flex items-center justify-between p-4 bg-purple-50/50 rounded-xl hover:bg-purple-50 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
-                          {subscriber.avatar_url ? (
-                            <img 
-                              src={subscriber.avatar_url} 
-                              alt={subscriber.display_name || ''}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            getInitials(subscriber.display_name)
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 truncate group-hover:text-purple-600 transition-colors">
-                            {subscriber.display_name || 'Пользователь'}
-                          </h3>
-                          <p className="text-sm text-gray-500 truncate">{subscriber.email}</p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            Подписан {formatDate(subscriber.subscribed_at)}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <Link
-                        href={`/mentor/${subscriber.user_id}`}
-                        className="ml-4 px-4 py-2 bg-white text-purple-700 border border-purple-200 rounded-xl text-sm font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
-                        onClick={() => setShowSubscribersModal(false)}
-                      >
-                        Профиль
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Футер */}
-            <div className="p-4 border-t border-purple-100 bg-gray-50">
-              <button
-                onClick={() => setShowSubscribersModal(false)}
-                className="w-full px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-              >
-                Закрыть
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </main>
