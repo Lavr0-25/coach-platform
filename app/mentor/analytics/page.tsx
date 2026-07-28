@@ -159,29 +159,43 @@ export default function AnalyticsPage() {
     }
   }
 
+  // 🔥 ИСПРАВЛЕННАЯ ФУНКЦИЯ: два отдельных запроса вместо JOIN
   const loadSubscribers = async () => {
     if (!user || !coach) return
     
     setSubscribersLoading(true)
     try {
-      const { data: subsData, error } = await supabase
+      // 1. Сначала получаем все подписки
+      const { data: subsData, error: subsError } = await supabase
         .from('subscriptions')
-        .select(`
-          user_id,
-          subscribed_at,
-          profiles (
-            email,
-            full_name,
-            avatar_url
-          )
-        `)
+        .select('user_id, subscribed_at')
         .eq('coach_id', user.id)
         .order('subscribed_at', { ascending: false })
 
-      if (error) throw error
+      if (subsError) throw subsError
 
-      const formattedSubscribers: Subscriber[] = subsData?.map((s: any) => {
-        const profile = s.profiles
+      // 2. Получаем уникальные user_id
+      const userIds = Array.from(new Set(subsData?.map(s => s.user_id) || []))
+      
+      if (userIds.length === 0) {
+        setSubscribers([])
+        setShowSubscribersModal(true)
+        return
+      }
+
+      // 3. Получаем профили этих пользователей
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, avatar_url')
+        .in('id', userIds)
+
+      if (profilesError) throw profilesError
+
+      // 4. Объединяем данные в памяти
+      const profilesMap = new Map(profilesData?.map((p: any) => [p.id, p]) || [])
+      
+      const formattedSubscribers: Subscriber[] = subsData.map(s => {
+        const profile = profilesMap.get(s.user_id)
         return {
           id: s.user_id,
           user_id: s.user_id,
@@ -190,7 +204,7 @@ export default function AnalyticsPage() {
           avatar_url: profile?.avatar_url,
           subscribed_at: s.subscribed_at,
         }
-      }) || []
+      })
 
       setSubscribers(formattedSubscribers)
       setShowSubscribersModal(true)
