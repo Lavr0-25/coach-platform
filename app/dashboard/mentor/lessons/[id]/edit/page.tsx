@@ -6,13 +6,20 @@ import { updateLesson, setLessonPublished } from '@/app/actions/updateLesson'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import FileUploader from '@/components/FileUploader'
+import RichTextEditor from '@/components/editor/RichTextEditor'
 
 const CONTENT_TYPES = [
-  { 
-    value: 'video', 
-    label: '🎥 Видео', 
+  {
+    value: 'video',
+    label: '🎥 Видео',
     hint: 'Ссылка на видео (YouTube, VK Видео, RuTube, Дзен или другая площадка)',
     placeholder: 'https://...'
+  },
+  {
+    value: 'text',
+    label: '📝 Текстовый урок',
+    hint: 'Статья в визуальном редакторе: заголовки, списки, картинки и видео прямо в тексте',
+    placeholder: ''
   },
   { 
     value: 'pdf', 
@@ -81,6 +88,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   const [contentType, setContentType] = useState('video')
   const [contentUrl, setContentUrl] = useState('')
   const [contentTitle, setContentTitle] = useState('')
+  const [contentHtml, setContentHtml] = useState('')
   
   const [uploadedFileUrl, setUploadedFileUrl] = useState('')
   const [uploadedFileName, setUploadedFileName] = useState('')
@@ -126,6 +134,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           
           setContentType(type)
           setContentUrl(content[0].content_url || '')
+          setContentHtml(content[0].content_html || '')
           
           // Если это файловый тип и URL есть, считаем его загруженным файлом для превью
           if (type === 'pdf' || type === 'image') {
@@ -170,7 +179,14 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
     // Для файловых типов проверяем uploadedFileUrl, для остальных - contentUrl
     const finalUrl = isFileType ? uploadedFileUrl : contentUrl
 
-    if (!finalUrl.trim()) {
+    // Текстовый урок: проверяем, что в редакторе есть хоть какой-то текст
+    // (Tiptap пустого документа отдаёт '<p></p>' — после снятия тегов остаётся пусто)
+    if (contentType === 'text' && !contentHtml.replace(/<[^>]*>/g, '').trim()) {
+      setError('Напишите текст урока в редакторе')
+      return
+    }
+
+    if (!finalUrl.trim() && contentType !== 'text') {
       setError(isFileType ? 'Загрузите файл' : 'Введите ссылку на контент')
       return
     }
@@ -188,8 +204,9 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
       },
       {
         content_type: contentType,
-        content_url: finalUrl.trim(),
+        content_url: contentType === 'text' ? '' : finalUrl.trim(),
         title: contentTitle.trim() || null,
+        content_html: contentType === 'text' ? contentHtml : null,
       }
     )
 
@@ -197,6 +214,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
       console.error('Error updating lesson:', result.error)
       setError(result.error)
       setSaving(false)
+      window.scrollTo({ top: 0, behavior: 'smooth' }) // ошибка сверху страницы — не потеряется
       return
     }
 
@@ -342,6 +360,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                     onClick={() => {
                       setContentType(type.value)
                       setContentUrl('')
+                      setContentHtml('')
                       setUploadedFileUrl('')
                       setUploadedFileName('')
                     }}
@@ -378,7 +397,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
             )}
 
             {/* Для остальных типов (video, storage, other) - показываем поле для ссылки */}
-            {!isFileType && (
+            {!isFileType && contentType !== 'text' && (
               <div>
                 <label htmlFor="contentUrl" className="block text-sm font-semibold text-gray-700 mb-1">
                   Ссылка на контент *
@@ -395,19 +414,31 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
               </div>
             )}
 
-            <div>
-              <label htmlFor="contentTitle" className="block text-sm font-semibold text-gray-700 mb-1">
-                Заголовок контента (необязательно)
-              </label>
-              <input
-                id="contentTitle"
-                type="text"
-                value={contentTitle}
-                onChange={(e) => setContentTitle(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
-                placeholder="Например: Видеоурок №1"
-              />
-            </div>
+            {/* Текстовый урок — WYSIWYG-редактор */}
+            {contentType === 'text' && (
+              <div>
+                <RichTextEditor value={contentHtml} onChange={setContentHtml} lessonId={lessonId} />
+                <p className="text-sm text-gray-500 mt-2">
+                  Совет: начните с заголовка (кнопка H1), картинки и видео вставляются кнопками на панели сверху
+                </p>
+              </div>
+            )}
+
+            {contentType !== 'text' && (
+              <div>
+                <label htmlFor="contentTitle" className="block text-sm font-semibold text-gray-700 mb-1">
+                  Заголовок контента (необязательно)
+                </label>
+                <input
+                  id="contentTitle"
+                  type="text"
+                  value={contentTitle}
+                  onChange={(e) => setContentTitle(e.target.value)}
+                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
+                  placeholder="Например: Видеоурок №1"
+                />
+              </div>
+            )}
           </div>
         </div>
 

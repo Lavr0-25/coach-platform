@@ -373,3 +373,193 @@ html[data-theme="dark"][data-palette="b3"] { --paper: #131313; --card: #1d1d1f; 
   .gradient-btn, .style-card { transition: none; }
   .gradient-btn:hover, .style-card:hover { transform: none; }
 }
+
+/* ============================================================================
+   ТЕКСТОВЫЙ УРОК (WYSIWYG, Tiptap)
+   ----------------------------------------------------------------------------
+   .lesson-prose — чтение на странице урока (app/lesson/[id]).
+   .lesson-prose-editor — область ввода в редакторе (RichTextEditor).
+   Цвета — только через токены темы (--t-ink-*, --brand), поэтому текст урока
+   автоматически перекрашивается в тёмной теме и при смене палитры.
+   ========================================================================== */
+
+.lesson-prose,
+.lesson-prose-editor {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--t-ink-700);
+  word-break: break-word;
+}
+
+/* Общий для обеих областей: отступы между блоками и внутренние элементы */
+.lesson-prose > * + *,
+.lesson-prose-editor > * + * {
+  margin-top: 1.1em;
+}
+
+.lesson-prose p,
+.lesson-prose-editor p {
+  margin: 0;
+}
+
+.lesson-prose h1,
+.lesson-prose-editor h1 {
+  font-size: 1.9em;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--t-ink-900);
+  margin: 1.4em 0 0;
+  text-wrap: balance;
+}
+
+.lesson-prose h2,
+.lesson-prose-editor h2 {
+  font-size: 1.45em;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--t-ink-900);
+  margin: 1.3em 0 0;
+  text-wrap: balance;
+}
+
+.lesson-prose h3,
+.lesson-prose-editor h3 {
+  font-size: 1.2em;
+  font-weight: 700;
+  color: var(--t-ink-800);
+  margin: 1.2em 0 0;
+}
+
+.lesson-prose strong {
+  font-weight: 700;
+  color: var(--t-ink-900);
+}
+
+.lesson-prose em {
+  font-style: italic;
+}
+
+.lesson-prose a,
+.lesson-prose-editor a {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.lesson-prose ul,
+.lesson-prose ol,
+.lesson-prose-editor ul,
+.lesson-prose-editor ol {
+  padding-left: 1.5em;
+  margin: 0;
+}
+
+.lesson-prose ul,
+.lesson-prose-editor ul {
+  list-style: disc;
+}
+
+.lesson-prose ol,
+.lesson-prose-editor ol {
+  list-style: decimal;
+}
+
+.lesson-prose li,
+.lesson-prose-editor li {
+  margin: 0.35em 0;
+}
+
+.lesson-prose li > p,
+.lesson-prose-editor li > p {
+  margin: 0;
+}
+
+/* Картинка в тексте — скруглённая, на всю ширину колонки, с подписью из alt */
+.lesson-prose img,
+.lesson-prose-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 1rem;
+  display: block;
+  margin: 0.5em auto;
+  box-shadow: 0 4px 20px var(--glow);
+}
+
+/* Видео-вставки (YouTube через .iframe-youtube, VK через .lesson-video-embed) */
+.lesson-prose iframe,
+.lesson-prose-editor iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  border: 0;
+  border-radius: 1rem;
+  background: #000;
+  display: block;
+  margin: 0.5em auto;
+}
+
+/* Tiptap оборачивает YouTube-iframe в div с классом iframe-youtube */
+.lesson-prose div[data-youtube-video],
+.lesson-prose-editor div[data-youtube-video] {
+  margin: 0.5em auto;
+}
+
+.lesson-prose-editor div[data-youtube-video] iframe {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  height: auto;
+  border-radius: 1rem;
+}
+
+.lesson-prose blockquote,
+.lesson-prose-editor blockquote {
+  border-left: 4px solid var(--brand);
+  padding: 0.4em 0 0.4em 1.2em;
+  margin: 0;
+  color: var(--t-ink-600);
+  font-style: italic;
+  background: color-mix(in srgb, var(--brand) 6%, transparent);
+  border-radius: 0 0.75rem 0.75rem 0;
+}
+
+.lesson-prose blockquote p,
+.lesson-prose-editor blockquote p {
+  margin: 0;
+}
+
+.lesson-prose hr,
+.lesson-prose-editor hr {
+  border: 0;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--brand) 35%, transparent),
+    transparent
+  );
+  margin: 1.8em 0;
+}
+
+.lesson-prose-editor ::selection,
+.lesson-prose-editor::selection {
+  background: color-mix(in srgb, var(--brand) 25%, transparent);
+}
+
+/* Мобильные экраны: чуть компактнее типографика урока */
+@media (max-width: 640px) {
+  .lesson-prose,
+  .lesson-prose-editor {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+
+  .lesson-prose h1,
+  .lesson-prose-editor h1 {
+    font-size: 1.6em;
+  }
+
+  .lesson-prose h2,
+  .lesson-prose-editor h2 {
+    font-size: 1.3em;
+  }
+}

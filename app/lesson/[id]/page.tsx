@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getVideoEmbedUrl } from '@/lib/video-embed'
+import { sanitizeLessonHtml } from '@/lib/editor/sanitizeLessonHtml'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -59,6 +60,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
         id,
         content_type,
         content_url,
+        content_html,
         order_index
       )
     `)
@@ -100,6 +102,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
       video: '🎬',
       youtube: '📺',
       vk_video: '📹',
+      text: '📝',
       pdf: '📄',
       image: '🖼️',
       storage: '💾',
@@ -109,6 +112,19 @@ export default async function LessonPage({ params }: LessonPageProps) {
   }
 
   const renderContent = () => {
+    // Текстовый урок — свёрстанная статья. HTML уже очищен при сохранении,
+    // но перестраховываемся и очищаем ещё раз при выводе (двойной замок).
+    if (content?.content_type === 'text') {
+      const html = sanitizeLessonHtml(content.content_html || '')
+      if (html) {
+        return (
+          <article className="lesson-prose">
+            <div dangerouslySetInnerHTML={{ __html: html }} />
+          </article>
+        )
+      }
+    }
+
     if (!content) {
       return (
         <div className="aspect-video bg-gradient-to-br from-purple-100 to-blue-100 rounded-xl flex items-center justify-center">

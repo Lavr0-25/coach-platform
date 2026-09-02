@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeLessonHtml } from '@/lib/editor/sanitizeLessonHtml'
 
 // Server Action для редактирования урока и его контента.
 // Владелец проверяется на сервере: .eq('coach_id', coach.id) в запросе,
@@ -50,6 +51,7 @@ export async function updateLesson(
     content_type: string
     content_url: string
     title: string | null
+    content_html?: string | null
   }
 ): Promise<ActionResult> {
   const supabase = await createClient()
@@ -78,6 +80,19 @@ export async function updateLesson(
 
   // Контент: обновляем существующую запись или создаём новую.
   // Урок уже проверен выше — lesson_id здесь гарантированно наш.
+  //
+  // Текстовый урок: HTML от клиента НЕ доверяем — очищаем на сервере через
+  // схему Tiptap (lib/editor/sanitizeLessonHtml.ts): script/onclick/javascript:
+  // отбрасываются, остаётся только разметка редактора. content_url для текста
+  // пустой (колонка NOT NULL — пишем '').
+  let contentUrl = content.content_url
+  let contentHtml: string | null = null
+  if (content.content_type === 'text') {
+    contentHtml = sanitizeLessonHtml(content.content_html || '')
+    if (!contentHtml) return { ok: false, error: 'Текст урока пуст — напишите хотя бы один абзац' }
+    contentUrl = ''
+  }
+
   const { data: existingContent } = await supabase
     .from('lesson_content')
     .select('id')
@@ -90,8 +105,9 @@ export async function updateLesson(
       .from('lesson_content')
       .update({
         content_type: content.content_type,
-        content_url: content.content_url,
+        content_url: contentUrl,
         title: content.title,
+        content_html: contentHtml,
       })
       .eq('id', existingContent.id)
     contentError = error
@@ -101,8 +117,9 @@ export async function updateLesson(
       .insert({
         lesson_id: lessonId,
         content_type: content.content_type,
-        content_url: content.content_url,
+        content_url: contentUrl,
         title: content.title,
+        content_html: contentHtml,
         order_index: 0,
       })
     contentError = error

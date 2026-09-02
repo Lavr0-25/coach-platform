@@ -7,11 +7,17 @@ import Link from 'next/link'
 import FileUploader from '@/components/FileUploader'
 
 const CONTENT_TYPES = [
-  { 
-    value: 'video', 
-    label: '🎥 Видео', 
+  {
+    value: 'video',
+    label: '🎥 Видео',
     hint: 'Ссылка на видео (YouTube, VK Видео, RuTube, Дзен или другая площадка)',
     placeholder: 'https://...'
+  },
+  {
+    value: 'text',
+    label: '📝 Текстовый урок',
+    hint: 'Статья в визуальном редакторе — напишете текст на следующем шаге',
+    placeholder: ''
   },
   { 
     value: 'pdf', 
@@ -106,7 +112,8 @@ export default function NewLessonPage() {
     // Для файловых типов проверяем загруженный файл
     const finalUrl = isFileType ? uploadedFileUrl : contentUrl
 
-    if (!finalUrl.trim()) {
+    // Текстовый урок создаём без контента: текст пишется в редакторе на следующем шаге
+    if (!finalUrl.trim() && contentType !== 'text') {
       setError(isFileType ? 'Загрузите файл' : 'Введите ссылку на контент')
       return
     }
@@ -130,6 +137,13 @@ export default function NewLessonPage() {
         .single()
 
       if (lessonError) throw lessonError
+
+      // Текстовый урок: контент появится после первого сохранения в редакторе —
+      // ведём сразу на страницу редактирования
+      if (contentType === 'text') {
+        router.push(`/dashboard/mentor/lessons/${lesson.id}/edit`)
+        return
+      }
 
       const { error: contentError } = await supabase
         .from('lesson_content')
@@ -270,8 +284,9 @@ export default function NewLessonPage() {
               </div>
             )}
 
-            {/* Для остальных типов (video, storage, other) - показываем поле для ссылки */}
-            {!isFileType && (
+            {/* Для остальных типов (video, storage, other) - показываем поле для ссылки.
+                Для текстового урока поля нет: текст пишется в редакторе на следующем шаге */}
+            {!isFileType && contentType !== 'text' && (
               <div>
                 <label htmlFor="contentUrl" className="block text-sm font-semibold text-gray-700 mb-1">
                   Ссылка на контент *
