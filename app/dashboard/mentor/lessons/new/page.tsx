@@ -117,7 +117,6 @@ export default function NewLessonPage() {
       const { data: lesson, error: lessonError } = await supabase
         .from('lessons')
         .insert({
-          course_id: null,
           module_id: null,
           coach_id: coachId,
           title: title.trim(),

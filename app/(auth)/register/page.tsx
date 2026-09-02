@@ -80,21 +80,21 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50/50 to-blue-50/50 flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold gradient-text mb-2">
             Создание аккаунта
           </h1>
           <p className="text-gray-600">
             Уже есть аккаунт?{' '}
-            <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link href="/login" className="text-purple-600 hover:text-purple-700 font-medium">
               Войти
             </Link>
           </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-8">
           <form onSubmit={handleRegister} className="space-y-6">
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-3">
@@ -126,7 +126,7 @@ export default function RegisterPage() {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Иван Петров"
                 disabled={loading || success}
               />
@@ -142,7 +142,7 @@ export default function RegisterPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="your@email.com"
                 disabled={loading || success}
               />
@@ -159,7 +159,7 @@ export default function RegisterPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-12"
                   placeholder="Минимум 6 символов"
                   disabled={loading || success}
                 />
@@ -189,7 +189,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading || success}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="gradient-btn w-full text-white py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -216,11 +216,11 @@ export default function RegisterPage() {
         <div className="mt-6 text-center text-sm text-gray-600">
           <p>Нажимая кнопку, вы соглашаетесь с</p>
           <div className="mt-1 space-x-2">
-            <Link href="/terms" className="text-blue-600 hover:text-blue-700">
+            <Link href="/terms" className="text-purple-600 hover:text-purple-700">
               условиями использования
             </Link>
             <span>и</span>
-            <Link href="/privacy" className="text-blue-600 hover:text-blue-700">
+            <Link href="/privacy" className="text-purple-600 hover:text-purple-700">
               политикой конфиденциальности
             </Link>
           </div>

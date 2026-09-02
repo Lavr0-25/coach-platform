@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { updateLesson, setLessonPublished } from '@/app/actions/updateLesson'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import FileUploader from '@/components/FileUploader'
@@ -66,6 +67,8 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [isPublished, setIsPublished] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -92,15 +95,20 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
         .from('lessons')
         .select('*')
         .eq('id', lessonId)
-        .single()
+        .maybeSingle()
 
       if (lessonError) throw lessonError
 
-      if (lesson) {
-        setTitle(lesson.title || '')
+      if (!lesson) {
+        setError('Урок не найден — возможно, он был удалён. Откройте «Мои уроки» заново.')
+        return
+      }
+
+      setTitle(lesson.title || '')
         setDescription(lesson.description || '')
         setPrice(lesson.price?.toString() || '0')
         setIsFreePreview(lesson.is_free_preview || false)
+        setIsPublished(lesson.is_published || false)
         setCoverImage(lesson.cover_image || '')
 
         const { data: content } = await supabase
@@ -125,7 +133,6 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
             setUploadedFileName(content[0].content_url ? decodeURIComponent(content[0].content_url.split('/').pop() || '') : '')
           }
         }
-      }
     } catch (error: any) {
       console.error('Error loading lesson:', error)
       setError('Ошибка загрузки урока')
@@ -135,6 +142,20 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   }
 
   const isFileType = contentType === 'pdf' || contentType === 'image'
+
+  const handleTogglePublish = async () => {
+    setPublishing(true)
+    const result = await setLessonPublished(lessonId, !isPublished)
+    if (!result.ok) {
+      setError(result.error)
+    } else {
+      const nowPublished = !isPublished
+      setIsPublished(nowPublished)
+      setSuccess(nowPublished ? '✅ Урок опубликован — теперь его видят студенты' : 'Урок снят с публикации — студенты его больше не видят')
+      setTimeout(() => setSuccess(''), 3000)
+    }
+    setPublishing(false)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -156,64 +177,33 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
 
     setSaving(true)
 
-    try {
-      const { error: lessonError } = await supabase
-        .from('lessons')
-        .update({
-          title: title.trim(),
-          description: description.trim(),
-          price: parseFloat(price) || 0,
-          is_free_preview: isFreePreview,
-          cover_image: coverImage || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', lessonId)
-
-      if (lessonError) throw lessonError
-
-      const { data: existingContent } = await supabase
-        .from('lesson_content')
-        .select('id')
-        .eq('lesson_id', lessonId)
-        .single()
-
-      let contentError
-
-      if (existingContent) {
-        const { error } = await supabase
-          .from('lesson_content')
-          .update({
-            content_type: contentType,
-            content_url: finalUrl.trim(),
-            title: contentTitle.trim() || null,
-          })
-          .eq('id', existingContent.id)
-        contentError = error
-      } else {
-        const { error } = await supabase
-          .from('lesson_content')
-          .insert({
-            lesson_id: lessonId,
-            content_type: contentType,
-            content_url: finalUrl.trim(),
-            title: contentTitle.trim() || null,
-            order_index: 0,
-          })
-        contentError = error
+    const result = await updateLesson(
+      lessonId,
+      {
+        title: title.trim(),
+        description: description.trim(),
+        price: parseFloat(price) || 0,
+        is_free_preview: isFreePreview,
+        cover_image: coverImage || null,
+      },
+      {
+        content_type: contentType,
+        content_url: finalUrl.trim(),
+        title: contentTitle.trim() || null,
       }
+    )
 
-      if (contentError) throw contentError
-
-      setSuccess('Урок успешно обновлён!')
-      setTimeout(() => {
-        router.push('/dashboard/mentor/lessons')
-      }, 2000)
-    } catch (error: any) {
-      console.error('Error updating lesson:', error)
-      setError(error.message || 'Ошибка при сохранении урока')
-    } finally {
+    if (!result.ok) {
+      console.error('Error updating lesson:', result.error)
+      setError(result.error)
       setSaving(false)
+      return
     }
+
+    setSuccess('Урок успешно обновлён!')
+    setTimeout(() => {
+      router.push('/dashboard/mentor/lessons')
+    }, 2000)
   }
 
   if (loading) {
@@ -230,16 +220,57 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   const selectedContentType = CONTENT_TYPES.find(t => t.value === contentType)
 
   return (
-    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl">
-      <div className="flex items-center gap-2 text-sm text-gray-600 mb-6 flex-wrap">
-        <Link href="/dashboard/mentor" className="hover:text-purple-600 transition-colors">Кабинет автора</Link>
-        <span>/</span>
-        <Link href="/dashboard/mentor/lessons" className="hover:text-purple-600 transition-colors">Мои уроки</Link>
-        <span>/</span>
-        <span className="text-gray-900 font-medium">Редактировать урок</span>
+    <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 pt-24 sm:pt-28 max-w-4xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-2 text-sm text-gray-600 flex-wrap">
+          <Link href="/dashboard/mentor" className="hover:text-purple-600 transition-colors">Кабинет автора</Link>
+          <span>/</span>
+          <Link href="/dashboard/mentor/lessons" className="hover:text-purple-600 transition-colors">Мои уроки</Link>
+          <span>/</span>
+          <span className="text-gray-900 font-medium">Редактировать урок</span>
+        </div>
+
+        <Link
+          href={`/lesson/${lessonId}`}
+          className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-all inline-flex items-center gap-2 self-start sm:self-auto"
+          target="_blank"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+          </svg>
+          <span className="hidden sm:inline">Как видят студенты</span>
+        </Link>
       </div>
 
       <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-8">Редактировать урок</h1>
+
+      {/* Статус публикации: всегда виден, меняется отдельной кнопкой (не через «Сохранить») */}
+      <div className={`rounded-xl border p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isPublished ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+        <div className="flex items-start gap-3">
+          <span className="text-xl leading-none mt-0.5">{isPublished ? '🟢' : '🟡'}</span>
+          <div>
+            <p className="font-semibold text-gray-900 text-sm">
+              {isPublished ? 'Урок опубликован' : 'Урок — черновик'}
+            </p>
+            <p className="text-sm text-gray-600">
+              {isPublished
+                ? 'Урок виден студентам (в каталоге и на странице наставника)'
+                : 'Урок виден только вам — студенты его пока не видят'}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleTogglePublish}
+          disabled={publishing}
+          className={isPublished
+            ? 'bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-all disabled:opacity-50 whitespace-nowrap'
+            : 'gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all disabled:opacity-50 whitespace-nowrap'}
+        >
+          {publishing ? 'Меняем статус...' : isPublished ? 'Вернуть в черновик' : 'Опубликовать урок'}
+        </button>
+      </div>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-6">

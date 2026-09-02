@@ -96,15 +96,20 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
 
       setCourses(coursesData || [])
 
-      // Получаем отдельные уроки (не входящие в курсы)
+      // Получаем отдельные уроки (не входящие ни в один курс, только опубликованные)
       const { data: lessonsData } = await supabase
         .from('lessons')
-        .select('id, title, description, price, is_free_preview, created_at, cover_image')
+        .select('id, title, description, price, is_free_preview, is_published, created_at, cover_image')
         .eq('coach_id', coachData.id)
-        .is('course_id', null)
+        .eq('is_published', true)
         .order('created_at', { ascending: false })
 
-      setLessons(lessonsData || [])
+      const { data: linkedIds } = await supabase
+        .from('course_lessons')
+        .select('lesson_id')
+
+      const linked = new Set((linkedIds || []).map((r: any) => r.lesson_id))
+      setLessons((lessonsData || []).filter(l => !linked.has(l.id)))
 
       // 🔥 Подсчёт ВСЕХ уроков автора (включая те, что в курсах)
       const { data: allLessonsData } = await supabase

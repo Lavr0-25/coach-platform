@@ -51,17 +51,33 @@ export default function MentorLessonsPage() {
         price,
         is_free_preview,
         cover_image,
-        created_at,
-        course_id,
-        courses (
-          id,
-          title
-        )
+        created_at
       `)
       .eq('coach_id', coach.id)
       .order('created_at', { ascending: false })
 
-    setLessons(lessonsData || [])
+    // Связи с курсами: урок может быть в нескольких курсах (таблица course_lessons)
+    const lessonIds = (lessonsData || []).map(l => l.id)
+    let coursesByLesson = new Map<string, { id: string; title: string }[]>()
+    if (lessonIds.length > 0) {
+      const { data: linksData } = await supabase
+        .from('course_lessons')
+        .select('lesson_id, courses ( id, title )')
+        .in('lesson_id', lessonIds)
+
+      for (const link of linksData || []) {
+        const course = Array.isArray(link.courses) ? link.courses[0] : link.courses
+        if (!course) continue
+        const list = coursesByLesson.get(link.lesson_id) || []
+        list.push(course as { id: string; title: string })
+        coursesByLesson.set(link.lesson_id, list)
+      }
+    }
+
+    setLessons((lessonsData || []).map(l => ({
+      ...l,
+      courses: coursesByLesson.get(l.id) || [],
+    })))
     setLoading(false)
   }
 
@@ -73,9 +89,9 @@ export default function MentorLessonsPage() {
       )
     : lessons
 
-  // Группируем уроки: в курсах и без курса
-  const lessonsInCourses = filteredLessons?.filter(l => l.course_id) || []
-  const lessonsWithoutCourse = filteredLessons?.filter(l => !l.course_id) || []
+  // Группируем уроки: в курсах (есть связь в course_lessons) и свободные
+  const lessonsInCourses = filteredLessons?.filter(l => l.courses && l.courses.length > 0) || []
+  const lessonsWithoutCourse = filteredLessons?.filter(l => !l.courses || l.courses.length === 0) || []
   const freeLessons = filteredLessons?.filter(l => l.is_free_preview) || []
 
   if (loading) {
@@ -255,7 +271,7 @@ export default function MentorLessonsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
                     <span className="font-medium truncate">
-                      {lesson.courses[0].title}
+                      {lesson.courses[0].title}{lesson.courses.length > 1 ? ` +${lesson.courses.length - 1}` : ''}
                     </span>
                   </div>
                 )}

@@ -112,13 +112,19 @@ export default function MentorProfilePage() {
       // === 1. Загружаем ВСЕ уроки ===
       const { data: allLessons } = await supabase
         .from('lessons')
-        .select('id, title, description, price, is_free_preview, course_id, cover_image, created_at')
+        .select('id, title, description, price, is_free_preview, cover_image, created_at')
         .eq('coach_id', coachId)
         .order('created_at', { ascending: false })
-      
+
+      // Уроки в курсах — через связку course_lessons (урок может быть в нескольких)
+      const { data: linkedRows } = await supabase
+        .from('course_lessons')
+        .select('lesson_id')
+      const linkedIds = new Set((linkedRows || []).map((r: any) => r.lesson_id))
+
       if (allLessons) {
         const totalLessons = allLessons.length
-        const inCoursesLessons = allLessons.filter(l => l.course_id).length
+        const inCoursesLessons = allLessons.filter(l => linkedIds.has(l.id)).length
         const freeLessons = allLessons.filter(l => l.is_free_preview).length
         
         setStats(prev => ({

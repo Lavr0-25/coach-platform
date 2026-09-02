@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { updateCourse, attachLessonToCourse, detachLessonFromCourse, reorderCourseLessons, setCoursePublished } from '@/app/actions/updateCourse'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import CoverImageUploader from '@/components/CoverImageUploader'
@@ -54,6 +55,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
   
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   
@@ -96,23 +98,28 @@ function EditCourseForm({ courseId }: { courseId: string }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Пользователь не найден')
 
-      // Получаем coach_id
+      // Получаем coach_id (maybeSingle: 0 строк → null без ошибки 406)
       const { data: coach } = await supabase
         .from('coaches')
         .select('id')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (!coach) throw new Error('Coach не найден')
 
-      // Загружаем курс
+      // Загружаем курс (maybeSingle — курс мог быть удалён)
       const { data: course, error: courseError } = await supabase
         .from('courses')
         .select('*')
         .eq('id', courseId)
-        .single()
+        .maybeSingle()
 
       if (courseError) throw courseError
+
+      if (!course) {
+        setError('Курс не найден — возможно, он был удалён. Откройте «Мои курсы» заново.')
+        return
+      }
 
       if (course) {
         setTitle(course.title || '')
@@ -122,25 +129,31 @@ function EditCourseForm({ courseId }: { courseId: string }) {
         setCoverImageUrl(course.cover_image_url || course.cover_image || '')
       }
 
-      // Загружаем уроки курса
-      const { data: lessons } = await supabase
-        .from('lessons')
-        .select('*')
+      // Уроки курса — через связку course_lessons: один урок может быть в нескольких курсах
+      const { data: links } = await supabase
+        .from('course_lessons')
+        .select('order_index, lessons(*)')
         .eq('course_id', courseId)
         .order('order_index', { ascending: true })
 
-      setCourseLessons(lessons || [])
+      const inCourseLessons = (links || [])
+        .map((row: any) => row.lessons as Lesson)
+        .filter(l => l && l.id)
 
-      // Загружаем ДОСТУПНЫЕ уроки ТОЛЬКО текущего автора (без курса)
-      const { data: available } = await supabase
+      setCourseLessons(inCourseLessons)
+
+      // Доступные для добавления: свои уроки минус уже добавленные в ЭТОТ курс
+      const { data: own } = await supabase
         .from('lessons')
         .select('*')
         .eq('coach_id', coach.id) // ← Только свои уроки!
-        .is('course_id', null)
         .order('created_at', { ascending: false })
 
-      setAvailableLessons(available || [])
-      setFilteredLessons(available || [])
+      const inCourseIds = new Set(inCourseLessons.map(l => l.id))
+      const availableList = (own || []).filter(l => !inCourseIds.has(l.id))
+
+      setAvailableLessons(availableList)
+      setFilteredLessons(availableList)
     } catch (error: any) {
       console.error('Error loading course:', error)
       setError('Ошибка загрузки курса')
@@ -161,58 +174,55 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
     setSaving(true)
 
-    try {
-      const { error } = await supabase
-        .from('courses')
-        .update({
-          title: title.trim(),
-          description: description.trim() || null,
-          price: parseFloat(price) || 0,
-          is_published: isPublished,
-          cover_image_url: coverImageUrl.trim() || null,
-          cover_image: coverImageUrl.trim() || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', courseId)
+    const result = await updateCourse(courseId, {
+      title: title.trim(),
+      description: description.trim() || null,
+      price: parseFloat(price) || 0,
+      is_published: isPublished,
+      cover_image_url: coverImageUrl.trim() || null,
+    })
 
-      if (error) throw error
-
+    if (!result.ok) {
+      console.error('Error updating course:', result.error)
+      setError(result.error)
+    } else {
       setSuccess('✅ Курс успешно обновлён!')
       setTimeout(() => setSuccess(''), 3000)
-    } catch (error: any) {
-      console.error('Error updating course:', error)
-      setError(error.message || 'Ошибка при сохранении курса')
-    } finally {
-      setSaving(false)
     }
+    setSaving(false)
+  }
+
+  const handleTogglePublish = async () => {
+    setPublishing(true)
+    const result = await setCoursePublished(courseId, !isPublished)
+    if (!result.ok) {
+      setError(result.error)
+    } else {
+      const nowPublished = !isPublished
+      setIsPublished(nowPublished)
+      setSuccess(nowPublished ? '✅ Курс опубликован — теперь его видят студенты' : 'Курс снят с публикации — студенты его больше не видят')
+      setTimeout(() => setSuccess(''), 3000)
+    }
+    setPublishing(false)
   }
 
   const handleAddLesson = async (lessonId: string) => {
-    try {
-      const nextOrder = courseLessons.length + 1
-      
-      const { error } = await supabase
-        .from('lessons')
-        .update({
-          course_id: courseId,
-          order_index: nextOrder,
-        })
-        .eq('id', lessonId)
+    const result = await attachLessonToCourse(courseId, lessonId)
 
-      if (error) throw error
-
-      const lesson = availableLessons.find(l => l.id === lessonId)
-      if (lesson) {
-        setCourseLessons([...courseLessons, { ...lesson, course_id: courseId, order_index: nextOrder }])
-        setAvailableLessons(availableLessons.filter(l => l.id !== lessonId))
-      }
-
-      setShowAddLesson(false)
-      setLessonSearch('')
-    } catch (error: any) {
-      console.error('Error adding lesson:', error)
-      alert('Ошибка при добавлении урока')
+    if (!result.ok) {
+      console.error('Error adding lesson:', result.error)
+      alert(result.error)
+      return
     }
+
+    const lesson = availableLessons.find(l => l.id === lessonId)
+    if (lesson) {
+      // order_index считает сервер — читаем фактическое состояние курса заново
+      await loadData()
+    }
+
+    setShowAddLesson(false)
+    setLessonSearch('')
   }
 
   const handleRemoveLesson = async (lessonId: string) => {
@@ -220,48 +230,16 @@ function EditCourseForm({ courseId }: { courseId: string }) {
       return
     }
 
-    try {
-      const { error } = await supabase
-        .from('lessons')
-        .update({
-          course_id: null,
-          order_index: 0,
-        })
-        .eq('id', lessonId)
+    const result = await detachLessonFromCourse(courseId, lessonId)
 
-      if (error) throw error
-
-      // Получаем текущего автора
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Пользователь не найден')
-
-      const { data: coach } = await supabase
-        .from('coaches')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
-
-      if (!coach) throw new Error('Coach не найден')
-
-      // Обновляем списки
-      const lesson = courseLessons.find(l => l.id === lessonId)
-      if (lesson) {
-        setAvailableLessons([...availableLessons, lesson])
-        setCourseLessons(courseLessons.filter(l => l.id !== lessonId))
-        
-        // Проверяем, соответствует ли урок поиску
-        if (lessonSearch.trim()) {
-          const search = lessonSearch.toLowerCase()
-          if (lesson.title.toLowerCase().includes(search) ||
-              (lesson.description && lesson.description.toLowerCase().includes(search))) {
-            setFilteredLessons(prev => [...prev, lesson])
-          }
-        }
-      }
-    } catch (error: any) {
-      console.error('Error removing lesson:', error)
-      alert('Ошибка при удалении урока из курса')
+    if (!result.ok) {
+      console.error('Error removing lesson:', result.error)
+      alert(result.error)
+      return
     }
+
+    // Список доступных уроков читаем заново — сервер отработал отвязку
+    await loadData()
   }
 
   const handleMoveLesson = async (lessonId: string, direction: 'up' | 'down') => {
@@ -275,25 +253,14 @@ function EditCourseForm({ courseId }: { courseId: string }) {
     const [movedLesson] = newLessons.splice(currentIndex, 1)
     newLessons.splice(newIndex, 0, movedLesson)
 
-    const updatedLessons = newLessons.map((lesson, index) => ({
-      ...lesson,
-      order_index: index + 1,
-    }))
+    // Оптимистично показываем новый порядок, сервер подтверждает
+    setCourseLessons(newLessons.map((lesson, index) => ({ ...lesson, order_index: index + 1 })))
 
-    setCourseLessons(updatedLessons)
+    const result = await reorderCourseLessons(courseId, newLessons.map(l => l.id))
 
-    try {
-      for (const lesson of updatedLessons) {
-        const { error } = await supabase
-          .from('lessons')
-          .update({ order_index: lesson.order_index })
-          .eq('id', lesson.id)
-
-        if (error) throw error
-      }
-    } catch (error: any) {
-      console.error('Error reordering lessons:', error)
-      alert('Ошибка при изменении порядка')
+    if (!result.ok) {
+      console.error('Error reordering lessons:', result.error)
+      alert(result.error)
       loadData()
     }
   }
@@ -344,6 +311,33 @@ function EditCourseForm({ courseId }: { courseId: string }) {
             Назад
           </Link>
         </div>
+      </div>
+
+      {/* Статус публикации: всегда виден, меняется отдельной кнопкой (не через «Сохранить») */}
+      <div className={`rounded-xl border p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isPublished ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+        <div className="flex items-start gap-3">
+          <span className="text-xl leading-none mt-0.5">{isPublished ? '🟢' : '🟡'}</span>
+          <div>
+            <p className="font-semibold text-gray-900 text-sm">
+              {isPublished ? 'Курс опубликован' : 'Курс — черновик'}
+            </p>
+            <p className="text-sm text-gray-600">
+              {isPublished
+                ? 'Курс виден студентам в каталоге'
+                : 'Курс виден только вам — студенты его пока не видят'}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleTogglePublish}
+          disabled={publishing}
+          className={isPublished
+            ? 'bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-all disabled:opacity-50 whitespace-nowrap'
+            : 'gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all disabled:opacity-50 whitespace-nowrap'}
+        >
+          {publishing ? 'Меняем статус...' : isPublished ? 'Вернуть в черновик' : 'Опубликовать курс'}
+        </button>
       </div>
 
       {/* Уведомления */}
@@ -432,21 +426,6 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                     onChange={(e) => setPrice(e.target.value)}
                     className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   />
-                </div>
-
-                <div className="flex items-end pb-1">
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <input
-                      id="isPublished"
-                      type="checkbox"
-                      checked={isPublished}
-                      onChange={(e) => setIsPublished(e.target.checked)}
-                      className="w-5 h-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
-                    />
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-purple-700 transition-colors">
-                      {isPublished ? 'Опубликован' : 'Черновик'}
-                    </span>
-                  </label>
                 </div>
               </div>
 

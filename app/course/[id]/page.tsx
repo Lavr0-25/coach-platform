@@ -75,21 +75,23 @@ export default async function CoursePage({ params }: CoursePageProps) {
   const coach = Array.isArray(course.coaches) ? course.coaches[0] : course.coaches
   const isOwner = user?.id === coach?.user_id
 
-  // Получаем уроки курса
-  const { data: directLessons, error: lessonsError } = await supabase
-    .from('lessons')
+  // Получаем уроки курса — через связку course_lessons (урок может быть в нескольких курсах)
+  const { data: lessonLinks, error: lessonsError } = await supabase
+    .from('course_lessons')
     .select(`
-      id,
-      title,
-      description,
-      price,
-      is_free_preview,
       order_index,
-      lesson_content (
+      lessons (
         id,
-        content_type,
-        content_url,
-        order_index
+        title,
+        description,
+        price,
+        is_free_preview,
+        lesson_content (
+          id,
+          content_type,
+          content_url,
+          order_index
+        )
       )
     `)
     .eq('course_id', id)
@@ -99,7 +101,12 @@ export default async function CoursePage({ params }: CoursePageProps) {
     console.error('Lessons error:', lessonsError)
   }
 
-  const totalLessons = directLessons?.length || 0
+  // Разворачиваем связку в плоский список уроков
+  const directLessons = (lessonLinks || [])
+    .map((row: any) => ({ ...row.lessons, order_index: row.order_index }))
+    .filter((l: any) => l && l.id)
+
+  const totalLessons = directLessons.length
   const isFree = course.price === 0 || course.is_free_preview
 
   // Проверяем покупку
@@ -111,7 +118,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
       .eq('user_id', user.id)
       .eq('course_id', id)
       .eq('payment_status', 'completed')
-      .single()
+      .maybeSingle()
     isPurchased = !!purchase
   }
 
@@ -174,10 +181,10 @@ export default async function CoursePage({ params }: CoursePageProps) {
           </div>
         )}
 
-        {course.cover_image ? (
+        {course.cover_image_url || course.cover_image ? (
           <div className="mb-6">
             <div className="aspect-video rounded-xl overflow-hidden shadow-lg">
-              <img src={course.cover_image} alt={course.title} className="w-full h-full object-cover" />
+              <img src={course.cover_image_url || course.cover_image} alt={course.title} className="w-full h-full object-cover" />
             </div>
           </div>
         ) : (
@@ -252,15 +259,20 @@ export default async function CoursePage({ params }: CoursePageProps) {
                 {isPurchased ? 'Продолжить обучение' : 'Начать обучение'}
               </Link>
             ) : (
-              <Link
-                href={`/checkout?course_id=${id}`}
-                className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                Купить курс
-              </Link>
+              // Платежи ещё не подключены: нейтральная кнопка вместо битой ссылки на /checkout
+              <div>
+                <button
+                  disabled
+                  title="Оплата появится скоро"
+                  className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 opacity-60 cursor-not-allowed inline-flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  Купить курс
+                </button>
+                <p className="text-sm text-gray-500 mt-2">Онлайн-оплата появится скоро</p>
+              </div>
             )}
           </div>
         )}

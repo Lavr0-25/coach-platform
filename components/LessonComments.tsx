@@ -218,12 +218,12 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
     }
   }, [lessonId, courseId, supabase, loadUserNames])
 
-  // Запускаем загрузку только при изменении userId, lessonId или courseId
+  // Комментарии видны всем (в т.ч. анонимам); бан- и отзыв-проверки — только для залогиненных
   useEffect(() => {
-    if (userId !== null) {
-      loadComments()
+    loadComments()
+    loadSettings()
+    if (userId) {
       checkBanStatus()
-      loadSettings()
       checkUserReview()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -52,7 +52,7 @@ export default function Navbar() {
         if (!mounted) return
 
         if (userError) {
-          console.error('Auth error:', userError)
+          // Сессии нет (аноним) — это норма, а не ошибка
           setUser(null)
           setProfile(null)
           setCoachId(null)

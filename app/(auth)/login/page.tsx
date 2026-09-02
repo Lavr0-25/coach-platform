@@ -62,23 +62,23 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50/50 to-blue-50/50 flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full">
         {/* Заголовок */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold gradient-text mb-2">
             Вход в систему
           </h1>
           <p className="text-gray-600">
             Или{' '}
-            <Link href="/register" className="text-blue-600 hover:text-blue-700 font-medium">
+            <Link href="/register" className="text-purple-600 hover:text-purple-700 font-medium">
               зарегистрируйтесь
             </Link>
           </p>
         </div>
 
         {/* Форма входа */}
-        <div className="bg-white rounded-xl shadow-sm border p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-8">
           <form onSubmit={handleLogin} className="space-y-6">
             {/* Сообщение об ошибке */}
             {error && (
@@ -101,7 +101,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="your@email.com"
                 disabled={loading}
               />
@@ -119,7 +119,7 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-12"
                   placeholder="••••••••"
                   disabled={loading}
                 />
@@ -145,7 +145,7 @@ export default function LoginPage() {
 
             {/* Ссылка "Забыли пароль?" */}
             <div className="flex items-center justify-end">
-              <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700">
+              <Link href="/forgot-password" className="text-sm text-purple-600 hover:text-purple-700">
                 Забыли пароль?
               </Link>
             </div>
@@ -154,7 +154,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="gradient-btn w-full text-white py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>

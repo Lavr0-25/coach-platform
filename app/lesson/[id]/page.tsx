@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getVideoEmbedUrl } from '@/lib/video-embed'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -69,6 +70,12 @@ export default async function LessonPage({ params }: LessonPageProps) {
   const coach = Array.isArray(lesson.coaches) ? lesson.coaches[0] : lesson.coaches
   const isOwner = user?.id === coach?.user_id
 
+  // Черновик урока: виден только автору, остальным — 404.
+  // Урок внутри курса не прячем: видимость курса определяется курсом.
+  if (!lesson.is_published && !isOwner && !lesson.course_id) {
+    notFound()
+  }
+
   // Получаем контент урока
   const content = lesson.lesson_content?.[0]
   const isFree = lesson.price === 0 || lesson.is_free_preview
@@ -113,22 +120,28 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
     const icon = getContentTypeIcon(content.content_type)
 
+    // Ютуб/VK/Rutube/Дзен — определяем по самой ссылке и даём embed-плеер,
+    // даже если тип в базе сохранён как 'video'
+    const embedUrl = getVideoEmbedUrl(content.content_url)
+    if (embedUrl) {
+      return (
+        <div className="aspect-video rounded-xl overflow-hidden shadow-lg bg-black">
+          <iframe
+            src={embedUrl}
+            className="w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+          />
+        </div>
+      )
+    }
+
     if (content.content_type === 'youtube' || content.content_type === 'video') {
       return (
         <div className="aspect-video rounded-xl overflow-hidden shadow-lg bg-black">
-          {content.content_type === 'youtube' ? (
-            <iframe
-              src={content.content_url}
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          ) : (
-            <video controls className="w-full h-full">
-              <source src={content.content_url} />
-              Ваш браузер не поддерживает видео
-            </video>
-          )}
+          <video controls className="w-full h-full">
+            <source src={content.content_url} />
+            Ваш браузер не поддерживает видео
+          </video>
         </div>
       )
     }
@@ -259,15 +272,18 @@ export default async function LessonPage({ params }: LessonPageProps) {
         {/* Кнопки действий */}
         {!isOwner && !isFree && !isPurchased && (
           <div className="flex flex-wrap gap-3">
-            <Link
-              href={`/checkout?lesson_id=${id}`}
-              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
+            {/* Платежи ещё не подключены: нейтральная кнопка вместо битой ссылки на /checkout */}
+            <button
+              disabled
+              title="Оплата появится скоро"
+              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 opacity-60 cursor-not-allowed inline-flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
               Купить урок
-            </Link>
+            </button>
+            <p className="text-sm text-gray-500 self-center">Онлайн-оплата появится скоро</p>
           </div>
         )}
       </div>
