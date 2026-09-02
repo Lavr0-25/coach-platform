@@ -53,8 +53,10 @@ export async function GET(request: Request) {
   })
 }
 
-// PATCH — сменить статус обращения: { id: string, status: 'new'|'in_progress'|'resolved'|'rejected' }
+// PATCH — сменить статус обращения: { id, status: 'new'|'in_progress'|'resolved'|'rejected', reply?: string }
 // Только для админских ключей — смена статуса означает «админ взял в работу».
+// reply — необязательный ответ пользователю («Решено, спасибо…», «Недостаточно данных: …»).
+// Пустой reply ('') стирает предыдущий ответ.
 export async function PATCH(request: Request) {
   const auth = await getAgentClient(request)
   if ('error' in auth) return auth.error
@@ -69,6 +71,7 @@ export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null)
   const id = body?.id as string | undefined
   const status = body?.status as string | undefined
+  const reply = body?.reply as string | undefined
 
   if (!id || !status) {
     return Response.json({ error: 'Нужны поля id и status' }, { status: 400 })
@@ -80,9 +83,15 @@ export async function PATCH(request: Request) {
     )
   }
 
+  const payload: Record<string, unknown> = { status, updated_at: new Date().toISOString() }
+  if (reply !== undefined) {
+    payload.admin_reply = reply || null
+    payload.replied_at = reply ? new Date().toISOString() : null
+  }
+
   const { data, error } = await supabase
     .from('feedback')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(payload)
     .eq('id', id)
     .select('id')
 
@@ -91,5 +100,5 @@ export async function PATCH(request: Request) {
     return Response.json({ error: 'Обращение не найдено' }, { status: 404 })
   }
 
-  return Response.json({ ok: true, id, status })
+  return Response.json({ ok: true, id, status, reply: reply ? reply : null })
 }

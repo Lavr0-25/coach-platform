@@ -42,8 +42,16 @@ user_name, images[] — публичные URL Storage, created_at, updated_at),
 
 ### `PATCH /api/agent/feedback` — только admin
 
-Тело `{ "id": uuid, "status": "new|in_progress|resolved|rejected" }` → `{ ok, id, status }`.
-Валидация статуса (400), не-админ (403), несуществующий id (404).
+Тело `{ "id": uuid, "status": "...", "reply": "текст ответа" }` → `{ ok, id, status, reply }`.
+- `status` обязателен; `reply` — необязательный ответ пользователю
+  («Решено 02.09, спасибо…» или «Недостаточно данных: …»). Ответ виден
+  пользователю в «Мои обращения» (`app/feedback`), пишется в поля
+  `admin_reply` / `replied_at` таблицы feedback.
+- Пустой `reply` (`""`) стирает предыдущий ответ.
+- Валидация статуса (400), не-админ (403), несуществующий id (404).
+
+Админка и API меняют статус одинаково (одинаковый payload), чтобы ответ,
+оставленный через админку, и через агента не расходились.
 
 ### `GET /api/agent/reports` — только admin
 
@@ -64,9 +72,35 @@ comment_reports: [...], review_reports: [...] }`
   (анонсировано на странице /api-keys).
 - Доступ только к feedback + reports. Остальные таблицы агенту недоступны.
 
+## RLS-политики feedback (проверено 2026-09-02)
+
+Ранний набор политик был неполным — у пользователя не было UPDATE/DELETE своих
+строк (кнопки «Редактировать»/«Удалить» в «Мои обращения» тихо не работали).
+Актуальный полный набор (7 политик):
+
+| cmd | Политика | Условие |
+|---|---|---|
+| SELECT | Users can view own feedback | `auth.uid() = user_id` |
+| SELECT | Admins can view all feedback | роль admin в coaches |
+| INSERT | Users can create feedback | with_check: `auth.uid() = user_id` |
+| UPDATE | Users can update own new feedback | using: своё + `status='new'`; with_check: своё |
+| UPDATE | Admins can update feedback | роль admin |
+| DELETE | Users can delete own new feedback | своё + `status='new'` |
+| DELETE | Admins can delete feedback | роль admin |
+
+Правило: пользователь редактирует/удаляет СВОЁ обращение, пока оно «Новое»;
+после взятия в работу правит только админ. Это же условие дублируется в коде
+(server actions) — двойная проверка, RLS последняя линия обороны.
+
+⚠️ Урок: при включении RLS сразу проверять ВСЕ 4 команды (SELECT/INSERT/
+UPDATE/DELETE) для каждой роли. Отсутствие политики = тихий отказ без ошибки.
+
 ## История
 
 - 2026-09-02 — создано (feedback GET/PATCH, reports GET/DELETE), ключ в Vercel (Secret, Production).
 - 2026-09-02 — ключи переехали в базу (`agent_keys`, хэши, страница `/api-keys` для всех
   пользователей, развилка по роли admin/остальные, сервисный ключ в env; старый AGENT_KEY
   из env и страница /admin/agent-keys удалены).
+- 2026-09-02 — PATCH: ответ пользователю (`reply` → `admin_reply`/`replied_at`);
+  админка (/admin/feedback) и «Мои обращения» (/feedback) показывают ответ в плашке.
+  Починены RLS-политики feedback (UPDATE/DELETE своими, см. раздел выше).

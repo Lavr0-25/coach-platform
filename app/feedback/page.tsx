@@ -536,6 +536,19 @@ export default function FeedbackPage() {
                     </p>
                   )}
 
+                  {/* Ответ поддержки: виден при любом статусе */}
+                  {fb.admin_reply && (
+                    <div className="mt-3 p-4 rounded-xl bg-purple-50 border border-purple-100">
+                      <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">
+                        Ответ поддержки
+                        {fb.replied_at && (
+                          <span className="font-normal normal-case text-purple-500"> · {new Date(fb.replied_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</span>
+                        )}
+                      </p>
+                      <p className="text-sm text-gray-700 whitespace-pre-line break-words">{fb.admin_reply}</p>
+                    </div>
+                  )}
+
                   {/* Миниатюры скриншотов */}
                   {images.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-3">

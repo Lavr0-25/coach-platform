@@ -16,6 +16,8 @@ interface Feedback {
   created_at: string
   updated_at: string
   images?: string[] | null  // 🔥 Добавляем поле для изображений
+  admin_reply?: string | null   // ответ админа пользователю («Решено, спасибо…», «Недостаточно данных: …»)
+  replied_at?: string | null    // когда ответили
 }
 
 export default function AdminFeedbackPage() {
@@ -30,12 +32,24 @@ export default function AdminFeedbackPage() {
   const [bulkUpdating, setBulkUpdating] = useState(false)
   // Выбранные для массовых действий (id обращений)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  // Ответ пользователю в модалке просмотра (возврат на доработку = статус «Новое» + комментарий)
+  const [modalStatus, setModalStatus] = useState<Feedback['status']>('new')
+  const [modalReply, setModalReply] = useState('')
+  const [savingModal, setSavingModal] = useState(false)
   const supabase = createClient()
   const itemsPerPage = 10
 
   useEffect(() => {
     loadFeedbacks()
   }, [])
+
+  // При открытии модалки подставляем текущие статус и ответ обращения
+  useEffect(() => {
+    if (viewingFeedback) {
+      setModalStatus(viewingFeedback.status)
+      setModalReply(viewingFeedback.admin_reply || '')
+    }
+  }, [viewingFeedback])
 
   const loadFeedbacks = async () => {
     try {
@@ -53,12 +67,18 @@ export default function AdminFeedbackPage() {
     }
   }
 
-  const updateStatus = async (id: string, status: Feedback['status']) => {
+  const updateStatus = async (id: string, status: Feedback['status'], reply?: string) => {
     setUpdatingId(id)
     try {
+      // Ответ сохраняем вместе со статусом; replied_at ставим только когда есть текст
+      const payload: Record<string, unknown> = { status, updated_at: new Date().toISOString() }
+      if (reply !== undefined) {
+        payload.admin_reply = reply || null
+        payload.replied_at = reply ? new Date().toISOString() : null
+      }
       const { error } = await supabase
         .from('feedback')
-        .update({ status, updated_at: new Date().toISOString() })
+        .update(payload)
         .eq('id', id)
 
       if (error) throw error
@@ -645,21 +665,54 @@ export default function AdminFeedbackPage() {
                   </div>
                 )}
 
-                <div className="pt-4 border-t border-purple-100">
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Изменить статус</label>
-                  <select
-                    value={viewingFeedback.status}
-                    onChange={(e) => {
-                      updateStatus(viewingFeedback.id, e.target.value as Feedback['status'])
-                      setViewingFeedback({ ...viewingFeedback, status: e.target.value as Feedback['status'] })
+                <div className="pt-4 border-t border-purple-100 space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      Ответ пользователю
+                    </label>
+                    <textarea
+                      value={modalReply}
+                      onChange={(e) => setModalReply(e.target.value)}
+                      rows={3}
+                      placeholder="Например: «Решено 02.09, спасибо, что помогаете сделать платформу лучше» или «Недостаточно данных: уточните, пожалуйста, …» (тогда верните статус «Новое» — пользователь сможет дополнить обращение)"
+                      className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 bg-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Статус</label>
+                    <select
+                      value={modalStatus}
+                      onChange={(e) => setModalStatus(e.target.value as Feedback['status'])}
+                      className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 bg-white"
+                    >
+                      <option value="new">Новое</option>
+                      <option value="in_progress">В работе</option>
+                      <option value="resolved">Решено</option>
+                      <option value="rejected">Отклонено</option>
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={savingModal || updatingId === viewingFeedback.id}
+                    onClick={async () => {
+                      setSavingModal(true)
+                      await updateStatus(viewingFeedback.id, modalStatus, modalReply.trim())
+                      // Показываем сохранённое в модалке и в списке
+                      setViewingFeedback({
+                        ...viewingFeedback,
+                        status: modalStatus,
+                        admin_reply: modalReply.trim() || null,
+                        replied_at: modalReply.trim() ? new Date().toISOString() : null,
+                      })
+                      setSavingModal(false)
                     }}
-                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 bg-white"
+                    className="gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                   >
-                    <option value="new">Новое</option>
-                    <option value="in_progress">В работе</option>
-                    <option value="resolved">Решено</option>
-                    <option value="rejected">Отклонено</option>
-                  </select>
+                    {savingModal || updatingId === viewingFeedback.id ? 'Сохраняю…' : 'Сохранить статус и ответ'}
+                  </button>
+                  <p className="text-xs text-gray-400">
+                    Ответ увидит пользователь в «Мои обращения». Пустой ответ стирает предыдущий.
+                  </p>
                 </div>
               </div>
             </div>
