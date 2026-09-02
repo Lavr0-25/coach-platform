@@ -352,7 +352,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
             type={interactive ? 'button' : undefined}
             disabled={!interactive}
             onClick={() => interactive && setNewRating(star)}
-            className={`focus:outline-none transition-transform ${interactive ? 'cursor-pointer hover:scale-110' : 'cursor-default'}`}
+            className={`focus:outline-none transition-transform ${interactive ? 'cursor-pointer' : 'cursor-default'}`}
           >
             <svg
               className={`${sizeClasses[size]} ${

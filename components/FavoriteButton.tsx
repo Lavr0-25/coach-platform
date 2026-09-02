@@ -103,7 +103,7 @@ export default function FavoriteButton({ itemId, itemType, initialIsFavorited = 
     <button
       onClick={toggleFavorite}
       disabled={loading}
-      className={`${sizeClasses} rounded-full bg-white/90 backdrop-blur-sm border border-purple-200 shadow-sm flex items-center justify-center transition-all hover:scale-110 active:scale-95 disabled:opacity-50`}
+      className={`${sizeClasses} rounded-full bg-white/90 backdrop-blur-sm border border-purple-200 shadow-sm flex items-center justify-center transition-all active:scale-95 disabled:opacity-50`}
       title={isFavorited ? 'Удалить из избранного' : 'Добавить в избранное'}
     >
       {loading ? (

@@ -22,7 +22,7 @@ export default function NotFound() {
           </Link>
           <Link
             href="/mentors"
-            className="bg-white text-purple-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all"
+            className="bg-white text-purple-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-colors"
           >
             Все авторы
           </Link>

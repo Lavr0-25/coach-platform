@@ -205,7 +205,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
         {isOwner && (
           <Link
             href={`/dashboard/mentor/lessons/${id}/edit`}
-            className="bg-white text-purple-700 border border-purple-200 px-5 py-2.5 rounded-xl font-semibold hover:bg-purple-50 transition-all inline-flex items-center gap-2"
+            className="bg-white text-purple-700 border border-purple-200 px-5 py-2.5 rounded-xl font-semibold hover:bg-purple-50 transition-colors inline-flex items-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -217,17 +217,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
       {/* Заголовок урока */}
       <div className="style-card p-6 sm:p-8 mb-6 relative">
-        {/* Кнопка избранного */}
-        {!isOwner && (
-          <div className="absolute bottom-6 left-6 z-10">
-            <FavoriteButton 
-              itemId={id} 
-              itemType="lesson" 
-              size="md" 
-            />
-          </div>
-        )}
-
         <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-4 leading-tight">
           {lesson.title}
         </h1>
@@ -268,6 +257,15 @@ export default async function LessonPage({ params }: LessonPageProps) {
             </svg>
             {new Date(lesson.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
           </span>
+
+          {/* Кнопка избранного — в общем ряду, без наложения на бейджи */}
+          {!isOwner && (
+            <FavoriteButton
+              itemId={id}
+              itemType="lesson"
+              size="md"
+            />
+          )}
         </div>
 
         {/* Кнопки действий */}

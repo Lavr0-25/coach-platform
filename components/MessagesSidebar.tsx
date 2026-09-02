@@ -327,7 +327,7 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
                     
                     <button
                       onClick={(e) => hideConversation(conv.userId, e)}
-                      className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all flex-shrink-0 z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                      className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
                       title="Скрыть диалог"
                       type="button"
                     >
@@ -372,7 +372,7 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
                     </div>
                     <button
                       onClick={(e) => unhideConversation(conv.userId, e)}
-                      className="absolute top-2 right-2 p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-all flex-shrink-0 z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                      className="absolute top-2 right-2 p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors flex-shrink-0 z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
                       title="Вернуть диалог"
                       type="button"
                     >

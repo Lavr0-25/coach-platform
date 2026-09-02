@@ -264,7 +264,7 @@ export default function FeedbackPage() {
             )}
 
             {/* Кнопка загрузки */}
-            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-purple-300 rounded-xl cursor-pointer hover:border-purple-500 hover:bg-purple-50/30 transition-all">
+            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-purple-300 rounded-xl cursor-pointer hover:border-purple-500 hover:bg-purple-50/30 transition-colors">
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                 {uploading ? (
                   <>

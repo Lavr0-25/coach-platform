@@ -265,7 +265,7 @@ export default function Navbar() {
                     </button>
 
                     {showProfileMenu && (
-                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-purple-100 z-50 overflow-hidden">
+                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-purple-100 z-50 overflow-y-auto messages-scrollbar max-h-[calc(100vh-80px)]">
                         <div className="p-4 border-b border-purple-100 bg-gradient-to-br from-purple-50 to-blue-50">
                           <div className="flex items-center gap-3">
                             {/* Аватарка в выпадающем меню */}

@@ -240,7 +240,7 @@ export default function ThemeSettings({ asMenuItem = false }: { asMenuItem?: boo
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-purple-100 z-50 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-purple-100 z-50 overflow-y-auto messages-scrollbar max-h-[calc(100vh-80px)]">
           {panel}
         </div>
       )}

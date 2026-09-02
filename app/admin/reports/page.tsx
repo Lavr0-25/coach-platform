@@ -113,10 +113,10 @@ export default function ReportsPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-2 mb-6 flex gap-1">
-          <button onClick={() => setTab('comments')} className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-all text-sm ${tab === 'comments' ? 'gradient-btn text-white shadow-md' : 'text-gray-600 hover:bg-purple-50'}`}>
+          <button onClick={() => setTab('comments')} className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors text-sm ${tab === 'comments' ? 'gradient-btn text-white shadow-md' : 'text-gray-600 hover:bg-purple-50'}`}>
             На комментарии ({commentReports.length})
           </button>
-          <button onClick={() => setTab('reviews')} className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-all text-sm ${tab === 'reviews' ? 'gradient-btn text-white shadow-md' : 'text-gray-600 hover:bg-purple-50'}`}>
+          <button onClick={() => setTab('reviews')} className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors text-sm ${tab === 'reviews' ? 'gradient-btn text-white shadow-md' : 'text-gray-600 hover:bg-purple-50'}`}>
             На отзывы ({reviewReports.length})
           </button>
         </div>

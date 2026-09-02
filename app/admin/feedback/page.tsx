@@ -460,13 +460,13 @@ export default function AdminFeedbackPage() {
                       {viewingFeedback.images!.map((imgUrl, index) => (
                         <div key={index} className="relative group">
                           <div 
-                            className="aspect-square rounded-xl overflow-hidden border-2 border-purple-200 cursor-pointer hover:border-purple-400 transition-all hover:shadow-lg"
+                            className="aspect-square rounded-xl overflow-hidden border-2 border-purple-200 cursor-pointer hover:border-purple-400 transition-colors hover:shadow-lg"
                             onClick={() => setSelectedImage(imgUrl)}
                           >
                             <img 
                               src={imgUrl} 
                               alt={`Attachment ${index + 1}`}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
+                              className="w-full h-full object-cover transition-transform duration-200"
                             />
                           </div>
                           <a 

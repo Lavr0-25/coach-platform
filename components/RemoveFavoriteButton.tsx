@@ -44,7 +44,7 @@ export default function RemoveFavoriteButton({ itemId, itemType, onRemove }: Rem
     <button
       onClick={handleRemove}
       disabled={loading}
-      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm border border-red-200 shadow-sm flex items-center justify-center text-red-500 hover:bg-red-50 hover:scale-110 active:scale-95 transition-all disabled:opacity-50 z-10"
+      className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm border border-red-200 shadow-sm flex items-center justify-center text-red-500 hover:bg-red-50 active:scale-95 transition-all disabled:opacity-50 z-10"
       title="Удалить из избранного"
     >
       {loading ? (

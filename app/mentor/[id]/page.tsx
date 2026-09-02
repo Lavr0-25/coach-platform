@@ -345,7 +345,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
                         <img 
                           src={course.cover_image} 
                           alt={course.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-full object-cover transition-transform duration-500"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-white text-6xl opacity-50"></div>
@@ -411,7 +411,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
                         <img 
                           src={lesson.cover_image} 
                           alt={lesson.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover transition-transform duration-300"
                         />
                       ) : (
                         <span className="opacity-50"></span>

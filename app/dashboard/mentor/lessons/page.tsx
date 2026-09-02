@@ -246,7 +246,7 @@ export default function MentorLessonsPage() {
                     <img 
                       src={lesson.cover_image} 
                       alt={lesson.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover transition-transform duration-300"
                     />
                   ) : (
                     <span className="opacity-50">🎥</span>
@@ -328,7 +328,7 @@ export default function MentorLessonsPage() {
                     <img 
                       src={lesson.cover_image} 
                       alt={lesson.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover transition-transform duration-300"
                     />
                   ) : (
                     <span className="opacity-50">📄</span>

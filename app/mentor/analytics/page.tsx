@@ -215,7 +215,7 @@ export default function AnalyticsPage() {
           className="style-card p-6 hover:shadow-lg transition-all group block"
         >
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl transition-transform">
               👥
             </div>
             <div>

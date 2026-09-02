@@ -266,7 +266,7 @@ export default function FavoritesPage() {
                   <Link href={`/course/${course.id}`} className="block">
                     <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
                       {course.cover_image ? (
-                        <img src={course.cover_image} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        <img src={course.cover_image} alt={course.title} className="w-full h-full object-cover transition-transform duration-300" />
                       ) : (
                         <span className="opacity-50">📚</span>
                       )}
@@ -331,7 +331,7 @@ export default function FavoritesPage() {
                 <Link href={`/lesson/${lesson.id}`} className="block">
                   <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
                     {lesson.cover_image ? (
-                      <img src={lesson.cover_image} alt={lesson.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <img src={lesson.cover_image} alt={lesson.title} className="w-full h-full object-cover transition-transform duration-300" />
                     ) : (
                       <span className="opacity-50">📝</span>
                     )}

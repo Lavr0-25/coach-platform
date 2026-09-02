@@ -365,7 +365,7 @@ export default function NewLessonPage() {
           
           <Link
             href="/dashboard/mentor/lessons"
-            className="bg-white text-gray-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all text-center flex-1 sm:flex-none"
+            className="bg-white text-gray-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-colors text-center flex-1 sm:flex-none"
           >
             Отмена
           </Link>

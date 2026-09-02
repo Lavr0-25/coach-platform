@@ -295,7 +295,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
         <div className="flex gap-2">
           <Link
             href={`/course/${courseId}?view=preview`}
-            className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-all inline-flex items-center gap-2"
+            className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-colors inline-flex items-center gap-2"
             target="_blank"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -306,7 +306,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
           </Link>
           <Link
             href="/dashboard/mentor/courses"
-            className="bg-white text-gray-700 border border-purple-200 px-5 py-2.5 rounded-xl font-semibold hover:bg-purple-50 transition-all"
+            className="bg-white text-gray-700 border border-purple-200 px-5 py-2.5 rounded-xl font-semibold hover:bg-purple-50 transition-colors"
           >
             Назад
           </Link>
@@ -333,7 +333,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
           onClick={handleTogglePublish}
           disabled={publishing}
           className={isPublished
-            ? 'bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-all disabled:opacity-50 whitespace-nowrap'
+            ? 'bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap'
             : 'gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all disabled:opacity-50 whitespace-nowrap'}
         >
           {publishing ? 'Меняем статус...' : isPublished ? 'Вернуть в черновик' : 'Опубликовать курс'}
@@ -455,7 +455,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                   setShowAddLesson(true)
                   setLessonSearch('')
                 }}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-all inline-flex items-center justify-center gap-2"
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-colors inline-flex items-center justify-center gap-2"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

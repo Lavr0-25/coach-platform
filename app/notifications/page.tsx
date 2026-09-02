@@ -418,7 +418,7 @@ export default function NotificationsPage() {
 
                           <button
                             onClick={() => deleteNotification(notification)}
-                            className="p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 flex-shrink-0"
+                            className="p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
                             title="Удалить"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

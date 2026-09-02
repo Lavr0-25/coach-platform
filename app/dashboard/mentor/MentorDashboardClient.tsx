@@ -116,7 +116,7 @@ export default function MentorDashboardClient({
                       </Link>
                       <Link
                         href={`/dashboard/mentor/lessons/${lesson.id}/edit`}
-                        className="bg-white text-purple-700 border border-purple-200 px-4 py-2 rounded-lg font-medium text-sm hover:bg-purple-50 transition-all"
+                        className="bg-white text-purple-700 border border-purple-200 px-4 py-2 rounded-lg font-medium text-sm hover:bg-purple-50 transition-colors"
                       >
                         Редактировать
                       </Link>
@@ -153,7 +153,7 @@ export default function MentorDashboardClient({
               className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-5 hover:shadow-md transition-all group"
             >
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl transition-transform">
                   📝
                 </div>
                 <div>
@@ -167,7 +167,7 @@ export default function MentorDashboardClient({
               className="bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-200 rounded-xl p-5 hover:shadow-md transition-all group"
             >
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl transition-transform">
                   🗂️
                 </div>
                 <div>
@@ -318,7 +318,7 @@ export default function MentorDashboardClient({
                       </div>
                       <Link
                         href={`/lesson/${lesson.id}`}
-                        className="bg-white text-gray-700 border border-purple-200 px-5 py-2 rounded-lg font-medium text-sm hover:bg-purple-50 transition-all"
+                        className="bg-white text-gray-700 border border-purple-200 px-5 py-2 rounded-lg font-medium text-sm hover:bg-purple-50 transition-colors"
                       >
                         Повторить
                       </Link>

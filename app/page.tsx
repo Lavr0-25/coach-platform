@@ -560,7 +560,7 @@ export default function Home() {
                                   </Link>
                                   <button
                                     onClick={() => handleUnsubscribe(sub.coach_id)}
-                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
+                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
                                     title="Отписаться"
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -760,7 +760,7 @@ export default function Home() {
                             <img
                               src={item.cover_image}
                               alt={item.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              className="w-full h-full object-cover transition-transform duration-500"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">

@@ -187,7 +187,7 @@ export default function MentorCoursesPage() {
                   <img 
                     src={course.cover_image_url || course.cover_image} 
                     alt={course.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-full object-cover transition-transform duration-300"
                   />
                 ) : (
                   <span className="opacity-50">📚</span>

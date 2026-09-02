@@ -232,7 +232,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
 
         <Link
           href={`/lesson/${lessonId}`}
-          className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-all inline-flex items-center gap-2 self-start sm:self-auto"
+          className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-colors inline-flex items-center gap-2 self-start sm:self-auto"
           target="_blank"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,7 +265,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           onClick={handleTogglePublish}
           disabled={publishing}
           className={isPublished
-            ? 'bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-all disabled:opacity-50 whitespace-nowrap'
+            ? 'bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap'
             : 'gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all disabled:opacity-50 whitespace-nowrap'}
         >
           {publishing ? 'Меняем статус...' : isPublished ? 'Вернуть в черновик' : 'Опубликовать урок'}
@@ -459,7 +459,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           </button>
           <Link
             href="/dashboard/mentor/lessons"
-            className="bg-white text-gray-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-all text-center"
+            className="bg-white text-gray-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-colors text-center"
           >
             Отмена
           </Link>

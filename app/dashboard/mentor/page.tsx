@@ -92,7 +92,7 @@ export default async function MentorDashboardPage() {
             <Link
               key={link.href}
               href={link.href}
-              className="bg-white text-purple-700 border border-purple-200 px-4 py-2 rounded-lg font-medium text-sm hover:bg-purple-50 transition-all"
+              className="bg-white text-purple-700 border border-purple-200 px-4 py-2 rounded-lg font-medium text-sm hover:bg-purple-50 transition-colors"
             >
               {link.label}
             </Link>

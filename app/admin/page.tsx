@@ -45,7 +45,7 @@ export default async function AdminPage() {
         
         {/* Заголовок */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold gradient-text mb-2">
             ️ Админ-панель
           </h1>
           <p className="text-gray-600">
@@ -87,36 +87,28 @@ export default async function AdminPage() {
 
         {/* Дополнительная статистика — 4 карточки */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
-          <MiniStatCard 
-            title="Всего уроков" 
-            value={lessonsCount || 0} 
-            icon={<BookIcon />} 
-            gradient="from-indigo-50 to-blue-50" 
-            borderColor="border-indigo-200"
+          <MiniStatCard
+            title="Всего уроков"
+            value={lessonsCount || 0}
+            icon={<BookIcon />}
             textColor="text-indigo-700"
           />
-          <MiniStatCard 
-            title="Жалоб на комментарии" 
-            value={commentReportsCount || 0} 
-            icon={<CommentIcon />} 
-            gradient="from-orange-50 to-red-50" 
-            borderColor="border-orange-200"
+          <MiniStatCard
+            title="Жалоб на комментарии"
+            value={commentReportsCount || 0}
+            icon={<CommentIcon />}
             textColor="text-orange-700"
           />
-          <MiniStatCard 
-            title="Жалоб на отзывы" 
-            value={reviewReportsCount || 0} 
-            icon={<StarIcon />} 
-            gradient="from-pink-50 to-purple-50" 
-            borderColor="border-pink-200"
+          <MiniStatCard
+            title="Жалоб на отзывы"
+            value={reviewReportsCount || 0}
+            icon={<StarIcon />}
             textColor="text-pink-700"
           />
-          <MiniStatCard 
-            title="Новых обращений" 
-            value={newFeedbackCount || 0} 
-            icon={<FeedbackIcon />} 
-            gradient="from-blue-50 to-cyan-50" 
-            borderColor="border-blue-200"
+          <MiniStatCard
+            title="Новых обращений"
+            value={newFeedbackCount || 0}
+            icon={<FeedbackIcon />}
             textColor="text-blue-700"
           />
         </div>
@@ -184,26 +176,27 @@ export default async function AdminPage() {
 
 // ========== КОМПОНЕНТЫ ==========
 
-// Большая карточка статистики
+// Большая карточка статистики: белая карточка в стиле публичной части,
+// семантический цвет — только в цифре и иконке (red=баны, orange=жалобы...)
 function StatCard({ title, value, icon, color, href }: any) {
   const colors: any = {
-    red: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-600', iconBg: 'bg-red-100' },
-    orange: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-600', iconBg: 'bg-orange-100' },
-    green: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600', iconBg: 'bg-green-100' },
-    purple: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-600', iconBg: 'bg-purple-100' },
+    red: { text: 'text-red-600', iconBg: 'bg-red-100' },
+    orange: { text: 'text-orange-600', iconBg: 'bg-orange-100' },
+    green: { text: 'text-green-600', iconBg: 'bg-green-100' },
+    purple: { text: 'text-purple-600', iconBg: 'bg-purple-100' },
   }
-  
+
   const c = colors[color]
-  
+
   return (
     <Link href={href} className="block group">
-      <div className={`${c.bg} border ${c.border} rounded-2xl p-5 hover:shadow-lg hover:scale-[1.02] transition-all duration-200`}>
+      <div className="bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-lg transition-shadow duration-200">
         <div className="flex items-center justify-between">
           <div>
             <div className={`text-3xl font-bold ${c.text} mb-1`}>{value}</div>
             <div className="text-sm text-gray-700 font-medium">{title}</div>
           </div>
-          <div className={`${c.iconBg} w-14 h-14 rounded-xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform`}>
+          <div className={`${c.iconBg} w-14 h-14 rounded-xl flex items-center justify-center text-2xl`}>
             {icon}
           </div>
         </div>
@@ -212,15 +205,15 @@ function StatCard({ title, value, icon, color, href }: any) {
   )
 }
 
-// Маленькая карточка статистики
-function MiniStatCard({ title, value, icon, gradient, borderColor, textColor }: any) {
+// Маленькая карточка статистики — в том же белом стиле
+function MiniStatCard({ title, value, icon, textColor }: any) {
   return (
-    <div className={`bg-gradient-to-br ${gradient} border ${borderColor} rounded-2xl p-4`}>
+    <div className="bg-white border border-gray-100 rounded-2xl p-4">
       <div className="flex items-center gap-3">
         <div className="text-2xl">{icon}</div>
         <div>
           <div className={`text-2xl font-bold ${textColor}`}>{value}</div>
-          <div className={`text-xs ${textColor.replace('700', '600')} opacity-80`}>{title}</div>
+          <div className="text-xs text-gray-500">{title}</div>
         </div>
       </div>
     </div>
@@ -232,7 +225,7 @@ function AdminLink({ href, title, desc, icon, badge, badgeColor, badgeText }: an
   return (
     <Link href={href} className="group block p-5 bg-white rounded-2xl shadow-sm border border-purple-100 hover:shadow-xl hover:border-purple-300 hover:-translate-y-0.5 transition-all duration-200">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-blue-100 rounded-xl flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
+        <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white">
           {icon}
         </div>
         <h3 className="text-lg font-bold text-gray-900">{title}</h3>
