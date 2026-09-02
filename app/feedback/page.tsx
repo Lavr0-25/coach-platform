@@ -316,7 +316,12 @@ export default function FeedbackPage() {
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value)
+                // После успешной отправки первое же изменение текста возвращает
+                // форму в рабочее состояние — можно отправить новое обращение
+                if (success) setSuccess(false)
+              }}
               required
               maxLength={200}
               placeholder={type === 'bug' ? 'Краткое описание ошибки' : 'Название вашей идеи'}
@@ -331,7 +336,10 @@ export default function FeedbackPage() {
             </label>
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value)
+                if (success) setSuccess(false)
+              }}
               required
               rows={6}
               placeholder={
