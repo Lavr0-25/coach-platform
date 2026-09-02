@@ -30,6 +30,20 @@ var p=localStorage.getItem('cp-palette'); if(p) d.setAttribute('data-palette', p
 var f=localStorage.getItem('cp-fs'); if(f) d.setAttribute('data-fs', f);
 }catch(e){}})()`;
 
+// Приём из доков Next.js (гайд preventing-flash-before-hydration): на сервере скрипт
+// рендерится как text/javascript и исполняется при загрузке страницы; при гидратации
+// в браузере рендерится как text/plain и игнорируется (React не умеет исполнять
+// <script> при клиентском рендере). Расхождение типа подавляет suppressHydrationWarning.
+function InlineScript({ html }: { html: string }) {
+  return (
+    <script
+      type={typeof window === 'undefined' ? 'text/javascript' : 'text/plain'}
+      suppressHydrationWarning
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  )
+}
+
 export const metadata: Metadata = {
   title: "RightWay — Правильный путь",
   description: "Платформа для создания и прохождения уроков от лучших наставников",
@@ -46,8 +60,11 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${manrope.variable} ${geistMono.variable} antialiased`}
     >
+      <head>
+        {/* Исполняется при разборе HTML, до первой отрисовки — до гидратации */}
+        <InlineScript html={themeInit} />
+      </head>
       <body className="min-h-screen flex flex-col">
-        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         <Navbar />
         <BanCheck />
         <main className="flex-1 bg-gray-50 text-gray-900">{children}</main>

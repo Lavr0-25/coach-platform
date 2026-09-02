@@ -4,37 +4,54 @@
 
 ## Назначение
 
-Узкое API для агента (Claude Code): сам читает обращения и жалобы, строит сводки,
+Узкое API для ИИ-агента (Claude Code): читает обращения и жалобы, строит сводки,
 проставляет статусы — без ручной выгрузки JSON. Паттерн зафиксирован скиллом
 `agent-admin-api` (глобальный, переносится в другие проекты Анатолия).
 
-## Аутентификация
+## Ключи: в базе, привязаны к пользователю
 
-- Заголовок `x-agent-key` = переменная окружения `AGENT_KEY` (`.env.local` локально,
-  Environment Variables в Vercel на проде; тип Secret, только Production).
-- Проверка: `lib/agentAuth.ts` → 401 (нет/неверный ключ), 503 (ключ не настроен).
-- Ротация: сгенерировать новый `AGENT_KEY`, обновить `.env.local` + Vercel, Redeploy.
+- Управление ключами — страница `/api-keys` (доступна любому залогиненному):
+  создать ключ (виден один раз), список СВОИХ ключей, отзыв. Ссылка в меню профиля.
+- Таблица `agent_keys`: `key_hash` (sha256, сами ключи не хранятся), `user_id`,
+  `name`, `created_at`, `last_used_at`, `revoked_at`. RLS включена, политик нет —
+  таблицу читает/пишет только сервер через сервисный ключ.
+- Создание/список/отзыв — server actions (`app/actions/agentKeyActions.ts`):
+  проверка входа вручную, операции через сервисный клиент, фильтр по владельцу.
+- Отзыв ключа закрывает доступ мгновенно, без передеплоя.
+
+## Аутентификация и права (lib/agentAuth.ts)
+
+1. Ключ из заголовка `x-agent-key` хэшируется и ищется в `agent_keys`
+   (не отозванный) — через сервисный клиент.
+2. Сервер входит в Supabase под владельцем ключа (magic link без письма) —
+   все запросы агента идут с его правами через RLS.
+3. Роль владельца (`coaches.role`) определяет объём:
+   - **admin** — все обращения, смена статусов, жалобы (чтение + закрытие);
+   - **остальные** — только ЧТЕНИЕ СВОИХ обращений (сводка помечена
+     `scope: "owner"`); PATCH и жалобы → 403.
+4. Требуется `SUPABASE_SERVICE_ROLE_KEY` на сервере (`.env.local` локально,
+   Secret/Production в Vercel): без него API отвечает 503.
 
 ## Endpoints
 
 ### `GET /api/agent/feedback?status=new|in_progress|resolved|rejected&limit=N`
 
-→ `{ total, counts: {new, in_progress, resolved, rejected}, items: [...] }`
+→ `{ scope, total, counts: {new, in_progress, resolved, rejected}, items: [...] }`
 items — записи feedback (id, type bug|feature, title, description, status, user_id,
 user_name, images[] — публичные URL Storage, created_at, updated_at), новые сверху. limit ≤ 500.
 
-### `PATCH /api/agent/feedback`
+### `PATCH /api/agent/feedback` — только admin
 
 Тело `{ "id": uuid, "status": "new|in_progress|resolved|rejected" }` → `{ ok, id, status }`.
-Валидация статуса (400), несуществующий id (404).
+Валидация статуса (400), не-админ (403), несуществующий id (404).
 
-### `GET /api/agent/reports`
+### `GET /api/agent/reports` — только admin
 
-→ `{ summary: { comment_reports, review_reports, total, by_reported_user: [{user_id, name, count}] },
+→ `{ summary: { comment_reports, review_reports, total, by_reported_user: [...] },
 comment_reports: [...], review_reports: [...] }`
 Имена участников раскрываются из coaches по reporter_id / reported_user_id (как в /admin/reports).
 
-### `DELETE /api/agent/reports?table=comment|review&id=uuid`
+### `DELETE /api/agent/reports?table=comment|review&id=uuid` — только admin
 
 Закрыть (удалить) жалобу — то же, что кнопка «Удалить» в /admin/reports → `{ ok, id }`.
 
@@ -42,8 +59,14 @@ comment_reports: [...], review_reports: [...] }`
 
 - **Блокировки пользователей** — нет. Ступень 2: сначала методика модерации
   (`moderation.md`, «рекомендую бан»), решение за человеком; автоматика — позже, отдельно.
-- Доступ только к feedback + reports. Остальные таблицы (users, purchases, …) агенту недоступны.
+- Не-админам — только чтение своих данных; запись (статусы, удаление жалоб) —
+  только админским ключам. Новые возможности для обычных ключей — позже
+  (анонсировано на странице /api-keys).
+- Доступ только к feedback + reports. Остальные таблицы агенту недоступны.
 
 ## История
 
 - 2026-09-02 — создано (feedback GET/PATCH, reports GET/DELETE), ключ в Vercel (Secret, Production).
+- 2026-09-02 — ключи переехали в базу (`agent_keys`, хэши, страница `/api-keys` для всех
+  пользователей, развилка по роли admin/остальные, сервисный ключ в env; старый AGENT_KEY
+  из env и страница /admin/agent-keys удалены).

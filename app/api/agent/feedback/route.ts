@@ -1,10 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
-import { checkAgentKey } from '@/lib/agentAuth'
+import { getAgentClient } from '@/lib/agentAuth'
 
 // Агентское API: обратная связь (feedback).
 // GET   /api/agent/feedback?status=new  — список обращений + счётчики по статусам
 // PATCH /api/agent/feedback             — { id, status } сменить статус
-// Доступ: заголовок x-agent-key = AGENT_KEY из .env.local (см. lib/agentAuth.ts).
+// Доступ: заголовок x-agent-key = ключ со страницы /api-keys (см. lib/agentAuth.ts).
+// Роль владельца ключа: админ видит все обращения и может менять статусы;
+// остальные видят ТОЛЬКО СВОИ обращения, смена статусов им недоступна.
 // Предназначено для работы Claude Code с админкой без ручной выгрузки JSON
 // (паттерн «agent-admin-api»; в интерфейсе админки дублируется кнопкой выгрузки).
 
@@ -13,10 +14,11 @@ const VALID_STATUSES = ['new', 'in_progress', 'resolved', 'rejected']
 // GET — список обращений. Фильтр ?status=new|in_progress|resolved|rejected.
 // Каждая запись: текст, автор, статусы, массив ссылок на скриншоты (публичные URL Storage).
 export async function GET(request: Request) {
-  const denied = checkAgentKey(request)
-  if (denied) return denied
+  const auth = await getAgentClient(request)
+  if ('error' in auth) return auth.error
+  const supabase = auth.client
+  const isAdmin = auth.role === 'admin'
 
-  const supabase = await createClient()
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
   const limit = Math.min(parseInt(searchParams.get('limit') || '100') || 100, 500)
@@ -27,18 +29,24 @@ export async function GET(request: Request) {
     .order('created_at', { ascending: false })
     .limit(limit)
   if (status) query = query.eq('status', status)
+  // Не-админ: только свои обращения
+  if (!isAdmin) query = query.eq('user_id', auth.userId)
 
   const { data, error } = await query
   if (error) return Response.json({ error: error.message }, { status: 500 })
 
   // Счётчики по статусам — чтобы агент сразу видел объём работы
+  // (не-админ считает только по своим)
   const [n, p, r, x] = await Promise.all(
-    ['new', 'in_progress', 'resolved', 'rejected'].map((s) =>
-      supabase.from('feedback').select('*', { count: 'exact', head: true }).eq('status', s)
-    )
+    ['new', 'in_progress', 'resolved', 'rejected'].map((s) => {
+      let q = supabase.from('feedback').select('*', { count: 'exact', head: true }).eq('status', s)
+      if (!isAdmin) q = q.eq('user_id', auth.userId)
+      return q
+    })
   )
 
   return Response.json({
+    scope: isAdmin ? 'admin: все обращения' : 'owner: только свои обращения',
     total: data?.length ?? 0,
     counts: { new: n.count ?? 0, in_progress: p.count ?? 0, resolved: r.count ?? 0, rejected: x.count ?? 0 },
     items: data ?? [],
@@ -46,10 +54,17 @@ export async function GET(request: Request) {
 }
 
 // PATCH — сменить статус обращения: { id: string, status: 'new'|'in_progress'|'resolved'|'rejected' }
-// Это то же действие, что делает админ селектом в /admin/feedback.
+// Только для админских ключей — смена статуса означает «админ взял в работу».
 export async function PATCH(request: Request) {
-  const denied = checkAgentKey(request)
-  if (denied) return denied
+  const auth = await getAgentClient(request)
+  if ('error' in auth) return auth.error
+  if (auth.role !== 'admin') {
+    return Response.json(
+      { error: 'Смена статусов доступна только ключу администратора' },
+      { status: 403 }
+    )
+  }
+  const supabase = auth.client
 
   const body = await request.json().catch(() => null)
   const id = body?.id as string | undefined
@@ -65,7 +80,6 @@ export async function PATCH(request: Request) {
     )
   }
 
-  const supabase = await createClient()
   const { data, error } = await supabase
     .from('feedback')
     .update({ status, updated_at: new Date().toISOString() })

@@ -27,8 +27,9 @@ export default function Breadcrumbs() {
       'users': 'Пользователи',
       'coaches': 'Наставники',
       'lessons': 'Уроки',
+      'api-keys': 'API-ключи агента',
     }
-    
+
     for (const path of paths) {
       accumulatedPath += `/${path}`
       breadcrumbs.push({

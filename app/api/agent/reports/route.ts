@@ -1,17 +1,30 @@
-import { createClient } from '@/lib/supabase/server'
-import { checkAgentKey } from '@/lib/agentAuth'
+import { getAgentClient } from '@/lib/agentAuth'
 
 // Агентское API: жалобы (reports — на комментарии, review_reports — на отзывы).
 // GET    /api/agent/reports          — обе таблицы + имена участников + сводка «кто на кого»
 // DELETE /api/agent/reports?table=comment|review&id=...  — закрыть жалобу (то же, что кнопка в /admin/reports)
 // У жалоб нет статусов: жизненный цикл — «посмотрели → закрыли или забанили».
 // Блокировка пользователя через это API НЕ делается (ступень 2, см. методику модерации).
+// Жалобы — зона модерации: доступны только ключу администратора.
+
+async function requireAdminAuth(request: Request) {
+  const auth = await getAgentClient(request)
+  if ('error' in auth) return auth
+  if (auth.role !== 'admin') {
+    return {
+      error: Response.json(
+        { error: 'Жалобы доступны только ключу администратора' },
+        { status: 403 }
+      ),
+    }
+  }
+  return auth
+}
 
 export async function GET(request: Request) {
-  const denied = checkAgentKey(request)
-  if (denied) return denied
-
-  const supabase = await createClient()
+  const auth = await requireAdminAuth(request)
+  if ('error' in auth) return auth.error
+  const supabase = auth.client
 
   const [{ data: commentData }, { data: reviewData }] = await Promise.all([
     supabase.from('reports').select('*').order('created_at', { ascending: false }),
@@ -71,8 +84,9 @@ export async function GET(request: Request) {
 // Это то же действие, что кнопка «Удалить» в /admin/reports.
 // ВАЖНО: закрытие жалобы ≠ бан. Блокировки агенту недоступны (ступень 2 методики).
 export async function DELETE(request: Request) {
-  const denied = checkAgentKey(request)
-  if (denied) return denied
+  const auth = await requireAdminAuth(request)
+  if ('error' in auth) return auth.error
+  const supabase = auth.client
 
   const { searchParams } = new URL(request.url)
   const table = searchParams.get('table')
@@ -85,7 +99,6 @@ export async function DELETE(request: Request) {
     )
   }
 
-  const supabase = await createClient()
   const { data, error } = await supabase
     .from(table === 'comment' ? 'reports' : 'review_reports')
     .delete()

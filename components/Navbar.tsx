@@ -366,6 +366,17 @@ export default function Navbar() {
                             Обратная связь
                           </Link>
 
+                          <Link
+                            href="/api-keys"
+                            className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
+                            onClick={() => setShowProfileMenu(false)}
+                          >
+                            <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m3 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1120 9z" />
+                            </svg>
+                            API-ключи агента
+                          </Link>
+
                           <hr className="my-2 border-purple-100" />
 
                           <ThemeSettings asMenuItem />
