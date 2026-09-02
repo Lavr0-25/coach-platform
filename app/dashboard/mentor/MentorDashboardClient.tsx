@@ -22,9 +22,10 @@ export default function MentorDashboardClient({
 }: MentorDashboardClientProps) {
   const [activeTab, setActiveTab] = useState('teaching')
 
+  // Все зарегистрированные — авторы с первого дня (coaches-строку создаёт триггер при регистрации)
   const tabs = [
-    { id: 'teaching', label: 'Мои уроки', icon: '', count: myLessons.length },
-    { id: 'learning', label: 'Моё обучение', icon: '', count: favorites.length + inProgress.length + completed.length },
+    { id: 'teaching', label: 'Мои уроки', icon: '📚', count: myLessons.length },
+    { id: 'learning', label: 'Моё обучение', icon: '🎓', count: favorites.length + inProgress.length + completed.length },
   ]
 
   return (
@@ -153,7 +154,7 @@ export default function MentorDashboardClient({
             >
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl group-hover:scale-110 transition-transform">
-                  
+                  📝
                 </div>
                 <div>
                   <div className="font-bold text-gray-900">Создать урок</div>
@@ -167,7 +168,7 @@ export default function MentorDashboardClient({
             >
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl group-hover:scale-110 transition-transform">
-                  
+                  🗂️
                 </div>
                 <div>
                   <div className="font-bold text-gray-900">Управление уроками</div>
@@ -183,7 +184,7 @@ export default function MentorDashboardClient({
       {activeTab === 'learning' && (
         <div className="space-y-6">
           <h2 className="text-2xl font-bold gradient-text flex items-center gap-2">
-            <span className="gradient-icon w-10 h-10 rounded-lg flex items-center justify-center text-white text-lg"></span>
+            <span className="gradient-icon w-10 h-10 rounded-lg flex items-center justify-center text-white text-lg">🎓</span>
             Моё обучение
           </h2>
 
@@ -332,7 +333,7 @@ export default function MentorDashboardClient({
           {purchases.length > 0 && (
             <div className="space-y-4">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <span className="text-purple-500"></span> Мои покупки
+                <span className="text-purple-500">💳</span> Мои покупки
               </h3>
               
               {purchases.slice(0, 3).map((purchase: any) => {
@@ -370,7 +371,7 @@ export default function MentorDashboardClient({
           {/* Если всё пусто */}
           {favorites.length === 0 && inProgress.length === 0 && completed.length === 0 && purchases.length === 0 && (
             <EmptyState
-              icon=""
+              icon="🎓"
               title="Вы ещё не начали обучение"
               description="Найдите интересные уроки на главной странице и начните свой путь к новым знаниям!"
               actionLink="/"
