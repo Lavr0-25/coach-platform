@@ -134,7 +134,7 @@ export default function BanCheck() {
         <div className="space-y-3">
           <button
             onClick={handleLogout}
-            className="w-full gradient-btn text-white py-3 rounded-xl font-semibold shadow-lg shadow-red-500/30 hover:shadow-xl transition-all"
+            className="w-full gradient-btn text-white py-3 rounded-xl font-semibold shadow-lg shadow-red-500/30 hover:shadow-xl transition-colors"
           >
             Выйти из аккаунта
           </button>

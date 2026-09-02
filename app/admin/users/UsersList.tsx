@@ -252,7 +252,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                   onChange={(e) => setBanReason(e.target.value)}
                   required
                   rows={3}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Опишите причину блокировки..."
                 />
               </div>
@@ -264,7 +264,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                   value={banDuration}
                   onChange={(e) => setBanDuration(e.target.value)}
                   min="1"
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Оставьте пустым для бессрочной блокировки"
                 />
                 <p className="text-xs text-gray-500 mt-1.5">Оставьте пустым для бессрочной блокировки</p>
@@ -281,7 +281,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                 <button
                   type="submit"
                   disabled={!banReason.trim() || loading === selectedUser?.id}
-                  className="flex-1 gradient-btn text-white py-2.5 rounded-xl font-medium shadow-lg shadow-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="flex-1 gradient-btn text-white py-2.5 rounded-xl font-medium shadow-lg shadow-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                 >
                   {loading === selectedUser?.id ? '⏳ Блокировка...' : '🚫 Заблокировать'}
                 </button>

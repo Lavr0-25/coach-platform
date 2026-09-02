@@ -450,7 +450,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                   rows={3}
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all bg-white"
+                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color] bg-white"
                   placeholder="Поделитесь впечатлениями..."
                 />
               </div>
@@ -459,7 +459,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="gradient-btn text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all w-full sm:w-auto"
+                  className="gradient-btn text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity w-full sm:w-auto"
                 >
                   {submitting ? 'Сохранение...' : userReview ? ' Обновить отзыв' : '✅ Опубликовать отзыв'}
                 </button>
@@ -493,7 +493,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
           {reviews.map((review) => (
             <div
               key={review.id}
-              className={`border rounded-xl p-4 transition-all ${
+              className={`border rounded-xl p-4 transition-colors ${
                 review.user_id === userId 
                   ? 'bg-purple-50/50 border-purple-200 shadow-sm' 
                   : 'bg-gray-50/50 border-purple-100 hover:shadow-md'

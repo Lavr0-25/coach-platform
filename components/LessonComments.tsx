@@ -237,7 +237,7 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
         const element = document.querySelector(hash)
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          element.classList.add('ring-2', 'ring-purple-400', 'bg-purple-50', 'transition-all', 'duration-500')
+          element.classList.add('ring-2', 'ring-purple-400', 'bg-purple-50', 'transition-colors', 'duration-500')
           setTimeout(() => {
             element.classList.remove('ring-2', 'ring-purple-400', 'bg-purple-50')
           }, 2500)
@@ -466,7 +466,7 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
         {reviewsCount > 0 && (
           <button
             onClick={() => setShowReviewsOnly(!showReviewsOnly)}
-            className={`px-4 py-2 rounded-xl font-medium transition-all text-sm ${
+            className={`px-4 py-2 rounded-xl font-medium transition-colors text-sm ${
               showReviewsOnly ? 'gradient-btn text-white shadow-lg shadow-purple-500/30' : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200'
             }`}
           >
@@ -503,7 +503,7 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
                 <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">Ваш комментарий <span className="text-red-500">*</span></label>
                 <textarea
                   id="comment" rows={4} value={newComment} onChange={(e) => setNewComment(e.target.value)}
-                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all bg-white"
+                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color] bg-white"
                   placeholder="Задайте вопрос или оставьте комментарий..." required
                 />
               </div>
@@ -512,7 +512,7 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
                   <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} className="w-4 h-4 text-purple-600 rounded border-purple-300 focus:ring-purple-500" />
                   <span className="text-sm text-gray-700">🔒 Личное сообщение (видит только ментор)</span>
                 </label>
-                <button type="submit" disabled={submitting} className="gradient-btn text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all w-full sm:w-auto">
+                <button type="submit" disabled={submitting} className="gradient-btn text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity w-full sm:w-auto">
                   {submitting ? 'Отправка...' : 'Отправить'}
                 </button>
               </div>
@@ -539,7 +539,7 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
             const hasReplies = comment.replies && comment.replies.length > 0
             
             return (
-              <div key={comment.id} id={`comment-${comment.id}`} className={`border-b border-purple-100 pb-6 last:border-0 transition-all duration-500 ${comment.rating !== null ? 'bg-purple-50/30 rounded-xl p-4 border border-purple-200' : ''}`}>
+              <div key={comment.id} id={`comment-${comment.id}`} className={`border-b border-purple-100 pb-6 last:border-0 transition-colors duration-500 ${comment.rating !== null ? 'bg-purple-50/30 rounded-xl p-4 border border-purple-200' : ''}`}>
                 <div className="flex items-start gap-3 mb-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 shadow-md">
                     {getUserInitial(comment.user_id)}
@@ -648,7 +648,7 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
                     {isExpanded && (
                       <div className="space-y-4">
                         {comment.replies!.map((reply: Comment) => (
-                          <div key={reply.id} id={`comment-${reply.id}`} className="flex items-start gap-3 transition-all duration-500">
+                          <div key={reply.id} id={`comment-${reply.id}`} className="flex items-start gap-3 transition-colors duration-500">
                             <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
                               {getUserInitial(reply.user_id)}
                             </div>

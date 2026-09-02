@@ -246,7 +246,7 @@ export default function BannedWordsPage() {
             />
             <label
               htmlFor="file-upload"
-              className={`inline-flex items-center gap-2 px-5 py-2.5 gradient-btn text-white rounded-xl font-medium shadow-lg shadow-purple-500/30 cursor-pointer transition-all ${
+              className={`inline-flex items-center gap-2 px-5 py-2.5 gradient-btn text-white rounded-xl font-medium shadow-lg shadow-purple-500/30 cursor-pointer transition-opacity ${
                 fileUploading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-xl'
               }`}
             >
@@ -325,14 +325,14 @@ export default function BannedWordsPage() {
               type="text"
               value={newWord}
               onChange={(e) => setNewWord(e.target.value)}
-              className="flex-1 px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+              className="flex-1 px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
               placeholder="Введите слово или фразу..."
               disabled={submitting}
             />
             <button
               type="submit"
               disabled={submitting || !newWord.trim()}
-              className="gradient-btn text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="gradient-btn text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
             >
               {submitting ? 'Добавление...' : 'Добавить'}
             </button>
@@ -353,7 +353,7 @@ export default function BannedWordsPage() {
                   setSearchQuery(e.target.value)
                   setCurrentPage(1)
                 }}
-                className="w-full pl-10 pr-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                 placeholder="Поиск по словам..."
               />
             </div>

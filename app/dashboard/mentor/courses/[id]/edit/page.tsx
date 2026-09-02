@@ -334,7 +334,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
           disabled={publishing}
           className={isPublished
             ? 'bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap'
-            : 'gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all disabled:opacity-50 whitespace-nowrap'}
+            : 'gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-[box-shadow,border-color,background-color,color] disabled:opacity-50 whitespace-nowrap'}
         >
           {publishing ? 'Меняем статус...' : isPublished ? 'Вернуть в черновик' : 'Опубликовать курс'}
         </button>
@@ -382,7 +382,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Например: Телесная психология: основы"
                 />
               </div>
@@ -396,7 +396,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                   rows={5}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none transition-all"
+                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Опишите, чему научатся студенты..."
                 />
               </div>
@@ -424,7 +424,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                     step="100"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                   />
                 </div>
               </div>
@@ -432,7 +432,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="gradient-btn text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="gradient-btn text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'Сохранение...' : 'Сохранить изменения'}
               </button>
@@ -587,7 +587,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                             </div>
                             <button
                               onClick={() => handleAddLesson(lesson.id)}
-                              className="gradient-btn text-white px-4 py-2 rounded-lg font-medium shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transition-all flex-shrink-0"
+                              className="gradient-btn text-white px-4 py-2 rounded-lg font-medium shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transition-colors flex-shrink-0"
                             >
                               Добавить
                             </button>

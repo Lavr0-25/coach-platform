@@ -266,7 +266,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           disabled={publishing}
           className={isPublished
             ? 'bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap'
-            : 'gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all disabled:opacity-50 whitespace-nowrap'}
+            : 'gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-[box-shadow,border-color,background-color,color] disabled:opacity-50 whitespace-nowrap'}
         >
           {publishing ? 'Меняем статус...' : isPublished ? 'Вернуть в черновик' : 'Опубликовать урок'}
         </button>
@@ -310,7 +310,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                 placeholder="Введите название урока"
               />
             </div>
@@ -321,7 +321,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                 rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                 placeholder="Опишите, что будет в уроке..."
               />
             </div>
@@ -345,7 +345,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                       setUploadedFileUrl('')
                       setUploadedFileName('')
                     }}
-                    className={`p-4 border-2 rounded-xl text-left transition-all ${
+                    className={`p-4 border-2 rounded-xl text-left transition-colors ${
                       contentType === type.value
                         ? 'border-purple-500 bg-purple-50 shadow-md'
                         : 'border-purple-100 hover:border-purple-300 hover:bg-purple-50/30'
@@ -389,7 +389,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                   required
                   value={contentUrl}
                   onChange={(e) => setContentUrl(e.target.value)}
-                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                   placeholder={selectedContentType?.placeholder}
                 />
               </div>
@@ -404,7 +404,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                 type="text"
                 value={contentTitle}
                 onChange={(e) => setContentTitle(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                 placeholder="Например: Видеоурок №1"
               />
             </div>
@@ -424,7 +424,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                 step="0.01"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                 placeholder="0"
               />
               <p className="text-sm text-gray-500 mt-1">Установите 0 для бесплатного урока</p>
@@ -453,7 +453,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           <button
             type="submit"
             disabled={saving}
-            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 transition-all text-center"
+            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 transition-opacity text-center"
           >
             {saving ? 'Сохранение...' : 'Сохранить изменения'}
           </button>

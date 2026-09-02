@@ -295,7 +295,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Поиск по курсам и урокам автора..."
-            className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+            className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
           />
           <svg 
             className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
@@ -339,7 +339,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
               const courseLessonsCount = course.course_lessons?.length || 0
               
               return (
-                <div key={course.id} className="style-card overflow-hidden hover:shadow-lg transition-all group border border-purple-100">
+                <div key={course.id} className="style-card overflow-hidden hover:shadow-lg transition-colors group border border-purple-100">
                   <Link href={`/course/${course.id}`} className="block">
                     <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 relative overflow-hidden">
                       {course.cover_image ? (
@@ -407,7 +407,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredLessons.map((lesson) => {
               return (
-                <div key={lesson.id} className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100">
+                <div key={lesson.id} className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100">
                   <Link href={`/lesson/${lesson.id}`} className="block">
                     <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden relative">
                       {lesson.cover_image ? (

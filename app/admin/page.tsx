@@ -223,7 +223,7 @@ function MiniStatCard({ title, value, icon, textColor }: any) {
 // Карточка раздела управления
 function AdminLink({ href, title, desc, icon, badge, badgeColor, badgeText }: any) {
   return (
-    <Link href={href} className="group block p-5 bg-white rounded-2xl shadow-sm border border-purple-100 hover:shadow-xl hover:border-purple-300 hover:-translate-y-0.5 transition-all duration-200">
+    <Link href={href} className="group block p-5 bg-white rounded-2xl shadow-sm border border-purple-100 hover:shadow-xl hover:border-purple-300 hover:-translate-y-0.5 transition-[transform,color,background-color,border-color,box-shadow] duration-200">
       <div className="flex items-center gap-3 mb-3">
         <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white">
           {icon}

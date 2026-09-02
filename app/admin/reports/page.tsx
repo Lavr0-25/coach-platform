@@ -129,7 +129,7 @@ export default function ReportsPage() {
           <div className="space-y-4">
             {(tab === 'comments' ? commentReports : reviewReports).length > 0 ? (
               (tab === 'comments' ? commentReports : reviewReports).map((report) => (
-                <div key={report.id} className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 md:p-5 hover:shadow-md transition-all">
+                <div key={report.id} className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 md:p-5 hover:shadow-md transition-colors">
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2 flex-wrap text-sm">

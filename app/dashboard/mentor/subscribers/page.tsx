@@ -212,7 +212,7 @@ export default function SubscribersPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Поиск по имени или email..."
-            className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+            className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
           />
           <svg 
             className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
@@ -276,7 +276,7 @@ export default function SubscribersPage() {
             {subscribers.map((subscriber) => (
               <div
                 key={subscriber.user_id}
-                className="style-card p-4 hover:shadow-md transition-all group"
+                className="style-card p-4 hover:shadow-md transition-colors group"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 flex-1 min-w-0">

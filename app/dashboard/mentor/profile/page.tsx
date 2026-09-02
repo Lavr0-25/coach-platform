@@ -416,7 +416,7 @@ export default function MentorProfilePage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Поиск по моим курсам и урокам..."
-                className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
               />
               <svg 
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
@@ -471,7 +471,7 @@ export default function MentorProfilePage() {
                   <Link
                     key={course.id}
                     href={`/dashboard/mentor/courses/${course.id}/edit`}
-                    className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100"
+                    className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100"
                   >
                     <div className="relative aspect-video bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
                       {course.cover_image ? (
@@ -522,7 +522,7 @@ export default function MentorProfilePage() {
                   <Link
                     key={lesson.id}
                     href={`/dashboard/mentor/lessons/${lesson.id}/edit`}
-                    className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100"
+                    className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100"
                   >
                     <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
                       <span className="opacity-50">📝</span>
@@ -581,7 +581,7 @@ export default function MentorProfilePage() {
                 <div className="flex flex-wrap justify-center gap-3">
                   <Link
                     href="/dashboard/mentor/lessons/new"
-                    className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
+                    className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-colors inline-flex items-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -640,7 +640,7 @@ export default function MentorProfilePage() {
                   required
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Иван Иванов"
                 />
               </div>
@@ -654,7 +654,7 @@ export default function MentorProfilePage() {
                   type="text"
                   value={specialization}
                   onChange={(e) => setSpecialization(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Психолог, бизнес-коуч, преподаватель"
                 />
               </div>
@@ -668,7 +668,7 @@ export default function MentorProfilePage() {
                   rows={4}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none transition-all"
+                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Расскажите о себе, своём опыте и подходе..."
                 />
               </div>
@@ -692,7 +692,7 @@ export default function MentorProfilePage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="gradient-btn text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="gradient-btn text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
               >
                 {saving ? 'Сохранение...' : 'Сохранить изменения'}
               </button>
@@ -721,7 +721,7 @@ export default function MentorProfilePage() {
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Минимум 8 символов"
                 />
               </div>
@@ -736,7 +736,7 @@ export default function MentorProfilePage() {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Повторите пароль"
                 />
               </div>

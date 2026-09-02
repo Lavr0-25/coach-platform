@@ -172,7 +172,7 @@ export default function FavoritesPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Поиск уроков и курсов..."
-                className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white/80 backdrop-blur-sm"
+                className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color] bg-white/80 backdrop-blur-sm"
               />
               <svg 
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-400" 
@@ -221,7 +221,7 @@ export default function FavoritesPage() {
           </p>
           <Link
             href="/mentors"
-            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
+            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-colors inline-flex items-center gap-2"
           >
             Найти авторов и материалы
           </Link>
@@ -257,7 +257,7 @@ export default function FavoritesPage() {
             {filteredCourses.map((course) => {
               const lessonsCount = course.course_lessons?.length || 0
               return (
-                <div key={course.id} className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100 relative">
+                <div key={course.id} className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100 relative">
                   <RemoveFavoriteButton 
                     itemId={course.id} 
                     itemType="course" 
@@ -322,7 +322,7 @@ export default function FavoritesPage() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredLessons.map((lesson) => (
-              <div key={lesson.id} className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100 relative">
+              <div key={lesson.id} className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100 relative">
                 <RemoveFavoriteButton 
                   itemId={lesson.id} 
                   itemType="lesson" 

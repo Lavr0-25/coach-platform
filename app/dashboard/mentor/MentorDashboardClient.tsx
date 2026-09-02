@@ -37,7 +37,7 @@ export default function MentorDashboardClient({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-colors ${
                 activeTab === tab.id
                   ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
                   : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
@@ -81,7 +81,7 @@ export default function MentorDashboardClient({
           {myLessons.length > 0 ? (
             <div className="space-y-3">
               {myLessons.slice(0, 5).map((lesson) => (
-                <div key={lesson.id} className="style-card p-4 sm:p-5 hover:shadow-md transition-all border border-purple-100 group">
+                <div key={lesson.id} className="style-card p-4 sm:p-5 hover:shadow-md transition-colors border border-purple-100 group">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-gray-900 mb-1 truncate group-hover:text-purple-600 transition-colors">
@@ -150,7 +150,7 @@ export default function MentorDashboardClient({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-purple-100">
             <Link
               href="/dashboard/mentor/lessons/new"
-              className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-5 hover:shadow-md transition-all group"
+              className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-5 hover:shadow-md transition-colors group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl transition-transform">
@@ -164,7 +164,7 @@ export default function MentorDashboardClient({
             </Link>
             <Link
               href="/dashboard/mentor/lessons"
-              className="bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-200 rounded-xl p-5 hover:shadow-md transition-all group"
+              className="bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-200 rounded-xl p-5 hover:shadow-md transition-colors group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl transition-transform">
@@ -233,7 +233,7 @@ export default function MentorDashboardClient({
                 if (!lesson) return null
 
                 return (
-                  <div key={fav.id} className="style-card p-4 sm:p-5 hover:shadow-md transition-all border border-purple-100 bg-gradient-to-br from-yellow-50/50 to-orange-50/50">
+                  <div key={fav.id} className="style-card p-4 sm:p-5 hover:shadow-md transition-colors border border-purple-100 bg-gradient-to-br from-yellow-50/50 to-orange-50/50">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-bold text-gray-900 mb-1 truncate">{lesson.title}</h4>
@@ -266,7 +266,7 @@ export default function MentorDashboardClient({
                 if (!lesson) return null
 
                 return (
-                  <div key={progress.id} className="style-card p-4 sm:p-5 hover:shadow-md transition-all border border-purple-100">
+                  <div key={progress.id} className="style-card p-4 sm:p-5 hover:shadow-md transition-colors border border-purple-100">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex-1 min-w-0 w-full">
                         <h4 className="font-bold text-gray-900 mb-3 truncate">{lesson.title}</h4>
@@ -277,7 +277,7 @@ export default function MentorDashboardClient({
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                             <div 
-                              className="bg-gradient-to-r from-orange-400 to-red-500 h-full rounded-full transition-all"
+                              className="bg-gradient-to-r from-orange-400 to-red-500 h-full rounded-full transition-[width]"
                               style={{ width: `${progress.progress_percentage}%` }}
                             />
                           </div>
@@ -308,7 +308,7 @@ export default function MentorDashboardClient({
                 if (!lesson) return null
 
                 return (
-                  <div key={progress.id} className="style-card p-4 sm:p-5 hover:shadow-md transition-all border border-purple-100 bg-gradient-to-br from-green-50/50 to-emerald-50/50">
+                  <div key={progress.id} className="style-card p-4 sm:p-5 hover:shadow-md transition-colors border border-purple-100 bg-gradient-to-br from-green-50/50 to-emerald-50/50">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-bold text-gray-900 mb-1 truncate">{lesson.title}</h4>
@@ -341,7 +341,7 @@ export default function MentorDashboardClient({
                 if (!lesson) return null
 
                 return (
-                  <div key={purchase.id} className="style-card p-4 sm:p-5 hover:shadow-md transition-all border border-purple-100">
+                  <div key={purchase.id} className="style-card p-4 sm:p-5 hover:shadow-md transition-colors border border-purple-100">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-bold text-gray-900 mb-2 truncate">{lesson.title}</h4>

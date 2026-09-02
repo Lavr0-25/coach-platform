@@ -202,7 +202,7 @@ export default function NewLessonPage() {
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                 placeholder="Например: Введение в профессию"
               />
             </div>
@@ -213,7 +213,7 @@ export default function NewLessonPage() {
                 rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none transition-all"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none transition-[box-shadow,border-color,background-color,color]"
                 placeholder="Краткое описание урока..."
               />
             </div>
@@ -238,7 +238,7 @@ export default function NewLessonPage() {
                       setUploadedFileUrl('')
                       setUploadedFileName('')
                     }}
-                    className={`p-4 border-2 rounded-xl text-left transition-all ${
+                    className={`p-4 border-2 rounded-xl text-left transition-colors ${
                       contentType === type.value
                         ? 'border-purple-500 bg-purple-50 shadow-md'
                         : 'border-purple-100 hover:border-purple-300 hover:bg-purple-50/30'
@@ -282,7 +282,7 @@ export default function NewLessonPage() {
                   required={!isFileType}
                   value={contentUrl}
                   onChange={(e) => setContentUrl(e.target.value)}
-                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                   placeholder={selectedContentType?.placeholder}
                 />
               </div>
@@ -298,7 +298,7 @@ export default function NewLessonPage() {
                   type="text"
                   value={contentTitle}
                   onChange={(e) => setContentTitle(e.target.value)}
-                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Например: Видеоурок №1"
                 />
               </div>
@@ -319,7 +319,7 @@ export default function NewLessonPage() {
                 step="100"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                 placeholder="0"
               />
               <p className="text-sm text-gray-500 mt-1">Оставьте 0, если урок бесплатный</p>
@@ -348,7 +348,7 @@ export default function NewLessonPage() {
           <button
             type="submit"
             disabled={loading}
-            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-center flex-1 sm:flex-none"
+            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity text-center flex-1 sm:flex-none"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">

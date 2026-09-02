@@ -102,7 +102,7 @@ export default async function MentorsPage({ searchParams }: MentorsPageProps) {
             name="search"
             defaultValue={search}
             placeholder="Поиск по имени, специализации или описанию..."
-            className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+            className="w-full px-5 py-3 pl-12 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
           />
           <svg 
             className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
@@ -147,7 +147,7 @@ export default async function MentorsPage({ searchParams }: MentorsPageProps) {
             <Link
               key={coach.id}
               href={`/mentor/${coach.id}`}
-              className="style-card p-6 hover:shadow-lg transition-all group border border-purple-100 flex flex-col"
+              className="style-card p-6 hover:shadow-lg transition-colors group border border-purple-100 flex flex-col"
             >
               {/* Аватар и имя */}
               <div className="flex items-start gap-4 mb-4">
@@ -232,14 +232,14 @@ export default async function MentorsPage({ searchParams }: MentorsPageProps) {
           {search ? (
             <Link
               href="/mentors"
-              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-block"
+              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-colors inline-block"
             >
               Показать всех авторов
             </Link>
           ) : (
             <Link
               href="/dashboard/mentor"
-              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-block"
+              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-colors inline-block"
             >
               Стать автором
             </Link>

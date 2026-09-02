@@ -195,7 +195,7 @@ export default function FileUploader({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all ${
+          className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-[transform,color,background-color,border-color,box-shadow] ${
             isDragging
               ? 'border-purple-600 bg-purple-100/50 scale-[1.02]'
               : 'border-purple-300 hover:border-purple-500 hover:bg-purple-50/30'

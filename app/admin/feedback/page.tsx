@@ -68,6 +68,22 @@ export default function AdminFeedbackPage() {
     }
   }
 
+  // JSON-выгрузка для передачи в работу с агентом: полный текст обращений
+  // + ссылки на скриншоты (картинки подтягиваются из Storage по публичным ссылкам)
+  const downloadJSON = () => {
+    const data = {
+      exported_at: new Date().toISOString(),
+      source: 'rightway.su — обратная связь',
+      total: feedbacks.length,
+      items: feedbacks,
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `feedback_${new Date().toISOString().split('T')[0]}.json`
+    link.click()
+  }
+
   const downloadCSV = () => {
     const headers = ['ID', 'Пользователь', 'Тип', 'Заголовок', 'Описание', 'Статус', 'Дата создания']
     const rows = feedbacks.map(f => [
@@ -163,9 +179,19 @@ export default function AdminFeedbackPage() {
               ← Назад
             </Link>
             <button
+              onClick={downloadJSON}
+              disabled={feedbacks.length === 0}
+              className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Выгрузить JSON
+            </button>
+            <button
               onClick={downloadCSV}
               disabled={feedbacks.length === 0}
-              className="gradient-btn text-white px-4 py-2 rounded-xl font-medium shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm flex items-center justify-center gap-2"
+              className="gradient-btn text-white px-4 py-2 rounded-xl font-medium shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity text-sm flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -195,7 +221,7 @@ export default function AdminFeedbackPage() {
                   <button
                     key={status}
                     onClick={() => { setFilter(status); setCurrentPage(1) }}
-                    className={`px-4 py-2 rounded-xl font-medium transition-all text-sm ${
+                    className={`px-4 py-2 rounded-xl font-medium transition-colors text-sm ${
                       filter === status
                         ? 'gradient-btn text-white shadow-md'
                         : 'bg-gray-100 text-gray-700 hover:bg-purple-50'
@@ -216,7 +242,7 @@ export default function AdminFeedbackPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1) }}
-                className="w-full pl-10 pr-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                 placeholder="Поиск по тексту..."
               />
             </div>
@@ -329,7 +355,7 @@ export default function AdminFeedbackPage() {
             {/* Мобильные карточки */}
             <div className="lg:hidden space-y-3">
               {paginatedFeedbacks.map((feedback) => (
-                <div key={feedback.id} className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 hover:shadow-md transition-all">
+                <div key={feedback.id} className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 hover:shadow-md transition-colors">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${

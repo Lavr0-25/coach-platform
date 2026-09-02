@@ -229,7 +229,7 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-yellow-500 h-2 rounded-full transition-all"
+              className="bg-yellow-500 h-2 rounded-full transition-[width]"
               style={{ width: `${progress.progress_percentage}%` }}
             ></div>
           </div>

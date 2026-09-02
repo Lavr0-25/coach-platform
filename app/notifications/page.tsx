@@ -317,7 +317,7 @@ export default function NotificationsPage() {
 
           <div className="flex gap-2 flex-wrap">
             {unreadCount > 0 && (
-              <button onClick={markAllAsRead} className="gradient-btn text-white px-4 py-2 rounded-xl font-medium shadow-sm hover:shadow-md transition-all">
+              <button onClick={markAllAsRead} className="gradient-btn text-white px-4 py-2 rounded-xl font-medium shadow-sm hover:shadow-md transition-colors">
                 Прочитать все
               </button>
             )}
@@ -338,7 +338,7 @@ export default function NotificationsPage() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-xl font-medium transition-all whitespace-nowrap flex-1 sm:flex-none text-center ${
+              className={`px-4 py-2 rounded-xl font-medium transition-colors whitespace-nowrap flex-1 sm:flex-none text-center ${
                 filter === f 
                   ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-md' 
                   : 'text-gray-600 hover:bg-purple-50'
@@ -375,7 +375,7 @@ export default function NotificationsPage() {
                 {groupNotifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`bg-white rounded-2xl shadow-sm border border-purple-100 p-4 transition-all hover:shadow-md group ${
+                    className={`bg-white rounded-2xl shadow-sm border border-purple-100 p-4 transition-colors hover:shadow-md group ${
                       !notification.isRead ? 'border-l-4 border-l-purple-600 bg-purple-50/20' : ''
                     }`}
                   >

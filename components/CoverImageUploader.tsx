@@ -156,7 +156,7 @@ export default function CoverImageUploader({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`aspect-video border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all group ${
+          className={`aspect-video border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-[transform,color,background-color,border-color,box-shadow] group ${
             isDragging
               ? 'border-purple-600 bg-purple-100/50 scale-[1.02]'
               : 'border-purple-300 hover:border-purple-500 hover:bg-purple-50/30'

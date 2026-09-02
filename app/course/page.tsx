@@ -83,7 +83,7 @@ export default async function CoursesCatalogPage() {
             <Link
               key={course.id}
               href={`/course/${course.id}`}
-              className="style-card overflow-hidden hover:shadow-lg transition-all group border border-purple-100 flex flex-col"
+              className="style-card overflow-hidden hover:shadow-lg transition-colors group border border-purple-100 flex flex-col"
             >
               {/* Обложка */}
               <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 relative overflow-hidden">
@@ -181,7 +181,7 @@ export default async function CoursesCatalogPage() {
           </p>
           <Link
             href="/dashboard/mentor"
-            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-block mt-6"
+            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-colors inline-block mt-6"
           >
             Стать автором
           </Link>

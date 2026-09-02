@@ -410,7 +410,7 @@ export default function Home() {
                   placeholder="Поиск уроков и курсов..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2.5 pl-10 bg-purple-50/50 border border-purple-200 rounded-full focus:bg-white focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300 transition-all text-sm"
+                  className="w-full px-4 py-2.5 pl-10 bg-purple-50/50 border border-purple-200 rounded-full focus:bg-white focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300 transition-[box-shadow,border-color,background-color,color] text-sm"
                 />
                 <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -474,10 +474,10 @@ export default function Home() {
                                   <img
                                     src={coach.avatar_url}
                                     alt={coach.display_name || ''}
-                                    className="w-9 h-9 rounded-full object-cover flex-shrink-0 group-hover:ring-2 group-hover:ring-purple-400 transition-all"
+                                    className="w-9 h-9 rounded-full object-cover flex-shrink-0 group-hover:ring-2 group-hover:ring-purple-400 transition-shadow"
                                   />
                                 ) : (
-                                  <div className="w-9 h-9 gradient-icon rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 group-hover:ring-2 group-hover:ring-purple-400 transition-all">
+                                  <div className="w-9 h-9 gradient-icon rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 group-hover:ring-2 group-hover:ring-purple-400 transition-[box-shadow,border-color,background-color,color]">
                                     {coach.display_name?.charAt(0).toUpperCase() || '?'}
                                   </div>
                                 )}
@@ -540,10 +540,10 @@ export default function Home() {
                                       <img
                                         src={sub.coach.avatar_url}
                                         alt={sub.coach.display_name || ''}
-                                        className="w-9 h-9 rounded-full object-cover group-hover:ring-2 group-hover:ring-purple-400 transition-all"
+                                        className="w-9 h-9 rounded-full object-cover group-hover:ring-2 group-hover:ring-purple-400 transition-shadow"
                                       />
                                     ) : (
-                                      <div className="w-9 h-9 gradient-icon rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 group-hover:ring-2 group-hover:ring-purple-400 transition-all">
+                                      <div className="w-9 h-9 gradient-icon rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 group-hover:ring-2 group-hover:ring-purple-400 transition-[box-shadow,border-color,background-color,color]">
                                         {sub.coach?.display_name?.charAt(0).toUpperCase() || '?'}
                                       </div>
                                     )}
@@ -620,7 +620,7 @@ export default function Home() {
               {/* Типы контента */}
               <button
                 onClick={() => setContentType('lessons')}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                   contentType === 'lessons'
                     ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
                     : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
@@ -631,7 +631,7 @@ export default function Home() {
               
               <button
                 onClick={() => setContentType('courses')}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                   contentType === 'courses'
                     ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
                     : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
@@ -645,7 +645,7 @@ export default function Home() {
                   setContentType('all')
                   setActiveFilter('all')
                 }}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                   contentType === 'all' && activeFilter === 'all'
                     ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
                     : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
@@ -660,7 +660,7 @@ export default function Home() {
                   setContentType('all')
                   setActiveFilter('new')
                 }}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                   activeFilter === 'new'
                     ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
                     : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
@@ -674,7 +674,7 @@ export default function Home() {
                   setContentType('all')
                   setActiveFilter('popular')
                 }}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                   activeFilter === 'popular'
                     ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
                     : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
@@ -688,7 +688,7 @@ export default function Home() {
                   setContentType('all')
                   setActiveFilter('free')
                 }}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                   activeFilter === 'free'
                     ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
                     : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
@@ -703,7 +703,7 @@ export default function Home() {
                     setContentType('all')
                     setActiveFilter('subscriptions')
                   }}
-                  className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
+                  className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                     activeFilter === 'subscriptions'
                       ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
                       : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'

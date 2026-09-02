@@ -226,7 +226,7 @@ export default function StopListPage() {
             {entries.map((entry) => {
               const expired = isExpired(entry.banned_until)
               return (
-                <div key={entry.id} className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-md transition-all">
+                <div key={entry.id} className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-md transition-colors">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">

@@ -173,7 +173,7 @@ export default function FeedbackPage() {
               <button
                 type="button"
                 onClick={() => setType('feature')}
-                className={`px-4 py-4 rounded-xl border-2 transition-all flex items-center justify-center gap-3 font-medium ${
+                className={`px-4 py-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-3 font-medium ${
                   type === 'feature'
                     ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
                     : 'border-gray-200 text-gray-600 hover:border-purple-300 hover:bg-purple-50/50'
@@ -185,7 +185,7 @@ export default function FeedbackPage() {
               <button
                 type="button"
                 onClick={() => setType('bug')}
-                className={`px-4 py-4 rounded-xl border-2 transition-all flex items-center justify-center gap-3 font-medium ${
+                className={`px-4 py-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-3 font-medium ${
                   type === 'bug'
                     ? 'border-red-500 bg-red-50 text-red-700 shadow-sm'
                     : 'border-gray-200 text-gray-600 hover:border-red-300 hover:bg-red-50/50'
@@ -209,7 +209,7 @@ export default function FeedbackPage() {
               required
               maxLength={200}
               placeholder={type === 'bug' ? 'Краткое описание ошибки' : 'Название вашей идеи'}
-              className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all bg-white"
+              className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color] bg-white"
             />
           </div>
 
@@ -228,7 +228,7 @@ export default function FeedbackPage() {
                   ? 'Опишите, что произошло, шаги для воспроизведения и ожидаемый результат...'
                   : 'Опишите вашу идею подробно: что это, зачем нужно и как это поможет платформе...'
               }
-              className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all bg-white resize-none"
+              className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color] bg-white resize-none"
             />
           </div>
 
@@ -320,7 +320,7 @@ export default function FeedbackPage() {
             <button
               type="submit"
               disabled={isLoading || success || uploading}
-              className="flex-1 gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              className="flex-1 gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>

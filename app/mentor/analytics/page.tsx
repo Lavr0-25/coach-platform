@@ -213,7 +213,7 @@ export default function AnalyticsPage() {
         {/* 🔥 КЛИКАБЕЛЬНАЯ ССЫЛКА НА ОТДЕЛЬНУЮ СТРАНИЦУ (исправлен путь) */}
         <Link 
           href="/dashboard/mentor/subscribers" 
-          className="style-card p-6 hover:shadow-lg transition-all group block"
+          className="style-card p-6 hover:shadow-lg transition-colors group block"
         >
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl transition-transform">
@@ -302,7 +302,7 @@ export default function AnalyticsPage() {
                       {/* Столбец */}
                       <div className="w-full flex flex-col items-center justify-end h-56">
                         <div 
-                          className="w-full bg-gradient-to-t from-purple-500 to-blue-500 rounded-t-sm relative transition-all group-hover:opacity-80"
+                          className="w-full bg-gradient-to-t from-purple-500 to-blue-500 rounded-t-sm relative transition-opacity group-hover:opacity-80"
                           style={{ height: `${Math.max(height, data.views > 0 ? 2 : 0)}%` }}
                         >
                           {/* Столбец завершённых */}
@@ -465,7 +465,7 @@ export default function AnalyticsPage() {
           </p>
           <Link
             href="/dashboard/mentor/lessons/new"
-            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all inline-flex items-center gap-2"
+            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-colors inline-flex items-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

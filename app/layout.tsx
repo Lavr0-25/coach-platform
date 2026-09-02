@@ -53,14 +53,15 @@ export default function RootLayout({
         <main className="flex-1 bg-gray-50 text-gray-900">{children}</main>
         <footer className="bg-white border-t border-purple-100 flex-shrink-0">
           <div className="container mx-auto px-4 py-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-center">
               <Link
                 href="/"
                 className="text-lg font-bold gradient-text hover:opacity-80 transition-opacity"
               >
                 RightWay
               </Link>
-              <div className="flex items-center gap-4 text-sm text-gray-500">
+              {/* Ссылки переносятся на узких экранах, а не распирают подвал */}
+              <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-gray-500">
                 <Link href="/terms" className="hover:text-purple-600 transition-colors">
                   Условия использования
                 </Link>
