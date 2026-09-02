@@ -70,7 +70,7 @@ export default function FavoritesPage() {
             is_published,
             coach_id,
             coaches(display_name, avatar_url),
-            lessons(id)
+            course_lessons(lessons(id))
           `)
           .in('id', courseIds)
         
@@ -254,7 +254,7 @@ export default function FavoritesPage() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCourses.map((course) => {
-              const lessonsCount = course.lessons?.length || 0
+              const lessonsCount = course.course_lessons?.length || 0
               return (
                 <div key={course.id} className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100 relative">
                   <RemoveFavoriteButton 

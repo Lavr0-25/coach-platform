@@ -14,7 +14,7 @@ interface Course {
   cover_image: string | null
   is_published: boolean
   created_at: string
-  lessons?: { id: string }[]
+  course_lessons?: { lessons: { id: string }[] }[]
 }
 
 interface Lesson {
@@ -88,7 +88,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
           cover_image,
           is_published,
           created_at,
-          lessons(id)
+          course_lessons(lessons(id))
         `)
         .eq('coach_id', coachData.id)
         .eq('is_published', true)
@@ -335,7 +335,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCourses.map((course) => {
-              const courseLessonsCount = course.lessons?.length || 0
+              const courseLessonsCount = course.course_lessons?.length || 0
               
               return (
                 <div key={course.id} className="style-card overflow-hidden hover:shadow-lg transition-all group border border-purple-100">

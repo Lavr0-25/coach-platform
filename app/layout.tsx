@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Manrope, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import BanCheck from "@/components/BanCheck";
@@ -8,9 +8,11 @@ import BanCheck from "@/components/BanCheck";
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Manrope — единственный шрифт проекта, содержит полноценную кириллицу
+// (Geist кириллицы не имеет — весь сайт рендерился запасным шрифтом).
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin", "cyrillic"],
 });
 
 const geistMono = Geist_Mono({
@@ -18,8 +20,18 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Ставит тему/палитру/размер шрифта ДО первой отрисовки — иначе посетитель
+// видит «вспышку» светлой темы до применения сохранённого выбора.
+const themeInit = `(function(){try{
+var d=document.documentElement;
+var t=localStorage.getItem('cp-theme');
+d.setAttribute('data-theme', t==='light'||t==='dark' ? t : (window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+var p=localStorage.getItem('cp-palette'); if(p) d.setAttribute('data-palette', p);
+var f=localStorage.getItem('cp-fs'); if(f) d.setAttribute('data-fs', f);
+}catch(e){}})()`;
+
 export const metadata: Metadata = {
-  title: "CoachPlatform - Платформа для обучения",
+  title: "RightWay — Правильный путь",
   description: "Платформа для создания и прохождения уроков от лучших наставников",
 };
 
@@ -31,12 +43,14 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      suppressHydrationWarning
+      className={`${manrope.variable} ${geistMono.variable} antialiased`}
     >
       <body className="min-h-screen flex flex-col">
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
         <Navbar />
         <BanCheck />
-        <main className="flex-1 bg-gray-50">{children}</main>
+        <main className="flex-1 bg-gray-50 text-gray-900">{children}</main>
         <footer className="bg-white border-t border-purple-100 flex-shrink-0">
           <div className="container mx-auto px-4 py-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-3">
@@ -44,7 +58,7 @@ export default function RootLayout({
                 href="/"
                 className="text-lg font-bold gradient-text hover:opacity-80 transition-opacity"
               >
-                CoachPlatform
+                RightWay
               </Link>
               <div className="flex items-center gap-4 text-sm text-gray-500">
                 <Link href="/terms" className="hover:text-purple-600 transition-colors">
@@ -55,7 +69,7 @@ export default function RootLayout({
                   Политика конфиденциальности
                 </Link>
               </div>
-              <p className="text-sm text-gray-400">© 2026 CoachPlatform. Все права защищены.</p>
+              <p className="text-sm text-gray-400">© 2026 RightWay. Все права защищены.</p>
             </div>
           </div>
         </footer>

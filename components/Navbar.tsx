@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import NotificationsBell from './NotificationsBell'
 import MessagesBell from './MessagesBell'
+import ThemeSettings from './ThemeSettings'
 
 interface Profile {
   display_name?: string
@@ -206,12 +207,16 @@ export default function Navbar() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Логотип с градиентом */}
-          <Link href="/" className="text-2xl font-bold gradient-text hover:opacity-80 transition-opacity">
-            CoachPlatform
+          <Link href="/" className="text-xl sm:text-2xl font-bold gradient-text hover:opacity-80 transition-opacity">
+            RightWay
           </Link>
 
           {/* Правая часть с иконками */}
           <div className="flex items-center gap-3">
+            {/* Шестерёнка в шапке — только для анонимов; у залогиненных
+                настройки живут в меню профиля (экономим место на мобильных) */}
+            {!user && isLoaded && <ThemeSettings />}
+
             {!isLoaded ? (
               <div className="w-10 h-10 bg-purple-100 rounded-full animate-pulse" />
             ) : user ? (
@@ -362,6 +367,8 @@ export default function Navbar() {
                           </Link>
 
                           <hr className="my-2 border-purple-100" />
+
+                          <ThemeSettings asMenuItem />
 
                           <button
                             onClick={handleSignOut}

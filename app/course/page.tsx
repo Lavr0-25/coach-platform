@@ -21,8 +21,10 @@ export default async function CoursesCatalogPage() {
         specialization,
         avatar_url
       ),
-      lessons (
-        id
+      course_lessons (
+        lessons (
+          id
+        )
       )
     `)
     .eq('is_published', true)
@@ -36,7 +38,7 @@ export default async function CoursesCatalogPage() {
   const coursesWithCount = courses?.map(course => ({
     ...course,
     cover_image: course.cover_image || course.cover_image_url,
-    lessonsCount: course.lessons?.length || 0,
+    lessonsCount: course.course_lessons?.length || 0,
     coach: course.coaches?.[0] || null
   })) || []
 

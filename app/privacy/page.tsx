@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Политика конфиденциальности - CoachPlatform',
-  description: 'Политика конфиденциальности платформы CoachPlatform',
+  title: 'Политика конфиденциальности - RightWay',
+  description: 'Политика конфиденциальности платформы RightWay',
 }
 
 // Черновик: места с [заполнить] требуют реальных данных владельца

@@ -1,8 +1,291 @@
 @import "tailwindcss";
 
+/* ============================================================================
+   ДИЗАЙН-ТОКЕНЫ coach-platform
+   ----------------------------------------------------------------------------
+   Как это устроено:
+   1. Каждая палитра задаёт опорные цвета: --paper (фон страницы), --card
+      (карточки), --ink (текст), --brand (основной), --brand-2, --accent.
+   2. Тема (light/dark) меняет только опору и «проценты смешивания» —
+      все шкалы Tailwind (purple-*, gray-*, blue-*...) выводятся из опоры
+      через color-mix. Классы bg-white, text-gray-900, bg-purple-600 работают
+      как раньше, но перекрашиваются вместе с темой и палитрой.
+   3. Переключение: <html data-palette="a|b1|b2|b3" data-theme="light|dark"
+      data-fs="85|100|115|130">. Атрибуты ставит inline-скрипт в layout.tsx
+      до первой отрисовки (без «мигания»).
+   ========================================================================== */
+
+@theme inline {
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Поверхности: bg-white = карточка, серые = нейтральная шкала от --ink/--paper */
+  --color-white: var(--card);
+  --color-gray-50: var(--t-ink-50);
+  --color-gray-100: var(--t-ink-100);
+  --color-gray-200: var(--t-ink-200);
+  --color-gray-300: var(--t-ink-300);
+  --color-gray-400: var(--t-ink-400);
+  --color-gray-500: var(--t-ink-500);
+  --color-gray-600: var(--t-ink-600);
+  --color-gray-700: var(--t-ink-700);
+  --color-gray-800: var(--t-ink-800);
+  --color-gray-900: var(--t-ink-900);
+  --color-gray-950: var(--t-ink-950);
+  --color-slate-50: var(--t-ink-50);
+  --color-slate-100: var(--t-ink-100);
+  --color-slate-200: var(--t-ink-200);
+  --color-slate-300: var(--t-ink-300);
+  --color-slate-400: var(--t-ink-400);
+  --color-slate-500: var(--t-ink-500);
+  --color-slate-600: var(--t-ink-600);
+  --color-slate-700: var(--t-ink-700);
+  --color-slate-800: var(--t-ink-800);
+  --color-slate-900: var(--t-ink-900);
+
+  /* Бренд: purple/violet/indigo -> --brand */
+  --color-purple-50: var(--t-brand-50);
+  --color-purple-100: var(--t-brand-100);
+  --color-purple-200: var(--t-brand-200);
+  --color-purple-300: var(--t-brand-300);
+  --color-purple-400: var(--t-brand-400);
+  --color-purple-500: var(--t-brand-500);
+  --color-purple-600: var(--t-brand-600);
+  --color-purple-700: var(--t-brand-700);
+  --color-purple-800: var(--t-brand-800);
+  --color-purple-900: var(--t-brand-900);
+  --color-violet-500: var(--t-brand-500);
+  --color-violet-600: var(--t-brand-600);
+  --color-indigo-50: var(--t-brand-50);
+  --color-indigo-100: var(--t-brand-100);
+  --color-indigo-500: var(--t-brand-500);
+  --color-indigo-600: var(--t-brand-600);
+  --color-indigo-900: var(--t-brand-900);
+
+  /* Акцент: blue/sky/cyan -> --accent */
+  --color-blue-50: var(--t-accent-50);
+  --color-blue-100: var(--t-accent-100);
+  --color-blue-200: var(--t-accent-200);
+  --color-blue-300: var(--t-accent-300);
+  --color-blue-500: var(--t-accent-500);
+  --color-blue-600: var(--t-accent-600);
+  --color-blue-700: var(--t-accent-700);
+  --color-blue-900: var(--t-accent-900);
+
+  /* Статусы */
+  --color-green-50: var(--t-ok-50);
+  --color-green-100: var(--t-ok-100);
+  --color-green-200: var(--t-ok-200);
+  --color-green-500: var(--t-ok-500);
+  --color-green-600: var(--t-ok-600);
+  --color-green-700: var(--t-ok-700);
+  --color-green-800: var(--t-ok-800);
+  --color-emerald-500: var(--t-ok-500);
+  --color-emerald-600: var(--t-ok-600);
+  --color-emerald-50: var(--t-ok-50);
+  --color-emerald-100: var(--t-ok-100);
+
+  --color-red-50: var(--t-bad-50);
+  --color-red-100: var(--t-bad-100);
+  --color-red-200: var(--t-bad-200);
+  --color-red-500: var(--t-bad-500);
+  --color-red-600: var(--t-bad-600);
+  --color-red-700: var(--t-bad-700);
+  --color-red-800: var(--t-bad-800);
+  --color-red-900: var(--t-bad-900);
+  --color-rose-500: var(--t-bad-500);
+  --color-rose-600: var(--t-bad-600);
+
+  --color-orange-50: var(--t-warn-50);
+  --color-orange-100: var(--t-warn-100);
+  --color-orange-500: var(--t-warn-500);
+  --color-orange-600: var(--t-warn-600);
+  --color-orange-800: var(--t-warn-800);
+  --color-amber-100: var(--t-warn-100);
+  --color-amber-500: var(--t-warn-500);
+  --color-amber-600: var(--t-warn-600);
+  --color-yellow-50: var(--t-warn-50);
+  --color-yellow-100: var(--t-warn-100);
+  --color-yellow-200: var(--t-warn-200);
+  --color-yellow-500: var(--t-warn-500);
+  --color-yellow-800: var(--t-warn-800);
+  --color-pink-100: var(--t-warn-100);
+  --color-pink-500: var(--t-warn-500);
+  --color-pink-600: var(--t-warn-600);
+}
+
+/* ----------------------------------------------------------------------------
+   Базовые значения темы (светлая). Палитры переопределяют опору ниже.
+   -------------------------------------------------------------------------- */
+:root {
+  --paper: #ffffff;
+  --card: #ffffff;
+  --ink: #111827;
+  --shade-anchor: #000000;
+
+  /* проценты смешивания к --paper (светлые ступени) */
+  --m50: 7%; --m100: 14%; --m200: 22%; --m300: 35%; --m400: 60%; --m500: 82%;
+  /* проценты к --shade-anchor (тёмные ступени) */
+  --s700: 84%; --s800: 68%; --s900: 50%; --s950: 34%;
+
+  /* статусы */
+  --ok: #22c55e;   --ok-deep: #15803d;
+  --warn: #f59e0b; --warn-deep: #b45309;
+  --bad: #ef4444;  --bad-deep: #b91c1c;
+
+  /* размер шрифта */
+  font-size: 100%;
+}
+html[data-fs="85"]  { font-size: 85%; }
+html[data-fs="115"] { font-size: 115%; }
+html[data-fs="130"] { font-size: 130%; }
+
+/* ----------------------------------------------------------------------------
+   Вывод шкал из опорных цветов. Одна формула на все семейства.
+   -------------------------------------------------------------------------- */
+:root {
+  --t-ink-50:   color-mix(in srgb, var(--ink) var(--m50), var(--paper));
+  --t-ink-100:  color-mix(in srgb, var(--ink) var(--m100), var(--paper));
+  --t-ink-200:  color-mix(in srgb, var(--ink) var(--m200), var(--paper));
+  --t-ink-300:  color-mix(in srgb, var(--ink) var(--m300), var(--paper));
+  --t-ink-400:  color-mix(in srgb, var(--ink) var(--m400), var(--paper));
+  --t-ink-500:  color-mix(in srgb, var(--ink) var(--m500), var(--paper));
+  --t-ink-600:  var(--ink);
+  --t-ink-700:  color-mix(in srgb, var(--ink) var(--s700), var(--shade-anchor));
+  --t-ink-800:  color-mix(in srgb, var(--ink) var(--s800), var(--shade-anchor));
+  --t-ink-900:  color-mix(in srgb, var(--ink) var(--s900), var(--shade-anchor));
+  --t-ink-950:  color-mix(in srgb, var(--ink) var(--s950), var(--shade-anchor));
+
+  --t-brand-50:   color-mix(in srgb, var(--brand) var(--m50), var(--paper));
+  --t-brand-100:  color-mix(in srgb, var(--brand) var(--m100), var(--paper));
+  --t-brand-200:  color-mix(in srgb, var(--brand) var(--m200), var(--paper));
+  --t-brand-300:  color-mix(in srgb, var(--brand) var(--m300), var(--paper));
+  --t-brand-400:  color-mix(in srgb, var(--brand) var(--m400), var(--paper));
+  --t-brand-500:  color-mix(in srgb, var(--brand) var(--m500), var(--paper));
+  --t-brand-600:  var(--brand);
+  --t-brand-700:  color-mix(in srgb, var(--brand) var(--s700), var(--shade-anchor));
+  --t-brand-800:  color-mix(in srgb, var(--brand) var(--s800), var(--shade-anchor));
+  --t-brand-900:  color-mix(in srgb, var(--brand) var(--s900), var(--shade-anchor));
+
+  --t-accent-50:   color-mix(in srgb, var(--accent) var(--m50), var(--paper));
+  --t-accent-100:  color-mix(in srgb, var(--accent) var(--m100), var(--paper));
+  --t-accent-200:  color-mix(in srgb, var(--accent) var(--m200), var(--paper));
+  --t-accent-300:  color-mix(in srgb, var(--accent) var(--m300), var(--paper));
+  --t-accent-500:  color-mix(in srgb, var(--accent) var(--m500), var(--paper));
+  --t-accent-600:  var(--accent);
+  --t-accent-700:  color-mix(in srgb, var(--accent) var(--s700), var(--shade-anchor));
+  --t-accent-900:  color-mix(in srgb, var(--accent) var(--s900), var(--shade-anchor));
+
+  --t-ok-50:   color-mix(in srgb, var(--ok) var(--m50), var(--paper));
+  --t-ok-100:  color-mix(in srgb, var(--ok) var(--m100), var(--paper));
+  --t-ok-200:  color-mix(in srgb, var(--ok) var(--m200), var(--paper));
+  --t-ok-500:  var(--ok);
+  --t-ok-600:  var(--ok-deep);
+  --t-ok-700:  color-mix(in srgb, var(--ok-deep) var(--s700), var(--shade-anchor));
+  --t-ok-800:  color-mix(in srgb, var(--ok-deep) var(--s800), var(--shade-anchor));
+
+  --t-bad-50:   color-mix(in srgb, var(--bad) var(--m50), var(--paper));
+  --t-bad-100:  color-mix(in srgb, var(--bad) var(--m100), var(--paper));
+  --t-bad-200:  color-mix(in srgb, var(--bad) var(--m200), var(--paper));
+  --t-bad-500:  var(--bad);
+  --t-bad-600:  var(--bad-deep);
+  --t-bad-700:  color-mix(in srgb, var(--bad-deep) var(--s700), var(--shade-anchor));
+  --t-bad-800:  color-mix(in srgb, var(--bad-deep) var(--s800), var(--shade-anchor));
+  --t-bad-900:  color-mix(in srgb, var(--bad-deep) var(--s900), var(--shade-anchor));
+
+  --t-warn-50:   color-mix(in srgb, var(--warn) var(--m50), var(--paper));
+  --t-warn-100:  color-mix(in srgb, var(--warn) var(--m100), var(--paper));
+  --t-warn-200:  color-mix(in srgb, var(--warn) var(--m200), var(--paper));
+  --t-warn-500:  var(--warn);
+  --t-warn-600:  var(--warn-deep);
+  --t-warn-800:  color-mix(in srgb, var(--warn-deep) var(--s800), var(--shade-anchor));
+}
+
+/* ----------------------------------------------------------------------------
+   ПАЛИТРЫ (светлые значения)
+   -------------------------------------------------------------------------- */
+
+/* A — Фиолет (как сейчас) */
+:root, html[data-palette="a"] {
+  --brand: #8b5cf6;
+  --brand-2: #6366f1;
+  --accent: #3b82f6;
+  --grad-a: #8b5cf6; --grad-b: #6366f1; --grad-c: #3b82f6;
+  --grad-a-h: #7c3aed; --grad-b-h: #4f46e5; --grad-c-h: #2563eb;
+  --glow: rgba(139, 92, 246, 0.08);
+  --glow-hover-a: rgba(139, 92, 246, 0.3);
+  --glow-hover-b: rgba(59, 130, 246, 0.2);
+}
+
+/* B1 — Хвоя */
+html[data-palette="b1"] {
+  --brand: #1e5c48;
+  --brand-2: #2f7a5f;
+  --accent: #d97a2b;
+  --grad-a: #1e5c48; --grad-b: #2f7a5f; --grad-c: #3f9268;
+  --grad-a-h: #164636; --grad-b-h: #265f4b; --grad-c-h: #357a55;
+  --glow: rgba(30, 92, 72, 0.08);
+  --glow-hover-a: rgba(30, 92, 72, 0.28);
+  --glow-hover-b: rgba(217, 122, 43, 0.18);
+}
+
+/* B2 — Чернила и коралл */
+html[data-palette="b2"] {
+  --brand: #1e3a5f;
+  --brand-2: #2c5282;
+  --accent: #ee5d4d;
+  --grad-a: #1e3a5f; --grad-b: #2c5282; --grad-c: #4a6b96;
+  --grad-a-h: #162c49; --grad-b-h: #244469; --grad-c-h: #3d5c82;
+  --glow: rgba(30, 58, 95, 0.08);
+  --glow-hover-a: rgba(30, 58, 95, 0.3);
+  --glow-hover-b: rgba(238, 93, 77, 0.18);
+}
+
+/* B3 — Графит и шафран */
+html[data-palette="b3"] {
+  --brand: #2e2e38;
+  --brand-2: #4b4b57;
+  --accent: #d98e04;
+  --grad-a: #2e2e38; --grad-b: #43434f; --grad-c: #5a5a68;
+  --grad-a-h: #22222b; --grad-b-h: #383842; --grad-c-h: #4d4d59;
+  --glow: rgba(46, 46, 56, 0.08);
+  --glow-hover-a: rgba(46, 46, 56, 0.3);
+  --glow-hover-b: rgba(217, 142, 4, 0.18);
+}
+
+/* ----------------------------------------------------------------------------
+   ТЁМНАЯ ТЕМА (для любой палитры)
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0e1016;
+  --card: #161923;
+  --ink: #e6e8ee;
+  --shade-anchor: #ffffff;
+
+  --m50: 10%; --m100: 16%; --m200: 24%; --m300: 38%; --m400: 62%; --m500: 82%;
+  --s700: 66%; --s800: 52%; --s900: 38%; --s950: 26%;
+
+  --ok: #34d399;   --ok-deep: #059669;
+  --warn: #fbbf24; --warn-deep: #d97706;
+  --bad: #f87171;  --bad-deep: #dc2626;
+}
+html[data-theme="dark"][data-palette="b1"] { --paper: #12140f; --card: #191d17; --ink: #e7e5df; }
+html[data-theme="dark"][data-palette="b2"] { --paper: #0f1219; --card: #171c26; --ink: #e4e7f0; }
+html[data-theme="dark"][data-palette="b3"] { --paper: #131313; --card: #1d1d1f; --ink: #e8e8e8; }
+
+/* ----------------------------------------------------------------------------
+   КЛАССЫ-ПАТТЕРНЫ (на переменных палитры)
+   -------------------------------------------------------------------------- */
+
+/* Белый текст закреплён буквально: --color-white смаплен на цвет карточки
+   (чтобы bg-white темнел в тёмной теме), но text-white живёт на цветных
+   поверхностях (градиентные кнопки, бейджи) и всегда должен быть белым. */
+.text-white { color: #ffffff; }
+.text-white\/70 { color: rgb(255 255 255 / 0.7); }
+
 /* Градиентный текст */
 .gradient-text {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
+  background: linear-gradient(135deg, var(--grad-a) 0%, var(--grad-b) 50%, var(--grad-c) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -10,29 +293,32 @@
 
 /* Градиентная кнопка */
 .gradient-btn {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
-  transition: all 0.3s ease;
+  background: linear-gradient(135deg, var(--grad-a) 0%, var(--grad-b) 50%, var(--grad-c) 100%);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
 }
 
 .gradient-btn:hover {
-  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--grad-a-h) 0%, var(--grad-b-h) 50%, var(--grad-c-h) 100%);
   transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 10px 25px color-mix(in srgb, var(--brand) 40%, transparent);
 }
 
 /* Градиентная иконка */
 .gradient-icon {
-  background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #60a5fa 100%);
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--grad-a) 75%, var(--paper)),
+    color-mix(in srgb, var(--grad-b) 75%, var(--paper)),
+    color-mix(in srgb, var(--grad-c) 75%, var(--paper)));
 }
 
 /* Карточка с эффектом свечения при наведении */
 .style-card {
   position: relative;
-  background: white;
+  background: var(--card);
   border-radius: 1.5rem;
-  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.08);
+  box-shadow: 0 4px 20px var(--glow);
   border: 2px solid transparent;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .style-card::before {
@@ -41,7 +327,7 @@
   inset: -2px;
   border-radius: 1.5rem;
   padding: 2px;
-  background: linear-gradient(135deg, #8b5cf6, #6366f1, #3b82f6);
+  background: linear-gradient(135deg, var(--grad-a), var(--grad-b), var(--grad-c));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -52,7 +338,7 @@
 }
 
 .style-card:hover {
-  box-shadow: 0 0 30px rgba(139, 92, 246, 0.3), 0 0 60px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 30px var(--glow-hover-a), 0 0 60px var(--glow-hover-b);
   transform: translateY(-4px);
 }
 
@@ -70,15 +356,20 @@
 }
 
 .messages-scrollbar::-webkit-scrollbar-thumb {
-  background: #a78bfa;
+  background: color-mix(in srgb, var(--grad-a) 60%, var(--paper));
   border-radius: 3px;
 }
 
 .messages-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #8b5cf6;
+  background: var(--grad-a);
 }
 
 .messages-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #a78bfa transparent;
+  scrollbar-color: color-mix(in srgb, var(--grad-a) 60%, var(--paper)) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gradient-btn, .style-card { transition: none; }
+  .gradient-btn:hover, .style-card:hover { transform: none; }
 }

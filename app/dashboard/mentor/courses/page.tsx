@@ -54,9 +54,11 @@ export default function MentorCoursesPage() {
         cover_image_url,
         cover_image,
         created_at,
-        lessons (
-          id,
-          title
+        course_lessons (
+          lessons (
+            id,
+            title
+          )
         )
       `)
       .eq('coach_id', coach.id)
@@ -65,7 +67,7 @@ export default function MentorCoursesPage() {
     // Считаем количество уроков в каждом курсе
     const coursesWithCount = coursesData?.map(course => ({
       ...course,
-      lessonsCount: course.lessons?.length || 0
+      lessonsCount: course.course_lessons?.length || 0
     })) || []
 
     setCourses(coursesWithCount)

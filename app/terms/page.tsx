@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Условия использования - CoachPlatform',
-  description: 'Условия использования платформы CoachPlatform',
+  title: 'Условия использования - RightWay',
+  description: 'Условия использования платформы RightWay',
 }
 
 // Черновик: места с [заполнить] требуют реальных данных владельца
@@ -22,7 +22,7 @@ export default function TermsPage() {
         <section>
           <h2 className="text-xl font-bold text-gray-900 mb-2">1. Общие положения</h2>
           <p>
-            CoachPlatform (далее — «Платформа») — сервис, позволяющий наставникам
+            RightWay (далее — «Платформа») — сервис, позволяющий наставникам
             размещать обучающие курсы и уроки, а пользователям — проходить обучение.
             Используя Платформу, вы соглашаетесь с настоящими Условиями.
           </p>
