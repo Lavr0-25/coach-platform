@@ -42,3 +42,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# скриншоты багов: рабочая очередь, не для репо (кроме .gitkeep)
+/scrin_bag/*
+!/scrin_bag/.gitkeep
