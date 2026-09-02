@@ -89,6 +89,7 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
           lesson_id: lessonId,
           status: 'started',
           progress_percentage: 10,
+          started_at: new Date().toISOString(),
         }, {
           onConflict: 'user_id,lesson_id'
         })
@@ -127,6 +128,7 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
           lesson_id: lessonId,
           status: 'completed',
           progress_percentage: 100,
+          completed_at: new Date().toISOString(),
         }, {
           onConflict: 'user_id,lesson_id'
         })
@@ -177,18 +179,9 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
     })
   }
 
-  if (loading) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm border p-4">
-        <div className="animate-pulse space-y-2">
-          <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-2 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!userId) {
+  // Пока не знаем, залогинен ли пользователь, и для анонима — не показываем ничего
+  // (иначе аноним видит «скелетон» вместо скрытого блока)
+  if (loading || !userId) {
     return null
   }
 
@@ -205,7 +198,7 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
           <button
             onClick={handleStart}
             disabled={updating}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+            className="gradient-btn text-white px-4 py-2 rounded-lg font-medium shadow-lg shadow-purple-500/20 transition-colors disabled:bg-gray-400"
           >
             {updating ? 'Загрузка...' : '▶️ Начать урок'}
           </button>
@@ -250,7 +243,7 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
           <button
             onClick={handleComplete}
             disabled={updating}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:bg-gray-400"
+            className="gradient-btn text-white px-4 py-2 rounded-lg font-medium shadow-lg shadow-purple-500/20 transition-colors disabled:bg-gray-400"
           >
             {updating ? 'Сохранение...' : '✅ Отметить как пройденный'}
           </button>

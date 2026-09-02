@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import FavoriteButton from '@/components/FavoriteButton'
+import LessonProgress from '@/components/LessonProgress'
 
 const LessonComments = dynamic(
   () => import('@/components/LessonComments'),
@@ -298,6 +299,13 @@ export default async function LessonPage({ params }: LessonPageProps) {
             Содержание урока
           </h2>
           {renderContent()}
+        </div>
+      )}
+
+      {/* Прогресс обучения (для анонима компонент сам скрывается) */}
+      {(isFree || isPurchased || isOwner) && (
+        <div className="mb-6">
+          <LessonProgress lessonId={id} />
         </div>
       )}
 
