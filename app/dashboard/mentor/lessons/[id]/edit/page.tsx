@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { updateLesson, setLessonPublished } from '@/app/actions/updateLesson'
+import { deleteLesson } from '@/app/actions/deleteLesson'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import FileUploader from '@/components/FileUploader'
@@ -75,6 +76,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [isPublished, setIsPublished] = useState(false)
   const [hasSavedContent, setHasSavedContent] = useState(false)
   const [error, setError] = useState('')
@@ -173,6 +175,25 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
       setTimeout(() => setSuccess(''), 3000)
     }
     setPublishing(false)
+  }
+
+  const handleDelete = async () => {
+    // Подтверждение: удаление необратимо, каскадом уходят контент и статистика
+    const publishedWarning = isPublished
+      ? '\n\nУрок опубликован — студенты его больше не увидят.'
+      : ''
+    if (!window.confirm(`Удалить урок «${title}»?${publishedWarning}\n\nДействие нельзя отменить.`)) {
+      return
+    }
+    setDeleting(true)
+    const result = await deleteLesson(lessonId)
+    if (!result.ok) {
+      setError(result.error)
+      setDeleting(false)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    router.push('/dashboard/mentor/lessons')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -507,6 +528,14 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           >
             Отмена
           </Link>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="bg-white text-red-600 border border-red-200 px-6 py-3 rounded-xl font-semibold hover:bg-red-50 transition-colors disabled:opacity-50 ml-auto text-center whitespace-nowrap"
+          >
+            {deleting ? 'Удаление...' : 'Удалить урок'}
+          </button>
         </div>
       </form>
     </main>
