@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface Feedback {
   id: string
@@ -459,13 +460,15 @@ export default function AdminFeedbackPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {viewingFeedback.images!.map((imgUrl, index) => (
                         <div key={index} className="relative group">
-                          <div 
-                            className="aspect-square rounded-xl overflow-hidden border-2 border-purple-200 cursor-pointer hover:border-purple-400 transition-colors hover:shadow-lg"
+                          <div
+                            className="relative aspect-square rounded-xl overflow-hidden border-2 border-purple-200 cursor-pointer hover:border-purple-400 transition-colors hover:shadow-lg"
                             onClick={() => setSelectedImage(imgUrl)}
                           >
-                            <img 
-                              src={imgUrl} 
+                            <Image
+                              src={imgUrl}
                               alt={`Attachment ${index + 1}`}
+                              fill
+                              sizes="(max-width: 640px) 50vw, 33vw"
                               className="w-full h-full object-cover transition-transform duration-200"
                             />
                           </div>
@@ -544,10 +547,12 @@ export default function AdminFeedbackPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <img 
-              src={selectedImage} 
+            <Image
+              src={selectedImage}
               alt="Full size"
-              className="max-w-full max-h-[90vh] rounded-xl shadow-2xl"
+              width={1920}
+              height={1080}
+              className="w-auto h-auto max-w-full max-h-[90vh] rounded-xl shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
           </div>

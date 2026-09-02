@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface Subscriber {
   user_id: string
@@ -281,9 +282,11 @@ export default function SubscribersPage() {
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
                       {subscriber.avatar_url ? (
-                        <img 
-                          src={subscriber.avatar_url} 
+                        <Image
+                          src={subscriber.avatar_url}
                           alt={subscriber.display_name || ''}
+                          width={56}
+                          height={56}
                           className="w-full h-full object-cover"
                         />
                       ) : (

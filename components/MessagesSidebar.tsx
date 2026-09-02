@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import Image from 'next/image'
 import { useMobileChat } from '@/components/MessagesLayoutShell'
 
 interface Conversation {
@@ -293,7 +294,7 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
 
                     <div className="relative flex-shrink-0 z-10">
                       {conv.userAvatar ? (
-                        <img src={conv.userAvatar} alt={conv.userName} className="w-12 h-12 rounded-full object-cover border border-purple-100" />
+                        <Image src={conv.userAvatar} alt={conv.userName} width={48} height={48} className="w-12 h-12 rounded-full object-cover border border-purple-100" />
                       ) : (
                         <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-lg font-bold">
                           {conv.userName.charAt(0).toUpperCase()}
@@ -359,7 +360,7 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
                   <div key={`hidden-${conv.userId}`} className="group flex items-start gap-3 p-4 border-b border-purple-50 bg-gray-50/50 hover:bg-gray-100/50 transition-colors relative opacity-70">
                     <div className="relative flex-shrink-0 z-10">
                       {conv.userAvatar ? (
-                        <img src={conv.userAvatar} alt={conv.userName} className="w-12 h-12 rounded-full object-cover" />
+                        <Image src={conv.userAvatar} alt={conv.userName} width={48} height={48} className="w-12 h-12 rounded-full object-cover" />
                       ) : (
                         <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center text-white text-lg font-bold">
                           {conv.userName.charAt(0).toUpperCase()}
@@ -409,7 +410,7 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
                     >
                       <div className="absolute inset-0 bg-purple-50/0 group-hover:bg-purple-50/50 transition-colors" />
                       {coach.avatar_url ? (
-                        <img src={coach.avatar_url} alt={userName} className="w-10 h-10 rounded-full object-cover border border-purple-100 relative z-10" />
+                        <Image src={coach.avatar_url} alt={userName} width={40} height={40} className="w-10 h-10 rounded-full object-cover border border-purple-100 relative z-10" />
                       ) : (
                         <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold relative z-10">
                           {userName.charAt(0).toUpperCase()}

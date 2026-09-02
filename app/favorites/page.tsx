@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import RemoveFavoriteButton from '@/components/RemoveFavoriteButton'
 
 export default function FavoritesPage() {
@@ -264,9 +265,9 @@ export default function FavoritesPage() {
                   />
                   
                   <Link href={`/course/${course.id}`} className="block">
-                    <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
+                    <div className="relative aspect-video bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
                       {course.cover_image ? (
-                        <img src={course.cover_image} alt={course.title} className="w-full h-full object-cover transition-transform duration-300" />
+                        <Image src={course.cover_image} alt={course.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="w-full h-full object-cover transition-transform duration-300" />
                       ) : (
                         <span className="opacity-50">📚</span>
                       )}
@@ -284,7 +285,7 @@ export default function FavoritesPage() {
                     {course.coaches && (
                       <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
                         {course.coaches.avatar_url ? (
-                          <img src={course.coaches.avatar_url} alt="" className="w-5 h-5 rounded-full" />
+                          <Image src={course.coaches.avatar_url} alt="" width={20} height={20} className="w-5 h-5 rounded-full" />
                         ) : (
                           <span className="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center text-[10px] text-purple-700 font-bold">
                             {course.coaches.display_name?.charAt(0).toUpperCase()}
@@ -329,9 +330,9 @@ export default function FavoritesPage() {
                 />
                 
                 <Link href={`/lesson/${lesson.id}`} className="block">
-                  <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
+                  <div className="relative aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
                     {lesson.cover_image ? (
-                      <img src={lesson.cover_image} alt={lesson.title} className="w-full h-full object-cover transition-transform duration-300" />
+                      <Image src={lesson.cover_image} alt={lesson.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="w-full h-full object-cover transition-transform duration-300" />
                     ) : (
                       <span className="opacity-50">📝</span>
                     )}
@@ -349,7 +350,7 @@ export default function FavoritesPage() {
                   {lesson.coaches && (
                     <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
                       {lesson.coaches.avatar_url ? (
-                        <img src={lesson.coaches.avatar_url} alt="" className="w-5 h-5 rounded-full" />
+                        <Image src={lesson.coaches.avatar_url} alt="" width={20} height={20} className="w-5 h-5 rounded-full" />
                       ) : (
                         <span className="w-5 h-5 rounded-full bg-purple-200 flex items-center justify-center text-[10px] text-purple-700 font-bold">
                           {lesson.coaches.display_name?.charAt(0).toUpperCase()}

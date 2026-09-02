@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import FavoriteButton from '@/components/FavoriteButton'
 
 interface Course {
@@ -212,7 +213,7 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
           <div className="flex-shrink-0">
             <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-white shadow-xl bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
               {coach.avatar_url ? (
-                <img src={coach.avatar_url} alt={coach.display_name || ''} className="w-full h-full object-cover" />
+                <Image src={coach.avatar_url} alt={coach.display_name || ''} width={160} height={160} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-5xl sm:text-6xl font-bold text-purple-600">
                   {getInitials(coach.display_name)}
@@ -342,9 +343,11 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
                   <Link href={`/course/${course.id}`} className="block">
                     <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 relative overflow-hidden">
                       {course.cover_image ? (
-                        <img 
-                          src={course.cover_image} 
+                        <Image
+                          src={course.cover_image}
                           alt={course.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
                           className="w-full h-full object-cover transition-transform duration-500"
                         />
                       ) : (
@@ -408,9 +411,11 @@ export default function MentorPage({ params }: { params: Promise<{ id: string }>
                   <Link href={`/lesson/${lesson.id}`} className="block">
                     <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden relative">
                       {lesson.cover_image ? (
-                        <img 
-                          src={lesson.cover_image} 
+                        <Image
+                          src={lesson.cover_image}
                           alt={lesson.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
                           className="w-full h-full object-cover transition-transform duration-300"
                         />
                       ) : (

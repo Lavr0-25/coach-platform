@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getVideoEmbedUrl } from '@/lib/video-embed'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import FavoriteButton from '@/components/FavoriteButton'
 import LessonProgress from '@/components/LessonProgress'
@@ -170,7 +171,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
     if (content.content_type === 'image') {
       return (
         <div className="rounded-xl overflow-hidden shadow-lg">
-          <img src={content.content_url} alt={lesson.title} className="w-full h-auto" />
+          <Image src={content.content_url} alt={lesson.title} width={1200} height={675} className="w-full h-auto" />
         </div>
       )
     }
@@ -225,7 +226,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
           <div className="mb-5">
             <Link href={`/mentor/${coach.id}`} className="inline-flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors group">
               {coach.avatar_url ? (
-                <img src={coach.avatar_url} alt={coach.display_name} className="w-8 h-8 rounded-full object-cover" />
+                <Image src={coach.avatar_url} alt={coach.display_name} width={32} height={32} className="w-8 h-8 rounded-full object-cover" />
               ) : (
                 <div className="w-8 h-8 gradient-icon rounded-full flex items-center justify-center text-white text-sm font-bold">
                   {coach.display_name?.charAt(0).toUpperCase() || 'A'}

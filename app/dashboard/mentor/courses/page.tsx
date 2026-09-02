@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createCourse } from '@/app/actions/createCourse'
 
 export default function MentorCoursesPage() {
@@ -182,11 +183,13 @@ export default function MentorCoursesPage() {
               className="style-card p-6 hover:shadow-md transition-all group border border-purple-100"
             >
               {/* Обложка или заглушка */}
-              <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
+              <div className="relative aspect-video bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
                 {course.cover_image_url || course.cover_image ? (
-                  <img 
-                    src={course.cover_image_url || course.cover_image} 
+                  <Image
+                    src={course.cover_image_url || course.cover_image}
                     alt={course.title}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
                     className="w-full h-full object-cover transition-transform duration-300"
                   />
                 ) : (

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function MentorLessonsPage() {
   const [lessons, setLessons] = useState<any[]>([])
@@ -241,11 +242,13 @@ export default function MentorLessonsPage() {
                 className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100"
               >
                 {/* Обложка */}
-                <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
+                <div className="relative aspect-video bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
                   {lesson.cover_image ? (
-                    <img 
-                      src={lesson.cover_image} 
+                    <Image
+                      src={lesson.cover_image}
                       alt={lesson.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
                       className="w-full h-full object-cover transition-transform duration-300"
                     />
                   ) : (
@@ -323,11 +326,13 @@ export default function MentorLessonsPage() {
                 className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100"
               >
                 {/* Обложка */}
-                <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
+                <div className="relative aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
                   {lesson.cover_image ? (
-                    <img 
-                      src={lesson.cover_image} 
+                    <Image
+                      src={lesson.cover_image}
                       alt={lesson.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
                       className="w-full h-full object-cover transition-transform duration-300"
                     />
                   ) : (

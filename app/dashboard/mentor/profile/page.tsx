@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import CoverImageUploader from '@/components/CoverImageUploader'
 
 export default function MentorProfilePage() {
@@ -348,7 +349,7 @@ export default function MentorProfilePage() {
             <div className="flex flex-col sm:flex-row items-start gap-6">
               <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center flex-shrink-0">
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  <Image src={avatarUrl} alt="Avatar" width={128} height={128} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-4xl font-bold text-purple-600">
                     {getInitials(displayName)}
@@ -472,9 +473,9 @@ export default function MentorProfilePage() {
                     href={`/dashboard/mentor/courses/${course.id}/edit`}
                     className="style-card p-5 hover:shadow-lg transition-all group border border-purple-100"
                   >
-                    <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
+                    <div className="relative aspect-video bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
                       {course.cover_image ? (
-                        <img src={course.cover_image} alt={course.title} className="w-full h-full object-cover transition-transform duration-300" />
+                        <Image src={course.cover_image} alt={course.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="w-full h-full object-cover transition-transform duration-300" />
                       ) : (
                         <span className="opacity-50">📚</span>
                       )}

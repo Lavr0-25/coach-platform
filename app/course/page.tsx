@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default async function CoursesCatalogPage() {
   const supabase = await createClient()
@@ -87,9 +88,11 @@ export default async function CoursesCatalogPage() {
               {/* Обложка */}
               <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 relative overflow-hidden">
                 {course.cover_image ? (
-                  <img 
-                    src={course.cover_image} 
+                  <Image
+                    src={course.cover_image}
                     alt={course.title}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 33vw"
                     className="w-full h-full object-cover transition-transform duration-500"
                   />
                 ) : (
@@ -120,9 +123,11 @@ export default async function CoursesCatalogPage() {
                 {course.coach && (
                   <div className="flex items-center gap-2 mb-4 pt-4 border-t border-purple-100">
                     {course.coach.avatar_url ? (
-                      <img 
-                        src={course.coach.avatar_url} 
-                        alt={course.coach.display_name} 
+                      <Image
+                        src={course.coach.avatar_url}
+                        alt={course.coach.display_name}
+                        width={32}
+                        height={32}
                         className="w-8 h-8 rounded-full object-cover border border-purple-200"
                       />
                     ) : (

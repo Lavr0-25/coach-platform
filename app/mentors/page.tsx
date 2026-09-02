@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface MentorsPageProps {
   searchParams: Promise<{
@@ -25,27 +26,28 @@ export default async function MentorsPage({ searchParams }: MentorsPageProps) {
     .eq('role', 'mentor')
     .order('display_name', { ascending: true })
 
-  // Для каждого ментора считаем количество курсов и уроков
-  const coachesWithStats = await Promise.all(
-    (coaches || []).map(async (coach) => {
-      const { count: coursesCount } = await supabase
-        .from('courses')
-        .select('*', { count: 'exact', head: true })
-        .eq('coach_id', coach.id)
-        .eq('is_published', true)
+  // Считаем статистику двумя массовыми запросами (вместо 2 запросов на каждого автора),
+  // затем группируем по coach_id в коде — меньше сетевых кругов, страница грузится быстрее
+  const [{ data: courseRows }, { data: lessonRows }] = await Promise.all([
+    supabase.from('courses').select('coach_id').eq('is_published', true),
+    supabase.from('lessons').select('coach_id'),
+  ])
 
-      const { count: lessonsCount } = await supabase
-        .from('lessons')
-        .select('*', { count: 'exact', head: true })
-        .eq('coach_id', coach.id)
+  const coursesByCoach = new Map<string, number>()
+  courseRows?.forEach((row) => {
+    coursesByCoach.set(row.coach_id, (coursesByCoach.get(row.coach_id) || 0) + 1)
+  })
 
-      return {
-        ...coach,
-        coursesCount: coursesCount || 0,
-        lessonsCount: lessonsCount || 0,
-      }
-    })
-  )
+  const lessonsByCoach = new Map<string, number>()
+  lessonRows?.forEach((row) => {
+    lessonsByCoach.set(row.coach_id, (lessonsByCoach.get(row.coach_id) || 0) + 1)
+  })
+
+  const coachesWithStats = (coaches || []).map((coach) => ({
+    ...coach,
+    coursesCount: coursesByCoach.get(coach.id) || 0,
+    lessonsCount: lessonsByCoach.get(coach.id) || 0,
+  }))
 
   // Фильтруем: оставляем только тех, у кого есть курсы или уроки
   // И применяем поиск
@@ -150,9 +152,11 @@ export default async function MentorsPage({ searchParams }: MentorsPageProps) {
               {/* Аватар и имя */}
               <div className="flex items-start gap-4 mb-4">
                 {coach.avatar_url ? (
-                  <img
+                  <Image
                     src={coach.avatar_url}
                     alt={coach.display_name || ''}
+                    width={64}
+                    height={64}
                     className="w-16 h-16 rounded-full object-cover border-2 border-purple-200 flex-shrink-0"
                   />
                 ) : (

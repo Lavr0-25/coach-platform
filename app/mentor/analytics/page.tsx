@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function AnalyticsPage() {
   const supabase = createClient()
@@ -388,11 +389,13 @@ export default function AnalyticsPage() {
                 >
                   {/* Урок (картинка + название) */}
                   <div className="col-span-4 flex items-center gap-3">
-                    <div className="w-16 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-blue-600 flex-shrink-0 flex items-center justify-center">
+                    <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-blue-600 flex-shrink-0 flex items-center justify-center">
                       {lesson.cover_image ? (
-                        <img 
-                          src={lesson.cover_image} 
+                        <Image
+                          src={lesson.cover_image}
                           alt={lesson.title}
+                          fill
+                          sizes="64px"
                           className="w-full h-full object-cover"
                         />
                       ) : (

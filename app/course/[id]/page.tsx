@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import FavoriteButton from '@/components/FavoriteButton'
 
@@ -172,8 +173,8 @@ export default async function CoursePage({ params }: CoursePageProps) {
       <div className="style-card p-6 sm:p-8 mb-6">
         {course.cover_image_url || course.cover_image ? (
           <div className="mb-6">
-            <div className="aspect-video rounded-xl overflow-hidden shadow-lg">
-              <img src={course.cover_image_url || course.cover_image} alt={course.title} className="w-full h-full object-cover" />
+            <div className="relative aspect-video rounded-xl overflow-hidden shadow-lg">
+              <Image src={course.cover_image_url || course.cover_image} alt={course.title} fill sizes="(max-width: 1024px) 100vw, 900px" className="w-full h-full object-cover" />
             </div>
           </div>
         ) : (
@@ -192,7 +193,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
           <div className="mb-5">
             <Link href={`/mentor/${coach.id}`} className="inline-flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors group">
               {coach.avatar_url ? (
-                <img src={coach.avatar_url} alt={coach.display_name} className="w-8 h-8 rounded-full object-cover" />
+                <Image src={coach.avatar_url} alt={coach.display_name} width={32} height={32} className="w-8 h-8 rounded-full object-cover" />
               ) : (
                 <div className="w-8 h-8 gradient-icon rounded-full flex items-center justify-center text-white text-sm font-bold">
                   {coach.display_name?.charAt(0).toUpperCase() || 'A'}
