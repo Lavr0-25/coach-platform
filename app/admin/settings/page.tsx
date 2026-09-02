@@ -198,7 +198,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Информационный блок */}
-        <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-2xl p-5">
+        <div className="bg-white border border-purple-100 rounded-2xl p-5">
           <p className="text-sm font-semibold text-purple-900 mb-3 flex items-center gap-2">
             <span className="text-lg">ℹ️</span> Алгоритм работы автобана:
           </p>

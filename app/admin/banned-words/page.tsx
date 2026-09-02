@@ -225,7 +225,7 @@ export default function BannedWordsPage() {
         </div>
 
         {/* Массовая загрузка из файла */}
-        <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-2xl p-5 md:p-6 mb-6">
+        <div className="bg-white border border-purple-100 rounded-2xl p-5 md:p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
             <span className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white text-sm"></span>
             Массовая загрузка из файла
@@ -429,7 +429,7 @@ export default function BannedWordsPage() {
         )}
 
         {/* Информация */}
-        <div className="mt-6 bg-purple-50 border border-purple-200 rounded-2xl p-5">
+        <div className="mt-6 bg-white border border-purple-100 rounded-2xl p-5">
           <p className="text-sm font-semibold text-purple-900 mb-2 flex items-center gap-2">
             <span className="text-lg">ℹ️</span> Как это работает:
           </p>

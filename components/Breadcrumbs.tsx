@@ -25,6 +25,8 @@ export default function Breadcrumbs() {
       'feedback': 'Обратная связь',
       'settings': 'Настройки',
       'users': 'Пользователи',
+      'coaches': 'Наставники',
+      'lessons': 'Уроки',
     }
     
     for (const path of paths) {

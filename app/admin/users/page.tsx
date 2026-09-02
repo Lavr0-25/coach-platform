@@ -206,10 +206,11 @@ export default async function AdminUsersPage({
 
 function StatCard({ title, value, color }: { title: string; value: number; color: 'gray' | 'red' | 'green' | 'blue' }) {
   const styles = {
-    gray: 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 text-gray-700',
-    red: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 text-red-700',
-    green: 'bg-gradient-to-br from-green-50 to-green-100 border-green-200 text-green-700',
-    blue: 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 text-blue-700',
+    // Белый стиль П5: цвет — только в цифре (text-...), карточка нейтральная
+    gray: 'bg-white border-gray-100 text-gray-700',
+    red: 'bg-white border-gray-100 text-red-600',
+    green: 'bg-white border-gray-100 text-green-600',
+    blue: 'bg-white border-gray-100 text-blue-600',
   }
   
   return (

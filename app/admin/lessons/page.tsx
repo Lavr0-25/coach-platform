@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import Breadcrumbs from '@/components/Breadcrumbs'
 import LessonsList from './LessonsList'
 
 export default async function AdminLessonsPage({
@@ -9,7 +10,7 @@ export default async function AdminLessonsPage({
 }) {
   const supabase = await createClient()
   const params = await searchParams
-  
+
   const searchQuery = typeof params.search === 'string' ? params.search : ''
   const filterType = typeof params.type === 'string' ? params.type : 'all'
 
@@ -54,76 +55,76 @@ export default async function AdminLessonsPage({
   const paidCount = allLessons.filter(l => l.price > 0 && !l.is_free_preview).length
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Управление уроками
-        </h1>
-        <p className="text-gray-600">
-          Просмотр и управление уроками платформы
-        </p>
-      </div>
+    <main className="py-6 md:py-10">
+      <div className="container mx-auto px-4 max-w-6xl">
+        <Breadcrumbs />
 
-      {/* Статистика */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-xl shadow-sm border p-4">
-          <div className="text-2xl font-bold text-blue-600">
-            {allLessons.length}
+        {/* Заголовок */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold gradient-text">📚 Уроки</h1>
+            <p className="text-gray-600 text-sm mt-1">Просмотр и управление уроками платформы</p>
           </div>
-          <div className="text-sm text-gray-600">Всего уроков</div>
+          <Link href="/admin" className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm">
+            ← Назад
+          </Link>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border p-4">
-          <div className="text-2xl font-bold text-green-600">
-            {freeCount}
-          </div>
-          <div className="text-sm text-gray-600">Бесплатных</div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border p-4">
-          <div className="text-2xl font-bold text-purple-600">
-            {paidCount}
-          </div>
-          <div className="text-sm text-gray-600">Платных</div>
-        </div>
-      </div>
 
-      {/* Поиск и фильтры */}
-      <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-        <form className="flex gap-4">
-          <input
-            type="text"
-            name="search"
-            placeholder="🔍 Поиск по названию или описанию..."
-            defaultValue={searchQuery}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <select
-            name="type"
-            defaultValue={filterType}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">Все уроки</option>
-            <option value="free">Бесплатные</option>
-            <option value="paid">Платные</option>
-          </select>
-          <button
-            type="submit"
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-          >
-            Найти
-          </button>
-          {(searchQuery || filterType !== 'all') && (
-            <Link
-              href="/admin/lessons"
-              className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+        {/* Статистика — белый стиль П5: цвет только в цифре */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4">
+            <div className="text-2xl md:text-3xl font-bold text-blue-600">{allLessons.length}</div>
+            <div className="text-xs md:text-sm text-gray-600 mt-1">Всего уроков</div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4">
+            <div className="text-2xl md:text-3xl font-bold text-green-600">{freeCount}</div>
+            <div className="text-xs md:text-sm text-gray-600 mt-1">Бесплатных</div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4">
+            <div className="text-2xl md:text-3xl font-bold text-purple-600">{paidCount}</div>
+            <div className="text-xs md:text-sm text-gray-600 mt-1">Платных</div>
+          </div>
+        </div>
+
+        {/* Поиск и фильтры */}
+        <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 mb-6">
+          <form className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              name="search"
+              placeholder="🔍 Поиск по названию или описанию..."
+              defaultValue={searchQuery}
+              className="flex-1 px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
+            />
+            <select
+              name="type"
+              defaultValue={filterType}
+              className="px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 bg-white transition-[box-shadow,border-color,background-color,color]"
             >
-              Сбросить
-            </Link>
-          )}
-        </form>
-      </div>
+              <option value="all">Все уроки</option>
+              <option value="free">Бесплатные</option>
+              <option value="paid">Платные</option>
+            </select>
+            <button
+              type="submit"
+              className="gradient-btn text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-purple-500/30 transition-opacity text-sm"
+            >
+              Найти
+            </button>
+            {(searchQuery || filterType !== 'all') && (
+              <Link
+                href="/admin/lessons"
+                className="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors text-sm text-center"
+              >
+                Сбросить
+              </Link>
+            )}
+          </form>
+        </div>
 
-      {/* Список уроков */}
-      <LessonsList initialLessons={allLessons} />
-    </div>
+        {/* Список уроков */}
+        <LessonsList initialLessons={allLessons} />
+      </div>
+    </main>
   )
 }

@@ -137,7 +137,7 @@ export default function ReportsPage() {
                         <span className="text-gray-400">→</span>
                         <span className="font-medium text-red-700 bg-red-50 px-2 py-0.5 rounded">На: {report.reported_name}</span>
                       </div>
-                      <p className="text-sm text-gray-700 mb-2 bg-purple-50/50 p-3 rounded-xl border border-purple-100">
+                      <p className="text-sm text-gray-700 mb-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
                         <strong className="text-purple-700">Причина:</strong> {report.reason}
                       </p>
                       <p className="text-xs text-gray-500">{formatDate(report.created_at)}</p>

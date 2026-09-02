@@ -357,7 +357,7 @@ export default function AdminFeedbackPage() {
             <div className="hidden lg:block bg-white rounded-2xl shadow-sm border border-purple-100 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gradient-to-r from-purple-50 to-blue-50 border-b border-purple-100">
+                  <thead className="bg-gray-50 border-b border-purple-100">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-12">
                         {/* «Выбрать все» — по всему отфильтрованному списку */}
@@ -547,7 +547,7 @@ export default function AdminFeedbackPage() {
         {viewingFeedback && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setViewingFeedback(null)}>
             <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-purple-100" onClick={(e) => e.stopPropagation()}>
-              <div className="p-6 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-blue-50">
+              <div className="p-6 border-b border-purple-100 bg-gray-50">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -698,11 +698,12 @@ export default function AdminFeedbackPage() {
 // Вспомогательный компонент для карточек статистики
 function StatCard({ title, value, color }: { title: string; value: number; color: string }) {
   const styles: Record<string, string> = {
-    gray: 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 text-gray-700',
-    blue: 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 text-blue-700',
-    yellow: 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 text-yellow-700',
-    green: 'bg-gradient-to-br from-green-50 to-green-100 border-green-200 text-green-700',
-    red: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 text-red-700',
+    // Белый стиль П5: цвет — только в цифре (text-...), карточка нейтральная
+    gray: 'bg-white border-gray-100 text-gray-700',
+    blue: 'bg-white border-gray-100 text-blue-600',
+    yellow: 'bg-white border-gray-100 text-yellow-600',
+    green: 'bg-white border-gray-100 text-green-600',
+    red: 'bg-white border-gray-100 text-red-600',
   }
   
   return (

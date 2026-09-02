@@ -97,7 +97,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
   return (
     <>
       <div className="bg-white rounded-2xl shadow-sm border border-purple-100 overflow-hidden">
-        <div className="p-5 md:p-6 border-b border-purple-100 bg-gradient-to-r from-purple-50/50 to-blue-50/50">
+        <div className="p-5 md:p-6 border-b border-purple-100 bg-gray-50">
           <h2 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
             👥 Все пользователи
           </h2>
