@@ -46,3 +46,6 @@ next-env.d.ts
 # скриншоты багов: рабочая очередь, не для репо (кроме .gitkeep)
 /scrin_bag/*
 !/scrin_bag/.gitkeep
+
+# артефакты Playwright MCP (скриншоты, снапшоты, логи) — рабочие файлы агента, не для репо
+/.playwright-mcp/
