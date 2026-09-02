@@ -76,6 +76,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   const [saving, setSaving] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [isPublished, setIsPublished] = useState(false)
+  const [hasSavedContent, setHasSavedContent] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -131,10 +132,18 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           let type = content[0].content_type || 'video'
           if (['youtube', 'vk_video', 'vkvideo', 'vk'].includes(type)) type = 'video'
           if (['yandex_disk', 'presentation', 'yandexdisk', 'googledrive'].includes(type)) type = 'storage'
-          
+
           setContentType(type)
           setContentUrl(content[0].content_url || '')
           setContentHtml(content[0].content_html || '')
+
+          // Контент считается сохранённым, если запись непустая по сути:
+          // текст — есть текст вне тегов, остальные — есть ссылка/файл
+          const row = content[0]
+          const nonEmpty = type === 'text'
+            ? !!(row.content_html || '').replace(/<[^>]*>/g, '').trim()
+            : !!(row.content_url || '').trim()
+          setHasSavedContent(nonEmpty)
           
           // Если это файловый тип и URL есть, считаем его загруженным файлом для превью
           if (type === 'pdf' || type === 'image') {
@@ -218,6 +227,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
       return
     }
 
+    setHasSavedContent(true) // контент сохранён — публикация теперь разрешена
     setSuccess('Урок успешно обновлён!')
     setTimeout(() => {
       router.push('/dashboard/mentor/lessons')
@@ -274,17 +284,20 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
             <p className="text-sm text-gray-600">
               {isPublished
                 ? 'Урок виден студентам (в каталоге и на странице наставника)'
-                : 'Урок виден только вам — студенты его пока не видят'}
+                : hasSavedContent
+                  ? 'Урок виден только вам — студенты его пока не видят'
+                  : 'Урок виден только вам — чтобы опубликовать, сначала заполните и сохраните контент'}
             </p>
           </div>
         </div>
         <button
           type="button"
           onClick={handleTogglePublish}
-          disabled={publishing}
+          disabled={publishing || (!isPublished && !hasSavedContent)}
+          title={!isPublished && !hasSavedContent ? 'Сначала заполните и сохраните контент урока' : undefined}
           className={isPublished
             ? 'bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap'
-            : 'gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-[box-shadow,border-color,background-color,color] disabled:opacity-50 whitespace-nowrap'}
+            : 'gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-[box-shadow,border-color,background-color,color] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none whitespace-nowrap'}
         >
           {publishing ? 'Меняем статус...' : isPublished ? 'Вернуть в черновик' : 'Опубликовать урок'}
         </button>

@@ -24,6 +24,26 @@ export async function setLessonPublished(lessonId: string, published: boolean): 
 
   if (!coach) return { ok: false, error: 'Профиль наставника не найден' }
 
+  // Публиковать можно только урок с сохранённым контентом — иначе студент
+  // увидит заглушку. Проверяем по lesson_content: для текста нужен непустой
+  // HTML (вне тегов), для остальных типов — ссылка/файл.
+  if (published) {
+    const { data: contents } = await supabase
+      .from('lesson_content')
+      .select('content_type, content_url, content_html')
+      .eq('lesson_id', lessonId)
+      .limit(1)
+
+    const content = contents?.[0]
+    const hasContent = !!content && (content.content_type === 'text'
+      ? !!(content.content_html || '').replace(/<[^>]*>/g, '').trim()
+      : !!(content.content_url || '').trim())
+
+    if (!hasContent) {
+      return { ok: false, error: 'Сначала заполните и сохраните контент урока — публиковать пустой урок нельзя' }
+    }
+  }
+
   const { data, error: updateError } = await supabase
     .from('lessons')
     .update({ is_published: published, updated_at: new Date().toISOString() })
