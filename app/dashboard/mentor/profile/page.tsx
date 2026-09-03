@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import CoverImageUploader from '@/components/CoverImageUploader'
+import FileUploader from '@/components/FileUploader'
+import { BarChart3, UserRound } from 'lucide-react'
 
 export default function MentorProfilePage() {
   const supabase = createClient()
@@ -325,19 +326,19 @@ export default function MentorProfilePage() {
         <button
           type="button"
           onClick={() => setActiveTab('profile')}
-          className={`px-4 sm:px-6 py-3 font-medium text-sm whitespace-nowrap transition-colors ${
+          className={`px-4 sm:px-6 py-3 font-medium text-sm whitespace-nowrap transition-colors inline-flex items-center gap-2 ${
             activeTab === 'profile'
               ? 'text-purple-700 border-b-2 border-purple-700'
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          👤 Профиль
+          <UserRound className="w-4 h-4" /> Профиль
         </button>
         <Link
           href="/mentor/analytics"
           className="px-4 sm:px-6 py-3 font-medium text-sm whitespace-nowrap text-gray-500 hover:text-purple-700 transition-colors flex items-center gap-2"
         >
-          📊 Аналитика
+          <BarChart3 className="w-4 h-4" /> Аналитика
         </Link>
       </div>
 
@@ -674,17 +675,13 @@ export default function MentorProfilePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Аватар
-                </label>
-                <CoverImageUploader
-                  currentImage={avatarUrl}
-                  onImageUpload={(url) => setAvatarUrl(url)}
-                  entityType="course"
+                <FileUploader
+                  currentFile={avatarUrl}
+                  onFileUpload={(url) => setAvatarUrl(url)}
+                  entityType="profile_cover"
+                  label="Аватар"
+                  hint="PNG, JPG до 5MB (рекомендуется 400×400px, 1:1)"
                 />
-                <p className="text-xs text-gray-500 mt-2">
-                  Рекомендуемый размер: 400×400px (1:1)
-                </p>
               </div>
             </div>
 

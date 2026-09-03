@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { updateCourse, attachLessonToCourse, detachLessonFromCourse, reorderCourseLessons, setCoursePublished } from '@/app/actions/updateCourse'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import CoverImageUploader from '@/components/CoverImageUploader'
+import FileUploader from '@/components/FileUploader'
 
 interface Course {
   id: string
@@ -402,14 +402,13 @@ function EditCourseForm({ courseId }: { courseId: string }) {
               </div>
 
               <div>
-                <CoverImageUploader
-                  currentImage={coverImageUrl}
-                  onImageUpload={(url) => setCoverImageUrl(url)}
-                  entityType="course"
+                <FileUploader
+                  currentFile={coverImageUrl}
+                  onFileUpload={(url) => setCoverImageUrl(url)}
+                  entityType="course_cover"
+                  label="Обложка курса"
+                  hint="PNG, JPG до 5MB (рекомендуется 1200×675px, 16:9)"
                 />
-                <p className="text-xs text-gray-500 mt-2">
-                  Рекомендуемый размер: 1200×675px (16:9). Поддерживается загрузка файла и вставка скриншотов (Ctrl+V)
-                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

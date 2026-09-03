@@ -2,18 +2,24 @@
 
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { Camera, FileText, Lightbulb, Paperclip } from 'lucide-react'
 
 interface FileUploaderProps {
   currentFile?: string | null
   onFileUpload: (fileUrl: string, fileName: string) => void
   entityId?: string
-  entityType: 'lesson_cover' | 'course_cover' | 'lesson_content'
+  entityType: 'lesson_cover' | 'course_cover' | 'profile_cover' | 'lesson_content'
   acceptedTypes?: string[]
   maxSizeMB?: number
   label?: string
   placeholder?: string
+  /** Своя подсказка вместо «PNG, JPG до N MB» */
+  hint?: string
 }
 
+// Единственный загрузчик файлов проекта: клик / drag-and-drop / вставка из
+// буфера (Ctrl+V). До слияния сюда дублировали логику CoverImageUploader
+// и AvatarUploader (мёртвый код — удалены).
 export default function FileUploader({
   currentFile,
   onFileUpload,
@@ -22,7 +28,8 @@ export default function FileUploader({
   acceptedTypes = ['image/*'],
   maxSizeMB = 5,
   label,
-  placeholder
+  placeholder,
+  hint
 }: FileUploaderProps) {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(currentFile || null)
@@ -32,7 +39,7 @@ export default function FileUploader({
   const supabase = createClient()
 
   const getBucketName = () => {
-    if (entityType === 'lesson_cover' || entityType === 'course_cover') return 'covers'
+    if (entityType === 'lesson_cover' || entityType === 'course_cover' || entityType === 'profile_cover') return 'covers'
     return 'lesson_files'
   }
 
@@ -44,7 +51,7 @@ export default function FileUploader({
 
     const isImage = file.type.startsWith('image/')
     const isPdf = file.type === 'application/pdf'
-    
+
     if (!isImage && !isPdf && acceptedTypes[0] !== '*/*') {
       alert('Неподдерживаемый тип файла')
       return
@@ -148,7 +155,7 @@ export default function FileUploader({
           {label}
         </label>
       )}
-      
+
       {preview ? (
         <div className="relative rounded-xl overflow-hidden border-2 border-purple-200 group shadow-sm">
           {isImageFile ? (
@@ -157,19 +164,19 @@ export default function FileUploader({
             </div>
           ) : isPdfFile ? (
             <div className="bg-red-50 p-8 flex flex-col items-center justify-center">
-              <div className="text-6xl mb-3">📄</div>
+              <FileText className="w-14 h-14 text-red-400 mb-3" />
               <p className="text-sm font-medium text-gray-700">{fileName}</p>
               <p className="text-xs text-gray-500 mt-1">PDF документ</p>
             </div>
           ) : (
             <div className="aspect-video bg-purple-50 flex items-center justify-center">
               <div className="text-center">
-                <div className="text-4xl mb-2">📎</div>
+                <Paperclip className="w-9 h-9 text-purple-400 mb-2 mx-auto" />
                 <p className="text-sm font-medium text-gray-700">{fileName}</p>
               </div>
             </div>
           )}
-          
+
           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
             <button
               type="button"
@@ -202,17 +209,17 @@ export default function FileUploader({
           }`}
           style={{ minHeight: '200px' }}
         >
-          <div className={`w-16 h-16 gradient-icon rounded-full flex items-center justify-center text-white text-2xl mb-3 transition-transform ${
+          <div className={`w-16 h-16 gradient-icon rounded-full flex items-center justify-center text-white mb-3 transition-transform ${
             isDragging ? 'scale-110' : 'hover:scale-110'
           } shadow-lg`}>
-            {acceptedTypes.some(t => t.includes('pdf')) ? '📄' : '📷'}
+            {acceptedTypes.some(t => t.includes('pdf')) ? <FileText className="w-7 h-7" /> : <Camera className="w-7 h-7" />}
           </div>
           <p className="text-sm font-medium text-gray-700 mb-1 text-center">
             {isDragging ? 'Отпустите файл здесь' : (placeholder || 'Нажмите, перетащите или вставьте скриншот')}
           </p>
           <p className="text-xs text-gray-500 text-center mt-1">
-            {acceptedTypes.some(t => t.includes('pdf')) ? 'PDF' : 'PNG, JPG'} до {maxSizeMB}MB<br />
-            <span className="text-purple-600 font-medium">💡 Можно вставить Ctrl+V</span>
+            {hint || `${acceptedTypes.some(t => t.includes('pdf')) ? 'PDF' : 'PNG, JPG'} до ${maxSizeMB}MB`}<br />
+            <span className="text-purple-600 font-medium inline-flex items-center gap-1"><Lightbulb className="w-3.5 h-3.5" /> Можно вставить Ctrl+V</span>
           </p>
         </div>
       )}
