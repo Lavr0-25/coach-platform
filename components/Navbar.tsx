@@ -7,6 +7,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import NotificationsBell from './NotificationsBell'
 import MessagesBell from './MessagesBell'
 import ThemeSettings from './ThemeSettings'
+import { useSearch } from './SearchContext'
 
 interface Profile {
   display_name?: string
@@ -27,6 +28,9 @@ export default function Navbar() {
   const router = useRouter()
   const pathname = usePathname()
   const menuRef = useRef<HTMLDivElement>(null)
+  // Поиск виден в шапке только на главной и только на десктопе
+  const { query, setQuery } = useSearch()
+  const showSearch = pathname === '/'
 
   // 🔥 Обработчик клика вне меню пользователя
   useEffect(() => {
@@ -210,6 +214,24 @@ export default function Navbar() {
           <Link href="/" className="text-xl sm:text-2xl font-bold gradient-text hover:opacity-80 transition-opacity">
             RightWay
           </Link>
+
+          {/* Поиск в шапке — десктоп главной (на мобильных поле в теле страницы) */}
+          {showSearch && (
+            <div className="hidden lg:block flex-1 min-w-0 px-6">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Поиск уроков и курсов..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="w-full px-4 py-2 pl-10 bg-purple-50/50 border border-purple-200 rounded-full focus:bg-white focus:ring-2 focus:ring-purple-400/30 focus:border-purple-300 transition-[box-shadow,border-color,background-color,color] text-sm"
+                />
+                <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+          )}
 
           {/* Правая часть с иконками */}
           <div className="flex items-center gap-3">

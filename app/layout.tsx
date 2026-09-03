@@ -4,6 +4,7 @@ import { Manrope, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import BanCheck from "@/components/BanCheck";
+import { SearchProvider } from "@/components/SearchContext";
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -45,7 +46,12 @@ function InlineScript({ html }: { html: string }) {
 }
 
 export const metadata: Metadata = {
-  title: "RightWay — Правильный путь",
+  metadataBase: new URL("https://www.rightway.su"),
+  title: {
+    default: "RightWay — Правильный путь",
+    // Вложенные страницы подставляют своё название через generateMetadata
+    template: "%s | RightWay",
+  },
   description: "Платформа для создания и прохождения уроков от лучших наставников",
 };
 
@@ -65,9 +71,11 @@ export default function RootLayout({
         <InlineScript html={themeInit} />
       </head>
       <body className="min-h-screen flex flex-col">
-        <Navbar />
-        <BanCheck />
-        <main className="flex-1 bg-gray-50 text-gray-900">{children}</main>
+        <SearchProvider>
+          <Navbar />
+          <BanCheck />
+          <main className="flex-1 bg-gray-50 text-gray-900">{children}</main>
+        </SearchProvider>
         <footer className="bg-white border-t border-purple-100 flex-shrink-0">
           <div className="container mx-auto px-4 py-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-center">

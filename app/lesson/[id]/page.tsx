@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
+import type { Metadata } from 'next'
 import FavoriteButton from '@/components/FavoriteButton'
 import LessonProgress from '@/components/LessonProgress'
 
@@ -24,6 +25,37 @@ interface LessonPageProps {
   params: Promise<{
     id: string
   }>
+}
+
+// Мета-теги страницы урока — для поисковиков и ИИ-агентов
+export async function generateMetadata({ params }: LessonPageProps): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+
+  const { data: lesson } = await supabase
+    .from('lessons')
+    .select('title, description, cover_image, coach:coaches(display_name)')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (!lesson) return { title: 'Урок не найден' }
+
+  // Встроенный join supabase-js типизирует как массив
+  const coachRaw = lesson.coach as unknown
+  const coach = Array.isArray(coachRaw) ? coachRaw[0] : coachRaw
+  const coachName = (coach as { display_name: string | null } | null)?.display_name
+  const title = coachName ? `${lesson.title} — ${coachName}` : lesson.title
+  const description = (lesson.description || 'Урок на платформе RightWay').slice(0, 160)
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: lesson.cover_image ? [lesson.cover_image] : undefined,
+    },
+  }
 }
 
 export default async function LessonPage({ params }: LessonPageProps) {

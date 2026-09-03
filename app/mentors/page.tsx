@@ -1,6 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Наставники',
+  description: 'Все наставники платформы RightWay: биографии, специализации, их курсы и уроки',
+}
 
 interface MentorsPageProps {
   searchParams: Promise<{

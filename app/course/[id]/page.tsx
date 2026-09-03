@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
+import type { Metadata } from 'next'
 import FavoriteButton from '@/components/FavoriteButton'
 
 const ReviewsSection = dynamic(
@@ -33,6 +34,33 @@ interface CoursePageProps {
   params: Promise<{
     id: string
   }>
+}
+
+// Мета-теги страницы курса — для поисковиков и ИИ-агентов
+export async function generateMetadata({ params }: CoursePageProps): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+
+  const { data: course } = await supabase
+    .from('courses')
+    .select('title, description, cover_image, cover_image_url')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (!course) return { title: 'Курс не найден' }
+
+  const cover = course.cover_image || course.cover_image_url
+  const description = (course.description || 'Курс на платформе RightWay').slice(0, 160)
+
+  return {
+    title: course.title,
+    description,
+    openGraph: {
+      title: course.title,
+      description,
+      images: cover ? [cover] : undefined,
+    },
+  }
 }
 
 export default async function CoursePage({ params }: CoursePageProps) {
