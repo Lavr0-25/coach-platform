@@ -6,14 +6,18 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { updateMyFeedback, deleteMyFeedback } from '@/app/actions/feedbackActions'
+import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
+import { Input, Textarea, Label } from '@/components/ui/Input'
+import type { BadgeProps } from '@/components/ui/Badge'
 
 // Статусы и подписи — как в админке (/admin/feedback), чтобы пользователь
 // видел то же самое, что видит админ
-const STATUS_META: Record<string, { label: string; cls: string }> = {
-  new: { label: 'Новое', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
-  in_progress: { label: 'В работе', cls: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
-  resolved: { label: 'Решено', cls: 'bg-green-50 text-green-700 border-green-200' },
-  rejected: { label: 'Отклонено', cls: 'bg-red-50 text-red-700 border-red-200' },
+const STATUS_META: Record<string, { label: string; variant: NonNullable<BadgeProps['variant']> }> = {
+  new: { label: 'Новое', variant: 'blue' },
+  in_progress: { label: 'В работе', variant: 'yellow' },
+  resolved: { label: 'Решено', variant: 'green' },
+  rejected: { label: 'Отклонено', variant: 'red' },
 }
 
 const TYPE_META: Record<string, { icon: string; label: string }> = {
@@ -310,10 +314,9 @@ export default function FeedbackPage() {
 
           {/* Заголовок */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Заголовок <span className="text-red-500">*</span>
-            </label>
-            <input
+            <Label htmlFor="fb-title" required>Заголовок</Label>
+            <Input
+              id="fb-title"
               type="text"
               value={title}
               onChange={(e) => {
@@ -325,16 +328,14 @@ export default function FeedbackPage() {
               required
               maxLength={200}
               placeholder={type === 'bug' ? 'Краткое описание ошибки' : 'Название вашей идеи'}
-              className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color] bg-white"
             />
           </div>
 
           {/* Описание */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Описание <span className="text-red-500">*</span>
-            </label>
-            <textarea
+            <Label htmlFor="fb-description" required>Описание</Label>
+            <Textarea
+              id="fb-description"
               value={description}
               onChange={(e) => {
                 setDescription(e.target.value)
@@ -347,7 +348,7 @@ export default function FeedbackPage() {
                   ? 'Опишите, что произошло, шаги для воспроизведения и ожидаемый результат...'
                   : 'Опишите вашу идею подробно: что это, зачем нужно и как это поможет платформе...'
               }
-              className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color] bg-white resize-none"
+              className="resize-none"
             />
           </div>
 
@@ -443,39 +444,24 @@ export default function FeedbackPage() {
 
           {/* Кнопки */}
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <button
+            <Button
               type="submit"
-              disabled={isLoading || success || uploading}
-              className="flex-1 gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity flex items-center justify-center gap-2"
+              variant="primary"
+              size="lg"
+              loading={isLoading}
+              disabled={success || uploading}
+              className="flex-1"
             >
-              {isLoading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {editingId ? 'Сохранение...' : 'Отправка...'}
-                </>
-              ) : success ? (
-                'Готово!'
-              ) : editingId ? (
-                'Сохранить изменения'
-              ) : (
-                'Отправить обращение'
-              )}
-            </button>
+              {success ? 'Готово!' : editingId ? 'Сохранить изменения' : 'Отправить обращение'}
+            </Button>
             {editingId ? (
-              <button
-                type="button"
-                onClick={cancelEdit}
-                className="px-6 py-3 border border-purple-200 text-purple-700 rounded-xl font-semibold hover:bg-purple-50 transition-colors text-center"
-              >
+              <Button variant="outline" size="lg" onClick={cancelEdit}>
                 Отменить правку
-              </button>
+              </Button>
             ) : (
-              <Link
-                href="/"
-                className="px-6 py-3 border border-purple-200 text-purple-700 rounded-xl font-semibold hover:bg-purple-50 transition-colors text-center"
-              >
+              <Button variant="outline" size="lg" href="/">
                 Отмена
-              </Link>
+              </Button>
             )}
           </div>
         </form>
@@ -509,12 +495,14 @@ export default function FeedbackPage() {
                   {/* Шапка: тип + заголовок + статус */}
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-gray-500 mb-1">
                         <span>{type.icon}</span>
                         <span>{type.label}</span>
                         <span>·</span>
-                        {/* Дата в российском формате: 2 сентября 2026 */}
-                        <span>
+                        {/* Дата в российском формате: 2 сентября 2026.
+                            whitespace-nowrap — дата переносится на новую строку
+                            целиком, а не по словам в столбик на узких экранах */}
+                        <span className="whitespace-nowrap">
                           {new Date(fb.created_at).toLocaleDateString('ru-RU', {
                             day: 'numeric',
                             month: 'long',
@@ -524,9 +512,9 @@ export default function FeedbackPage() {
                       </div>
                       <h3 className="font-semibold text-gray-900 break-words">{fb.title}</h3>
                     </div>
-                    <span className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold border ${status.cls}`}>
+                    <Badge variant={status.variant} className="flex-shrink-0">
                       {status.label}
-                    </span>
+                    </Badge>
                   </div>
 
                   {/* Описание */}

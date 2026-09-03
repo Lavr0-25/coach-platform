@@ -4,6 +4,9 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { Input, Label } from '@/components/ui/Input'
 
 export default function LoginPage() {
   const supabase = createClient()
@@ -78,7 +81,7 @@ export default function LoginPage() {
         </div>
 
         {/* Форма входа */}
-        <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-8">
+        <Card padding="lg" rounded="2xl">
           <form onSubmit={handleLogin} className="space-y-6">
             {/* Сообщение об ошибке */}
             {error && (
@@ -92,16 +95,13 @@ export default function LoginPage() {
 
             {/* Поле: Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
+              <Label htmlFor="email">Email</Label>
+              <Input
                 id="email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="your@email.com"
                 disabled={loading}
               />
@@ -109,19 +109,17 @@ export default function LoginPage() {
 
             {/* Поле: Пароль с кнопкой "глаз" */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Пароль
-              </label>
+              <Label htmlFor="password">Пароль</Label>
               <div className="relative">
-                <input
+                <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-12"
                   placeholder="••••••••"
                   disabled={loading}
+                  className="pr-12"
                 />
                 <button
                   type="button"
@@ -151,25 +149,17 @@ export default function LoginPage() {
             </div>
 
             {/* Кнопка входа */}
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              className="gradient-btn w-full text-white py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+              variant="primary"
+              size="lg"
+              fullWidth
+              loading={loading}
             >
-              {loading ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Вход...
-                </>
-              ) : (
-                'Войти'
-              )}
-            </button>
+              {loading ? 'Вход...' : 'Войти'}
+            </Button>
           </form>
-        </div>
+        </Card>
 
         {/* Дополнительная информация */}
         <div className="mt-6 text-center text-sm text-gray-600">
