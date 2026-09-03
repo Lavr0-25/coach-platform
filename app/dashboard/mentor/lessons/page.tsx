@@ -8,6 +8,7 @@ import Image from 'next/image'
 import { Trash2 } from 'lucide-react'
 import { ToastProvider, useToast } from '@/components/Toast'
 import { deleteLesson } from '@/app/actions/deleteLesson'
+import { setLessonPublishAt } from '@/app/actions/updateLesson'
 
 export default function MentorLessonsPage() {
   // Провайдер локальный: ToastProvider подключён в админском layout,
@@ -26,6 +27,7 @@ function LessonsContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [confirmingScheduleId, setConfirmingScheduleId] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -67,6 +69,8 @@ function LessonsContent() {
         price,
         is_free_preview,
         cover_image,
+        is_published,
+        publish_at,
         created_at
       `)
       .eq('coach_id', coach.id)
@@ -108,6 +112,23 @@ function LessonsContent() {
     toast.showToast('Урок удалён', 'success')
     setLessons(prev => prev.filter(l => l.id !== lessonId))
   }
+
+  // Отмена расписания прямо из списка (бейдж с датой публикации)
+  const handleCancelSchedule = async (lessonId: string) => {
+    setConfirmingScheduleId(null)
+    const res = await setLessonPublishAt(lessonId, null)
+    if (!res.ok) {
+      toast.showToast(res.error || 'Не удалось отменить расписание', 'error')
+      return
+    }
+    toast.showToast('Расписание отменено', 'success')
+    setLessons(prev => prev.map(l => (l.id === lessonId ? { ...l, publish_at: null } : l)))
+  }
+
+  const formatSchedule = (iso: string) =>
+    new Date(iso).toLocaleString('ru-RU', {
+      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+    })
 
   // Фильтрация уроков
   const filteredLessons = debouncedSearch
@@ -328,6 +349,30 @@ function LessonsContent() {
                   </div>
                 )}
 
+                {/* Публикация по расписанию: бейдж + отмена (серверное действие) */}
+                {!lesson.is_published && lesson.publish_at && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
+                      🗓 {formatSchedule(lesson.publish_at)}
+                    </span>
+                    {confirmingScheduleId === lesson.id ? (
+                      <button
+                        onClick={() => handleCancelSchedule(lesson.id)}
+                        className="text-xs font-semibold text-red-600 hover:text-red-700 px-2 py-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 transition-colors whitespace-nowrap"
+                      >
+                        Точно отменить?
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmingScheduleId(lesson.id)}
+                        className="text-xs text-gray-400 hover:text-red-600 transition-colors whitespace-nowrap"
+                      >
+                        отменить
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {/* Мета-информация */}
                 <div className="flex items-center justify-between pt-3 border-t border-purple-100">
                   <div className="flex items-center gap-2">
@@ -421,6 +466,30 @@ function LessonsContent() {
                   <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                     {lesson.description}
                   </p>
+                )}
+
+                {/* Публикация по расписанию: бейдж + отмена (серверное действие) */}
+                {!lesson.is_published && lesson.publish_at && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
+                      🗓 {formatSchedule(lesson.publish_at)}
+                    </span>
+                    {confirmingScheduleId === lesson.id ? (
+                      <button
+                        onClick={() => handleCancelSchedule(lesson.id)}
+                        className="text-xs font-semibold text-red-600 hover:text-red-700 px-2 py-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 transition-colors whitespace-nowrap"
+                      >
+                        Точно отменить?
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmingScheduleId(lesson.id)}
+                        className="text-xs text-gray-400 hover:text-red-600 transition-colors whitespace-nowrap"
+                      >
+                        отменить
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {/* Мета-информация */}

@@ -46,9 +46,84 @@ export async function setLessonPublished(lessonId: string, published: boolean): 
 
   const { data, error: updateError } = await supabase
     .from('lessons')
-    .update({ is_published: published, updated_at: new Date().toISOString() })
+    .update({
+      is_published: published,
+      // Ручная публикация перекрывает расписание — снимаем его
+      publish_at: published ? null : undefined,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', lessonId)
     .eq('coach_id', coach.id) // ← только свой урок
+    .select('id')
+
+  if (updateError) return { ok: false, error: updateError.message }
+  if (!data || data.length === 0) {
+    return { ok: false, error: 'Урок не найден или нет прав на изменение' }
+  }
+  return { ok: true }
+}
+
+// Публикация по расписанию: автор задаёт/отменяет момент публикации (publish_at).
+// В назначенное время урок откроет планировщик в БД (pg_cron, миграция
+// 2026-09-03-scheduled-publish.sql) — только если контент непустой, иначе урок
+// останется черновиком. null = отменить расписание.
+export async function setLessonPublishAt(lessonId: string, publishAt: string | null): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Требуется вход' }
+
+  const { data: coach } = await supabase
+    .from('coaches')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!coach) return { ok: false, error: 'Профиль наставника не найден' }
+
+  const when = publishAt ? new Date(publishAt) : null
+  if (publishAt && (!when || isNaN(when.getTime()))) {
+    return { ok: false, error: 'Некорректная дата публикации' }
+  }
+  if (when && when.getTime() <= Date.now()) {
+    return { ok: false, error: 'Время публикации уже прошло — укажите будущее' }
+  }
+
+  // Свой черновик (у опубликованного урока расписание не имеет смысла)
+  const { data: lesson } = await supabase
+    .from('lessons')
+    .select('id, is_published')
+    .eq('id', lessonId)
+    .eq('coach_id', coach.id)
+    .maybeSingle()
+
+  if (!lesson) return { ok: false, error: 'Урок не найден или нет прав на изменение' }
+  if (lesson.is_published) {
+    return { ok: false, error: 'Урок уже опубликован — расписание не нужно' }
+  }
+
+  // Ставить расписание на пустой урок нельзя — то же правило, что у публикации
+  if (when) {
+    const { data: contents } = await supabase
+      .from('lesson_content')
+      .select('content_type, content_url, content_html')
+      .eq('lesson_id', lessonId)
+      .limit(1)
+
+    const content = contents?.[0]
+    const hasContent = !!content && (content.content_type === 'text'
+      ? !!(content.content_html || '').replace(/<[^>]*>/g, '').trim()
+      : !!(content.content_url || '').trim())
+
+    if (!hasContent) {
+      return { ok: false, error: 'Сначала заполните и сохраните контент урока — публиковать пустой урок нельзя' }
+    }
+  }
+
+  const { data, error: updateError } = await supabase
+    .from('lessons')
+    .update({ publish_at: publishAt, updated_at: new Date().toISOString() })
+    .eq('id', lessonId)
+    .eq('coach_id', coach.id)
     .select('id')
 
   if (updateError) return { ok: false, error: updateError.message }

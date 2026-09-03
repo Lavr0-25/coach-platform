@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { updateLesson, setLessonPublished } from '@/app/actions/updateLesson'
+import { updateLesson, setLessonPublished, setLessonPublishAt } from '@/app/actions/updateLesson'
 import { deleteLesson } from '@/app/actions/deleteLesson'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -77,6 +77,11 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   const [saving, setSaving] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  // Публикация по расписанию: момент из БД (ISO), открытая панель выбора и значение input
+  const [publishAt, setPublishAt] = useState<string | null>(null)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [scheduleValue, setScheduleValue] = useState('')
+  const [scheduling, setScheduling] = useState(false)
   const [isPublished, setIsPublished] = useState(false)
   const [hasSavedContent, setHasSavedContent] = useState(false)
   const [error, setError] = useState('')
@@ -120,6 +125,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
         setPrice(lesson.price?.toString() || '0')
         setIsFreePreview(lesson.is_free_preview || false)
         setIsPublished(lesson.is_published || false)
+        setPublishAt(lesson.publish_at || null)
         setCoverImage(lesson.cover_image || '')
 
         const { data: content } = await supabase
@@ -162,6 +168,45 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   }
 
   const isFileType = contentType === 'pdf' || contentType === 'image'
+
+  // Публикация по расписанию: ставим/отменяем publish_at (сервер проверит
+  // права, черновик, контент и что время в будущем)
+  const handleSchedule = async () => {
+    if (!scheduleValue) return
+    setScheduling(true)
+    const result = await setLessonPublishAt(lessonId, new Date(scheduleValue).toISOString())
+    setScheduling(false)
+    if (!result.ok) {
+      setError(result.error)
+      return
+    }
+    setError('')
+    setPublishAt(new Date(scheduleValue).toISOString())
+    setScheduleOpen(false)
+    setScheduleValue('')
+    setSuccess('Публикация запланирована — урок откроется сам в назначенное время')
+    setTimeout(() => setSuccess(''), 3000)
+  }
+
+  const handleCancelSchedule = async () => {
+    setScheduling(true)
+    const result = await setLessonPublishAt(lessonId, null)
+    setScheduling(false)
+    if (!result.ok) {
+      setError(result.error)
+      return
+    }
+    setError('')
+    setPublishAt(null)
+    setScheduleOpen(false)
+    setSuccess('Расписание отменено')
+    setTimeout(() => setSuccess(''), 3000)
+  }
+
+  const formatSchedule = (iso: string) =>
+    new Date(iso).toLocaleString('ru-RU', {
+      day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+    })
 
   const handleTogglePublish = async () => {
     setPublishing(true)
@@ -297,31 +342,90 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
       {/* Статус публикации: всегда виден, меняется отдельной кнопкой (не через «Сохранить») */}
       <div className={`rounded-xl border p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isPublished ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
         <div className="flex items-start gap-3">
-          <span className="text-xl leading-none mt-0.5">{isPublished ? '🟢' : '🟡'}</span>
+          <span className="text-xl leading-none mt-0.5">{isPublished ? '🟢' : publishAt ? '🗓' : '🟡'}</span>
           <div>
             <p className="font-semibold text-gray-900 text-sm">
-              {isPublished ? 'Урок опубликован' : 'Урок — черновик'}
+              {isPublished ? 'Урок опубликован' : publishAt ? `Публикация запланирована: ${formatSchedule(publishAt)}` : 'Урок — черновик'}
             </p>
             <p className="text-sm text-gray-600">
               {isPublished
                 ? 'Урок виден студентам (в каталоге и на странице наставника)'
-                : hasSavedContent
-                  ? 'Урок виден только вам — студенты его пока не видят'
-                  : 'Урок виден только вам — чтобы опубликовать, сначала заполните и сохраните контент'}
+                : publishAt
+                  ? 'Урок откроется сам в назначенное время; до этого его видите только вы'
+                  : hasSavedContent
+                    ? 'Урок виден только вам — студенты его пока не видят'
+                    : 'Урок виден только вам — чтобы опубликовать, сначала заполните и сохраните контент'}
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={handleTogglePublish}
-          disabled={publishing || (!isPublished && !hasSavedContent)}
-          title={!isPublished && !hasSavedContent ? 'Сначала заполните и сохраните контент урока' : undefined}
-          className={isPublished
-            ? 'bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap'
-            : 'gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-[box-shadow,border-color,background-color,color] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none whitespace-nowrap'}
-        >
-          {publishing ? 'Меняем статус...' : isPublished ? 'Вернуть в черновик' : 'Опубликовать урок'}
-        </button>
+        {!isPublished && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {/* Расписание: панель выбора времени / отмены */}
+            {scheduleOpen ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="datetime-local"
+                  value={scheduleValue}
+                  onChange={(e) => setScheduleValue(e.target.value)}
+                  className="px-3 py-2 border border-purple-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleSchedule}
+                  disabled={scheduling || !scheduleValue}
+                  className="gradient-btn text-white px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  {scheduling ? 'Сохраняю…' : 'Запланировать'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setScheduleOpen(false); setScheduleValue('') }}
+                  className="text-gray-500 hover:text-gray-700 text-sm px-2 py-2 whitespace-nowrap"
+                >
+                  Отмена
+                </button>
+              </div>
+            ) : publishAt ? (
+              <button
+                type="button"
+                onClick={handleCancelSchedule}
+                disabled={scheduling}
+                className="bg-white text-gray-700 border border-gray-300 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {scheduling ? 'Отменяю…' : 'Отменить расписание'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setScheduleOpen(true)}
+                disabled={!hasSavedContent}
+                title={!hasSavedContent ? 'Сначала заполните и сохраните контент урока' : 'Опубликовать автоматически в выбранное время'}
+                className="bg-white text-gray-700 border border-gray-300 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                🗓 По расписанию
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleTogglePublish}
+              disabled={publishing || !hasSavedContent}
+              title={!hasSavedContent ? 'Сначала заполните и сохраните контент урока' : undefined}
+              className="gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-[box-shadow,border-color,background-color,color] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none whitespace-nowrap"
+            >
+              {publishing ? 'Меняем статус...' : 'Опубликовать сейчас'}
+            </button>
+          </div>
+        )}
+        {isPublished && (
+          <button
+            type="button"
+            onClick={handleTogglePublish}
+            disabled={publishing}
+            className="bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap"
+          >
+            {publishing ? 'Меняем статус...' : 'Вернуть в черновик'}
+          </button>
+        )}
       </div>
 
       {error && (
