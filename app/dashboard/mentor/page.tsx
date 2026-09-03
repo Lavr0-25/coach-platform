@@ -90,6 +90,7 @@ export default async function MentorDashboardPage() {
   const sectionLinks = [
     { href: '/dashboard/mentor/courses', label: 'Мои курсы' },
     { href: '/dashboard/mentor/subscribers', label: 'Подписчики' },
+    { href: '/dashboard/mentor/topics', label: 'План тем' },
     { href: '/mentor/analytics', label: 'Аналитика' },
     { href: '/dashboard/mentor/profile', label: 'Профиль' },
   ]

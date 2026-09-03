@@ -5,12 +5,27 @@ import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { Trash2 } from 'lucide-react'
+import { ToastProvider, useToast } from '@/components/Toast'
+import { deleteLesson } from '@/app/actions/deleteLesson'
 
 export default function MentorLessonsPage() {
+  // Провайдер локальный: ToastProvider подключён в админском layout,
+  // а эта страница живёт в кабинете
+  return (
+    <ToastProvider>
+      <LessonsContent />
+    </ToastProvider>
+  )
+}
+
+function LessonsContent() {
+  const toast = useToast()
   const [lessons, setLessons] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -80,6 +95,18 @@ export default function MentorLessonsPage() {
       courses: coursesByLesson.get(l.id) || [],
     })))
     setLoading(false)
+  }
+
+  // Удаление урока (двухшаговое подтверждение, как в «Плане тем»)
+  const handleDelete = async (lessonId: string) => {
+    setConfirmingId(null)
+    const res = await deleteLesson(lessonId)
+    if (!res.ok) {
+      toast.showToast(res.error || 'Не удалось удалить урок', 'error')
+      return
+    }
+    toast.showToast('Урок удалён', 'success')
+    setLessons(prev => prev.filter(l => l.id !== lessonId))
   }
 
   // Фильтрация уроков
@@ -236,11 +263,33 @@ export default function MentorLessonsPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {lessonsInCourses.map((lesson) => (
-              <Link
+              <div
                 key={lesson.id}
-                href={`/dashboard/mentor/lessons/${lesson.id}/edit`}
-                className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100"
+                className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100 relative"
               >
+                {/* Кнопка удаления — поверх карточки (внутрь <Link> класть нельзя) */}
+                {confirmingId === lesson.id ? (
+                  <button
+                    onClick={() => handleDelete(lesson.id)}
+                    className="absolute top-3 right-3 z-10 px-3 py-1.5 rounded-lg border border-red-300 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100 transition-colors"
+                  >
+                    Точно удалить?
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setConfirmingId(lesson.id)}
+                    aria-label="Удалить урок"
+                    title="Удалить урок"
+                    className="absolute top-3 right-3 z-10 p-2 rounded-lg bg-white/90 border border-purple-100 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+
+                <Link
+                  href={`/dashboard/mentor/lessons/${lesson.id}/edit`}
+                  className="block"
+                >
                 {/* Обложка */}
                 <div className="relative aspect-video bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
                   {lesson.cover_image ? (
@@ -301,6 +350,7 @@ export default function MentorLessonsPage() {
                   </div>
                 </div>
               </Link>
+            </div>
             ))}
           </div>
         </div>
@@ -320,11 +370,33 @@ export default function MentorLessonsPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {lessonsWithoutCourse.map((lesson) => (
-              <Link
+              <div
                 key={lesson.id}
-                href={`/dashboard/mentor/lessons/${lesson.id}/edit`}
-                className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100"
+                className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100 relative"
               >
+                {/* Кнопка удаления — поверх карточки (внутрь <Link> класть нельзя) */}
+                {confirmingId === lesson.id ? (
+                  <button
+                    onClick={() => handleDelete(lesson.id)}
+                    className="absolute top-3 right-3 z-10 px-3 py-1.5 rounded-lg border border-red-300 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100 transition-colors"
+                  >
+                    Точно удалить?
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setConfirmingId(lesson.id)}
+                    aria-label="Удалить урок"
+                    title="Удалить урок"
+                    className="absolute top-3 right-3 z-10 p-2 rounded-lg bg-white/90 border border-purple-100 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+
+                <Link
+                  href={`/dashboard/mentor/lessons/${lesson.id}/edit`}
+                  className="block"
+                >
                 {/* Обложка */}
                 <div className="relative aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
                   {lesson.cover_image ? (
@@ -373,6 +445,7 @@ export default function MentorLessonsPage() {
                   </div>
                 </div>
               </Link>
+            </div>
             ))}
           </div>
         </div>
