@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { BookOpen, FileText } from 'lucide-react'
 import RemoveFavoriteButton from '@/components/RemoveFavoriteButton'
 
 export default function FavoritesPage() {
@@ -249,7 +250,7 @@ export default function FavoritesPage() {
       {filteredCourses.length > 0 && (
         <div className="mb-10">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📚</span>
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white"><BookOpen className="w-4 h-4" /></span>
             Курсы {debouncedSearch && <span className="text-base text-gray-500">({filteredCourses.length})</span>}
           </h2>
           
@@ -269,7 +270,7 @@ export default function FavoritesPage() {
                       {course.cover_image ? (
                         <Image src={course.cover_image} alt={course.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="w-full h-full object-cover transition-transform duration-300" />
                       ) : (
-                        <span className="opacity-50">📚</span>
+                        <BookOpen className="w-10 h-10 opacity-50" />
                       )}
                     </div>
                     
@@ -316,7 +317,7 @@ export default function FavoritesPage() {
       {filteredLessons.length > 0 && (
         <div className="mb-10">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm"></span>
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white"><FileText className="w-4 h-4" /></span>
             Уроки {debouncedSearch && <span className="text-base text-gray-500">({filteredLessons.length})</span>}
           </h2>
           
@@ -334,7 +335,7 @@ export default function FavoritesPage() {
                     {lesson.cover_image ? (
                       <Image src={lesson.cover_image} alt={lesson.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="w-full h-full object-cover transition-transform duration-300" />
                     ) : (
-                      <span className="opacity-50">📝</span>
+                      <FileText className="w-10 h-10 opacity-50" />
                     )}
                   </div>
                   
