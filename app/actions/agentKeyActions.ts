@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { hashAgentKey } from '@/lib/agentAuth'
 
-// Server Actions для /api-keys — управление ключами агентского API.
+// Server Actions для страницы «API-ключи агента» (/dashboard/ai/keys).
 // Ключ может создать любой залогиненный пользователь; права агента определяются
 // ролью владельца (админ — полный доступ, остальные — чтение своих данных).
 // Таблица agent_keys закрыта RLS наглухо (политик нет), поэтому все операции —

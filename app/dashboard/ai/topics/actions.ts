@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 
-// Server Actions для страницы «План тем» (/dashboard/mentor/topics).
+// Server Actions для страницы «План тем» (/dashboard/ai/topics).
 // Чтение — на клиенте под RLS (как на остальных страницах кабинета),
 // запись — через серверные действия с обязательной проверкой сессии:
 // каждое действие — точка входа, доступная кому угодно по POST.

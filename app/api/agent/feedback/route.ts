@@ -3,7 +3,7 @@ import { getAgentClient } from '@/lib/agentAuth'
 // Агентское API: обратная связь (feedback).
 // GET   /api/agent/feedback?status=new  — список обращений + счётчики по статусам
 // PATCH /api/agent/feedback             — { id, status } сменить статус
-// Доступ: заголовок x-agent-key = ключ со страницы /api-keys (см. lib/agentAuth.ts).
+// Доступ: заголовок x-agent-key = ключ со страницы /dashboard/ai/keys (см. lib/agentAuth.ts).
 // Роль владельца ключа: админ видит все обращения и может менять статусы;
 // остальные видят ТОЛЬКО СВОИ обращения, смена статусов им недоступна.
 // Предназначено для работы Claude Code с админкой без ручной выгрузки JSON
