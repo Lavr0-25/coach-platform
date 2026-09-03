@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { deleteLesson, updateLesson } from '@/app/admin/actions'
 import { useToast } from '@/components/Toast'
 
 // Статус-чипы — семантический цвет в рамке, как во всей админке
@@ -26,23 +26,11 @@ export default function LessonsList({ initialLessons }: { initialLessons: any[] 
 
     setLoading(lessonId)
 
-    const supabase = createClient()
+    const result = await deleteLesson(lessonId)
 
-    // Сначала удаляем контент урока
-    await supabase
-      .from('lesson_content')
-      .delete()
-      .eq('lesson_id', lessonId)
-
-    // Затем удаляем сам урок
-    const { error } = await supabase
-      .from('lessons')
-      .delete()
-      .eq('id', lessonId)
-
-    if (error) {
-      console.error('Error deleting lesson:', error)
-      showToast('Ошибка при удалении урока', 'error')
+    if (!result.ok) {
+      console.error('Error deleting lesson:', result.error)
+      showToast(result.error || 'Ошибка при удалении урока', 'error')
     } else {
       // Обновляем список
       setLessons(lessons.filter(l => l.id !== lessonId))
@@ -70,15 +58,11 @@ export default function LessonsList({ initialLessons }: { initialLessons: any[] 
     setLoading(editingLesson.id)
     setShowEditModal(false)
 
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('lessons')
-      .update(editData)
-      .eq('id', editingLesson.id)
+    const result = await updateLesson(editingLesson.id, editData)
 
-    if (error) {
-      console.error('Error updating lesson:', error)
-      showToast('Ошибка при обновлении урока', 'error')
+    if (!result.ok) {
+      console.error('Error updating lesson:', result.error)
+      showToast(result.error || 'Ошибка при обновлении урока', 'error')
     } else {
       // Обновляем список
       setLessons(lessons.map(l =>

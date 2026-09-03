@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { saveSystemSettings } from '@/app/admin/actions'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -46,23 +47,8 @@ export default function SettingsPage() {
     setSuccessMessage('')
 
     try {
-      const updates = [
-        supabase
-          .from('system_settings')
-          .upsert({
-            key: 'auto_ban_threshold',
-            value: settings.autoBanThreshold.toString(),
-          }),
-        supabase
-          .from('system_settings')
-          .upsert({
-            key: 'auto_ban_duration_days',
-            value: settings.autoBanDurationDays.toString(),
-          }),
-      ]
-
-      const results = await Promise.all(updates)
-      if (results.some(r => r.error)) throw results.find(r => r.error)?.error
+      const result = await saveSystemSettings(settings.autoBanThreshold, settings.autoBanDurationDays)
+      if (!result.ok) throw new Error(result.error)
 
       setSuccessMessage('✅ Настройки успешно сохранены!')
       setTimeout(() => setSuccessMessage(''), 3000)

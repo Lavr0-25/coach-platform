@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { deleteReport, upsertStopList } from '@/app/admin/actions'
 import Link from 'next/link'
 
 interface Report {
@@ -53,11 +54,12 @@ export default function ReportsPage() {
 
   const handleDeleteReport = async (id: string, type: 'comment' | 'review') => {
     if (!confirm('Удалить эту жалобу?')) return
-    try {
-      await supabase.from(type === 'comment' ? 'reports' : 'review_reports').delete().eq('id', id)
+    const result = await deleteReport(id, type)
+    if (!result.ok) {
+      console.error('Error deleting report:', result.error)
+      alert(result.error || 'Ошибка при удалении жалобы')
+    } else {
       await loadReports()
-    } catch (error) {
-      console.error('Error deleting report:', error)
     }
   }
 
@@ -78,24 +80,16 @@ export default function ReportsPage() {
     date.setDate(date.getDate() + days)
     const bannedUntil = date.toISOString()
 
-    try {
-      const { error } = await supabase
-        .from('stop_list')
-        .upsert({
-          user_id: selectedUserId,
-          reason: banReason,
-          banned_until: bannedUntil,
-        }, { onConflict: 'user_id' })
+    const result = await upsertStopList(selectedUserId, banReason, bannedUntil)
 
-      if (error) throw error
-
+    if (!result.ok) {
+      alert(result.error || 'Ошибка: не удалось заблокировать')
+    } else {
       alert('✅ Пользователь заблокирован')
       setShowBanModal(false)
       setSelectedUserId('')
       setBanReason('')
       setBanDuration('')
-    } catch (error: any) {
-      alert('Ошибка: ' + (error.message || 'Не удалось заблокировать'))
     }
   }
 

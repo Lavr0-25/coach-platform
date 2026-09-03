@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { setCoachVerified } from '@/app/admin/actions'
 import { useToast } from '@/components/Toast'
 
 // Статус-чипы — семантический цвет в рамке, как во всей админке
@@ -21,17 +21,13 @@ export default function CoachesList({ initialCoaches }: { initialCoaches: any[] 
       c.id === coachId ? { ...c, is_verified: true } : c
     ))
 
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('coaches')
-      .update({ is_verified: true })
-      .eq('id', coachId)
+    const result = await setCoachVerified(coachId, true)
 
-    if (error) {
-      console.error('Error approving coach:', error)
+    if (!result.ok) {
+      console.error('Error approving coach:', result.error)
       // Откат изменений при ошибке
       setCoaches(initialCoaches || [])
-      showToast('Ошибка при одобрении наставника', 'error')
+      showToast(result.error || 'Ошибка при одобрении наставника', 'error')
     } else {
       showToast('Наставник проверен', 'success')
     }
@@ -47,17 +43,13 @@ export default function CoachesList({ initialCoaches }: { initialCoaches: any[] 
       c.id === coachId ? { ...c, is_verified: false } : c
     ))
 
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('coaches')
-      .update({ is_verified: false })
-      .eq('id', coachId)
+    const result = await setCoachVerified(coachId, false)
 
-    if (error) {
-      console.error('Error revoking coach:', error)
+    if (!result.ok) {
+      console.error('Error revoking coach:', result.error)
       // Откат изменений при ошибке
       setCoaches(initialCoaches || [])
-      showToast('Ошибка при отмене проверки', 'error')
+      showToast(result.error || 'Ошибка при отмене проверки', 'error')
     } else {
       showToast('Проверка отменена', 'success')
     }

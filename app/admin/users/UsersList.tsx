@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { banUser, unbanUser } from '@/app/admin/actions'
 
 export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
   const [users, setUsers] = useState(initialUsers || [])
@@ -26,34 +26,17 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
     setLoading(selectedUser.id)
     setShowBanModal(false)
 
-    const supabase = createClient()
-    
-    let unbannedAt = null
-    if (banDuration) {
-      const days = parseInt(banDuration)
-      const date = new Date()
-      date.setDate(date.getDate() + days)
-      unbannedAt = date.toISOString()
-    }
+    const days = banDuration ? parseInt(banDuration) : undefined
+    const result = await banUser(selectedUser.id, banReason, days)
 
-    const { error } = await supabase
-      .from('user_bans')
-      .insert({
-        user_id: selectedUser.id,
-        banned_by: (users.find(u => u.role === 'admin') as any)?.id,
-        reason: banReason,
-        unbanned_at: unbannedAt,
-        is_active: true
-      })
-
-    if (error) {
-      console.error('Error banning user:', error)
-      alert('Ошибка при блокировке пользователя')
+    if (!result.ok) {
+      console.error('Error banning user:', result.error)
+      alert(result.error || 'Ошибка при блокировке пользователя')
     } else {
       alert(`Пользователь ${selectedUser.email} заблокирован`)
       window.location.reload()
     }
-    
+
     setLoading(null)
   }
 
@@ -61,22 +44,17 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
     if (!confirm(`Разблокировать пользователя ${email}?`)) return
 
     setLoading(userId)
-    
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('user_bans')
-      .update({ is_active: false })
-      .eq('user_id', userId)
-      .eq('is_active', true)
 
-    if (error) {
-      console.error('Error unbanning user:', error)
-      alert('Ошибка при разблокировке')
+    const result = await unbanUser(userId)
+
+    if (!result.ok) {
+      console.error('Error unbanning user:', result.error)
+      alert(result.error || 'Ошибка при разблокировке')
     } else {
       alert(`Пользователь ${email} разблокирован`)
       window.location.reload()
     }
-    
+
     setLoading(null)
   }
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { addBannedWord, addBannedWordsBatch, deleteBannedWord, clearBannedWords } from '@/app/admin/actions'
 import Link from 'next/link'
 
 interface BannedWord {
@@ -49,7 +50,7 @@ export default function BannedWordsPage() {
 
   const handleAddWord = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!newWord.trim()) {
       alert('Введите слово')
       return
@@ -58,16 +59,9 @@ export default function BannedWordsPage() {
     setSubmitting(true)
 
     try {
-      const { error } = await supabase
-        .from('banned_words')
-        .insert({ word: newWord.trim().toLowerCase() })
-
-      if (error) {
-        if (error.code === '23505') {
-          alert('Это слово уже есть в списке')
-        } else {
-          throw error
-        }
+      const result = await addBannedWord(newWord)
+      if (!result.ok) {
+        alert(result.error)
         return
       }
 
@@ -97,7 +91,7 @@ export default function BannedWordsPage() {
 
     try {
       const text = await file.text()
-      
+
       const wordsList = text
         .split(/[\n,;\r]+/)
         .map(w => w.trim().toLowerCase())
@@ -109,33 +103,18 @@ export default function BannedWordsPage() {
         return
       }
 
-      const uniqueWords = [...new Set(wordsList)]
-
-      let added = 0
-      let exists = 0
-      let errors = 0
-
-      for (const word of uniqueWords) {
-        const { error } = await supabase
-          .from('banned_words')
-          .insert({ word })
-
-        if (error) {
-          if (error.code === '23505') {
-            exists++
-          } else {
-            errors++
-            console.error(`Error adding word "${word}":`, error)
-          }
-        } else {
-          added++
-        }
+      // Пакетная вставка одним запросом — дубли сервер игнорирует сам
+      const result = await addBannedWordsBatch(wordsList)
+      if (!result.ok) {
+        alert('Ошибка при загрузке файла: ' + (result.error || 'Неизвестная ошибка'))
+        setFileUploading(false)
+        return
       }
 
-      setUploadResult({ added, exists, errors })
+      setUploadResult({ added: result.added, exists: result.exists, errors: 0 })
       setCurrentPage(1)
       await loadWords()
-      
+
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
@@ -150,12 +129,8 @@ export default function BannedWordsPage() {
   const handleDeleteWord = async (id: string) => {
     setDeletingId(id)
     try {
-      const { error } = await supabase
-        .from('banned_words')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
+      const result = await deleteBannedWord(id)
+      if (!result.ok) throw new Error(result.error)
 
       await loadWords()
     } catch (error: any) {
@@ -168,12 +143,8 @@ export default function BannedWordsPage() {
 
   const handleClearAll = async () => {
     try {
-      const { error } = await supabase
-        .from('banned_words')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000')
-
-      if (error) throw error
+      const result = await clearBannedWords()
+      if (!result.ok) throw new Error(result.error)
 
       setShowClearModal(false)
       setCurrentPage(1)

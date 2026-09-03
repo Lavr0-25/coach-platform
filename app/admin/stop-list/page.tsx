@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { upsertStopList, removeStopListEntry } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
 import Breadcrumbs from '@/components/Breadcrumbs'
@@ -107,14 +108,8 @@ export default function StopListPage() {
       return
     }
     try {
-      const { error } = await supabase
-        .from('stop_list')
-        .upsert({ 
-          user_id: newBan.user_id, 
-          reason: newBan.reason, 
-          banned_until: newBan.banned_until 
-        }, { onConflict: 'user_id' })
-      if (error) throw error
+      const result = await upsertStopList(newBan.user_id, newBan.reason, newBan.banned_until)
+      if (!result.ok) throw new Error(result.error)
       showToast('Пользователь добавлен в стоп-лист', 'success')
       setShowAddModal(false)
       setNewBan({ user_id: '', reason: '', banned_until: '' })
@@ -129,8 +124,8 @@ export default function StopListPage() {
   const handleRemoveBan = async (id: string) => {
     if (!confirm('Разблокировать пользователя?')) return
     try {
-      const { error } = await supabase.from('stop_list').delete().eq('id', id)
-      if (error) throw error
+      const result = await removeStopListEntry(id)
+      if (!result.ok) throw new Error(result.error)
       showToast('Пользователь разблокирован', 'success')
       setCurrentPage(1)
       await loadStopList()

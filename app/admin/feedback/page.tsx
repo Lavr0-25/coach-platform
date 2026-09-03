@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { updateFeedbackStatus, bulkUpdateFeedbackStatus } from '@/app/admin/actions'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -70,18 +71,8 @@ export default function AdminFeedbackPage() {
   const updateStatus = async (id: string, status: Feedback['status'], reply?: string) => {
     setUpdatingId(id)
     try {
-      // Ответ сохраняем вместе со статусом; replied_at ставим только когда есть текст
-      const payload: Record<string, unknown> = { status, updated_at: new Date().toISOString() }
-      if (reply !== undefined) {
-        payload.admin_reply = reply || null
-        payload.replied_at = reply ? new Date().toISOString() : null
-      }
-      const { error } = await supabase
-        .from('feedback')
-        .update(payload)
-        .eq('id', id)
-
-      if (error) throw error
+      const result = await updateFeedbackStatus(id, status, reply)
+      if (!result.ok) throw new Error(result.error)
       await loadFeedbacks()
     } catch (err) {
       console.error('Error updating feedback:', err)
@@ -113,12 +104,8 @@ export default function AdminFeedbackPage() {
     if (selectedIds.length === 0) return
     setBulkUpdating(true)
     try {
-      const { error } = await supabase
-        .from('feedback')
-        .update({ status, updated_at: new Date().toISOString() })
-        .in('id', selectedIds)
-
-      if (error) throw error
+      const result = await bulkUpdateFeedbackStatus(selectedIds, status)
+      if (!result.ok) throw new Error(result.error)
       clearSelection()
       await loadFeedbacks()
     } catch (err) {
