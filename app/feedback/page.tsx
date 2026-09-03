@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input, Textarea, Label } from '@/components/ui/Input'
 import type { BadgeProps } from '@/components/ui/Badge'
+import { Bug, Lightbulb, Pencil, Trash2 } from 'lucide-react'
 
 // Статусы и подписи — как в админке (/admin/feedback), чтобы пользователь
 // видел то же самое, что видит админ
@@ -20,9 +21,9 @@ const STATUS_META: Record<string, { label: string; variant: NonNullable<BadgePro
   rejected: { label: 'Отклонено', variant: 'red' },
 }
 
-const TYPE_META: Record<string, { icon: string; label: string }> = {
-  bug: { icon: '🐛', label: 'Ошибка' },
-  feature: { icon: '💡', label: 'Идея' },
+const TYPE_META: Record<string, { icon: React.ReactNode; label: string }> = {
+  bug: { icon: <Bug className="w-4 h-4" />, label: 'Ошибка' },
+  feature: { icon: <Lightbulb className="w-4 h-4" />, label: 'Идея' },
 }
 
 export default function FeedbackPage() {
@@ -294,7 +295,7 @@ export default function FeedbackPage() {
                     : 'border-gray-200 text-gray-600 hover:border-purple-300 hover:bg-purple-50/50'
                 }`}
               >
-                <span className="text-2xl">💡</span>
+                <Lightbulb className="w-6 h-6" />
                 <span>Предложить идею</span>
               </button>
               <button
@@ -306,7 +307,7 @@ export default function FeedbackPage() {
                     : 'border-gray-200 text-gray-600 hover:border-red-300 hover:bg-red-50/50'
                 }`}
               >
-                <span className="text-2xl">🐛</span>
+                <Bug className="w-6 h-6" />
                 <span>Сообщить об ошибке</span>
               </button>
             </div>
@@ -563,7 +564,7 @@ export default function FeedbackPage() {
                         onClick={() => startEdit(fb)}
                         className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors"
                       >
-                        ✏️ Редактировать
+                        <Pencil className="w-3.5 h-3.5 inline" /> Редактировать
                       </button>
                       <button
                         type="button"
@@ -574,7 +575,7 @@ export default function FeedbackPage() {
                             : 'text-gray-400 hover:text-red-600'
                         }`}
                       >
-                        {confirmDeleteId === fb.id ? 'Точно удалить? Нажмите ещё раз' : '🗑 Удалить'}
+                        {confirmDeleteId === fb.id ? 'Точно удалить? Нажмите ещё раз' : <><Trash2 className="w-3.5 h-3.5 inline" /> Удалить</>}
                       </button>
                     </div>
                   )}

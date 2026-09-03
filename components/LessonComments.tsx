@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { checkBannedWords } from '@/lib/banned-words'
+import { Flag, Pencil, Trash2 } from 'lucide-react'
 
 interface UserInfo {
   id: string
@@ -570,11 +571,11 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
                         )}
                         {comment.user_id === userId ? (
                           <>
-                            <button onClick={() => handleEditComment(comment)} className="text-purple-600 hover:text-purple-700 text-xs font-medium">✏️ Редактировать</button>
-                            <button onClick={() => handleDelete(comment.id)} className="text-red-600 hover:text-red-700 text-xs font-medium">🗑️ Удалить</button>
+                            <button onClick={() => handleEditComment(comment)} className="inline-flex items-center gap-1 text-purple-600 hover:text-purple-700 text-xs font-medium"><Pencil className="w-3.5 h-3.5" /> Редактировать</button>
+                            <button onClick={() => handleDelete(comment.id)} className="inline-flex items-center gap-1 text-red-600 hover:text-red-700 text-xs font-medium"><Trash2 className="w-3.5 h-3.5" /> Удалить</button>
                           </>
                         ) : (
-                          <button onClick={() => setReportingCommentId(reportingCommentId === comment.id ? null : comment.id)} className="text-gray-400 hover:text-orange-600 text-xs font-medium">🚩 Жалоба</button>
+                          <button onClick={() => setReportingCommentId(reportingCommentId === comment.id ? null : comment.id)} className="inline-flex items-center gap-1 text-gray-400 hover:text-orange-600 text-xs font-medium"><Flag className="w-3.5 h-3.5" /> Жалоба</button>
                         )}
                       </div>
                     </div>
@@ -668,8 +669,8 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
                                   )}
                                   {reply.user_id === userId ? (
                                     <>
-                                      <button onClick={() => handleEditComment(reply)} className="text-purple-600 hover:text-purple-700 text-xs">✏️</button>
-                                      <button onClick={() => handleDelete(reply.id)} className="text-red-600 hover:text-red-700 text-xs">🗑️</button>
+                                      <button onClick={() => handleEditComment(reply)} className="inline-flex text-purple-600 hover:text-purple-700 text-xs"><Pencil className="w-3.5 h-3.5" /></button>
+                                      <button onClick={() => handleDelete(reply.id)} className="inline-flex text-red-600 hover:text-red-700 text-xs"><Trash2 className="w-3.5 h-3.5" /></button>
                                     </>
                                   ) : (
                                     <button onClick={() => setReportingCommentId(reportingCommentId === reply.id ? null : reply.id)} className="text-gray-400 hover:text-orange-600 text-xs">🚩</button>

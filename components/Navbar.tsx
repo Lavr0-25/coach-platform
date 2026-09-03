@@ -8,6 +8,7 @@ import NotificationsBell from './NotificationsBell'
 import MessagesBell from './MessagesBell'
 import ThemeSettings from './ThemeSettings'
 import { useSearch } from './SearchContext'
+import { Crown, SquarePen } from 'lucide-react'
 
 interface Profile {
   display_name?: string
@@ -251,7 +252,7 @@ export default function Navbar() {
                     onClick={handleBecomeMentor}
                     className="hidden md:inline-flex gradient-btn px-4 py-2 text-white rounded-full font-medium text-sm shadow-lg shadow-purple-500/30"
                   >
-                    ✍️ Стать автором
+                    <SquarePen className="w-4 h-4" /> Стать автором
                   </button>
                 )}
 
@@ -310,8 +311,8 @@ export default function Navbar() {
                                 {user.email}
                               </p>
                               {isAdmin && (
-                                <span className="inline-block mt-1 text-xs bg-gradient-to-r from-pink-500 to-purple-600 text-white px-2 py-0.5 rounded-full font-medium">
-                                  👑 Администратор
+                                <span className="inline-flex items-center gap-1 mt-1 text-xs bg-gradient-to-r from-pink-500 to-purple-600 text-white px-2 py-0.5 rounded-full font-medium">
+                                  <Crown className="w-3 h-3" /> Администратор
                                 </span>
                               )}
                             </div>
