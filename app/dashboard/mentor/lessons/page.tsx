@@ -9,6 +9,7 @@ import { Trash2 } from 'lucide-react'
 import { ToastProvider, useToast } from '@/components/Toast'
 import { deleteLesson } from '@/app/actions/deleteLesson'
 import { setLessonPublishAt } from '@/app/actions/updateLesson'
+import { MentorSectionNav } from '@/components/MentorSectionNav'
 
 export default function MentorLessonsPage() {
   // Провайдер локальный: ToastProvider подключён в админском layout,
@@ -156,16 +157,13 @@ function LessonsContent() {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-7xl pt-24 sm:pt-28">
+      {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
+      <MentorSectionNav className="mb-6" />
+
       {/* Заголовок */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
           <div>
-            <Link href="/dashboard/mentor" className="text-purple-600 hover:text-purple-700 font-medium inline-flex items-center gap-2 transition-colors group mb-2">
-              <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Назад в кабинет
-            </Link>
             <h1 className="text-3xl sm:text-4xl font-bold gradient-text">
               Мои уроки
             </h1>

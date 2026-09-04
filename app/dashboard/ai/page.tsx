@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { KeyRound, ListChecks, ChevronRight } from 'lucide-react'
+import { MentorSectionNav } from '@/components/MentorSectionNav'
 
 // Хаб раздела «Управление с ИИ»: всё, чем автор управляет ИИ-агентом, —
 // в одном месте. Рабочие инструменты автора (уроки, курсы, профиль) остаются
@@ -34,9 +35,8 @@ export default async function AiHubPage() {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl pt-24 sm:pt-28">
-      <Link href="/dashboard/mentor" className="text-sm text-gray-600 hover:text-purple-600 transition-colors">
-        ← В кабинет
-      </Link>
+      {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
+      <MentorSectionNav className="mb-6" />
       <h1 className="text-3xl sm:text-4xl font-bold gradient-text mt-2 mb-2">Управление с ИИ</h1>
       <p className="text-gray-600 mb-8">
         Всё, что нужно для работы вашего ИИ-агента: он пишет уроки по вашему плану тем

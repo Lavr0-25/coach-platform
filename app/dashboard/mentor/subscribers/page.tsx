@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { MentorSectionNav } from '@/components/MentorSectionNav'
 
 interface Subscriber {
   user_id: string
@@ -181,18 +182,8 @@ export default function SubscribersPage() {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-5xl pt-24 sm:pt-28">
-      {/* Хлебные крошки */}
-      <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-        <Link href="/dashboard/mentor/profile" className="hover:text-purple-600 transition-colors">
-          Личный кабинет
-        </Link>
-        <span>/</span>
-        <Link href="/mentor/analytics" className="hover:text-purple-600 transition-colors">
-          Аналитика
-        </Link>
-        <span>/</span>
-        <span className="text-gray-900 font-medium">Подписчики</span>
-      </div>
+      {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
+      <MentorSectionNav className="mb-6" />
 
       {/* Заголовок */}
       <div className="mb-8">

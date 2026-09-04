@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import FileUploader from '@/components/FileUploader'
+import { MentorSectionNav } from '@/components/MentorSectionNav'
 
 const CONTENT_TYPES = [
   {
@@ -171,13 +172,8 @@ export default function NewLessonPage() {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl pt-24 sm:pt-28">
-      <div className="flex items-center gap-2 text-sm text-gray-600 mb-6 flex-wrap">
-        <Link href="/dashboard/mentor" className="hover:text-purple-600 transition-colors">Кабинет автора</Link>
-        <span>/</span>
-        <Link href="/dashboard/mentor/lessons" className="hover:text-purple-600 transition-colors">Мои уроки</Link>
-        <span>/</span>
-        <span className="text-gray-900 font-medium">Новый урок</span>
-      </div>
+      {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
+      <MentorSectionNav className="mb-6" />
 
       <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-8">Создание нового урока</h1>
 

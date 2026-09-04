@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { BookOpen, CircleUserRound, GraduationCap, Heart, Plus, Users } from 'lucide-react'
+import { MentorSectionNav } from '@/components/MentorSectionNav'
 
 // Кабинет: сводка из двух зон («Создаю» / «Изучаю») без вкладок и дублей.
 // Рабочие разделы живут на своих страницах — отсюда только обзор и переходы.
@@ -86,15 +87,6 @@ export default async function MentorDashboardPage() {
   const greeting = hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер'
   const firstName = (coach?.display_name || 'Автор').split(' ')[0]
 
-  // Тихие ссылки на разделы кабинета — одна навигация вместо двух
-  const sectionLinks = [
-    { href: '/dashboard/mentor/courses', label: 'Мои курсы' },
-    { href: '/dashboard/mentor/subscribers', label: 'Подписчики' },
-    { href: '/dashboard/ai', label: 'Управление с ИИ' },
-    { href: '/mentor/analytics', label: 'Аналитика' },
-    { href: '/dashboard/mentor/profile', label: 'Профиль' },
-  ]
-
   // Плитки статистики — каждая ведёт в свой раздел
   const stats = [
     { href: '/dashboard/mentor/lessons', value: lessonsCount, label: 'Мои уроки' },
@@ -105,37 +97,19 @@ export default async function MentorDashboardPage() {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-7xl pt-24 sm:pt-28">
+      {/* Тихие ссылки на разделы кабинета — в самом верху, как на всех страницах */}
+      <MentorSectionNav className="mb-6" />
+
       {/* Шапка: приветствие + главное действие */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-            Кабинет
-          </p>
-          <h1 className="text-3xl sm:text-4xl font-bold gradient-text mt-1">
+          <h1 className="text-3xl sm:text-4xl font-bold gradient-text">
             {greeting}, {firstName}
           </h1>
-          <p className="text-gray-500 mt-1 text-sm">
-            {hasCreation
-              ? `${lessonsCount} ${plural(lessonsCount, 'урок', 'урока', 'уроков')} · ${coursesCount} ${plural(coursesCount, 'курс', 'курса', 'курсов')} · ${subscribersCount} ${plural(subscribersCount, 'подписчик', 'подписчика', 'подписчиков')}`
-              : 'Здесь появится всё, что ты создаёшь и изучаешь'}
-          </p>
         </div>
         <Button href="/dashboard/mentor/lessons/new">
           <Plus className="w-4 h-4" /> Создать урок
         </Button>
-      </div>
-
-      {/* Тихие ссылки на разделы кабинета */}
-      <div className="flex flex-wrap gap-x-5 gap-y-1 mb-8">
-        {sectionLinks.map(link => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="text-sm text-gray-500 hover:text-purple-700 transition-colors"
-          >
-            {link.label}
-          </Link>
-        ))}
       </div>
 
       {/* Статистика — плитки-переходы */}

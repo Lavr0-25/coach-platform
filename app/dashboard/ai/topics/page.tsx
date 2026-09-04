@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
-import Breadcrumbs from '@/components/Breadcrumbs'
+import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { useToast, ToastProvider } from '@/components/Toast'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -101,10 +101,8 @@ function TopicsContent() {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl pt-24 sm:pt-28">
-      <Breadcrumbs />
-      <Link href="/dashboard/ai" className="text-sm text-gray-600 hover:text-purple-600 transition-colors">
-        ← К разделу «Управление с ИИ»
-      </Link>
+      {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
+      <MentorSectionNav className="mb-6" />
       <h1 className="text-3xl sm:text-4xl font-bold gradient-text mt-2 mb-2">План тем</h1>
       <p className="text-gray-600 mb-8">
         Список тем для вашего ИИ-агента: он берёт следующую тему из очереди и готовит по ней урок.

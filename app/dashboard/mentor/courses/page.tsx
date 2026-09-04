@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createCourse } from '@/app/actions/createCourse'
+import { MentorSectionNav } from '@/components/MentorSectionNav'
 
 export default function MentorCoursesPage() {
   const [courses, setCourses] = useState<any[]>([])
@@ -96,14 +97,8 @@ export default function MentorCoursesPage() {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-6xl pt-24 sm:pt-28">
-      {/* Хлебные крошки */}
-      <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-        <Link href="/dashboard/mentor" className="hover:text-purple-600 transition-colors">
-          Кабинет автора
-        </Link>
-        <span>/</span>
-        <span className="text-gray-900">Мои курсы</span>
-      </div>
+      {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
+      <MentorSectionNav className="mb-6" />
 
       {/* Заголовок и кнопка */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">

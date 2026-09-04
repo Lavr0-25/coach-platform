@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import FileUploader from '@/components/FileUploader'
-import { BarChart3, UserRound } from 'lucide-react'
+import { MentorSectionNav } from '@/components/MentorSectionNav'
 
 export default function MentorProfilePage() {
   const supabase = createClient()
@@ -297,11 +297,8 @@ export default function MentorProfilePage() {
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-6xl pt-24 sm:pt-28">
       {/* Хлебные крошки */}
-      <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-        <Link href="/" className="hover:text-purple-600 transition-colors">Главная</Link>
-        <span>/</span>
-        <span className="text-gray-900 font-medium">Личный кабинет</span>
-      </div>
+      {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
+      <MentorSectionNav className="mb-6" />
 
       {/* Уведомления */}
       {error && (
@@ -320,27 +317,6 @@ export default function MentorProfilePage() {
           {success}
         </div>
       )}
-
-      {/* Вкладки: Профиль и Аналитика (ссылка) */}
-      <div className="flex border-b border-purple-100 mb-8 overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => setActiveTab('profile')}
-          className={`px-4 sm:px-6 py-3 font-medium text-sm whitespace-nowrap transition-colors inline-flex items-center gap-2 ${
-            activeTab === 'profile'
-              ? 'text-purple-700 border-b-2 border-purple-700'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <UserRound className="w-4 h-4" /> Профиль
-        </button>
-        <Link
-          href="/mentor/analytics"
-          className="px-4 sm:px-6 py-3 font-medium text-sm whitespace-nowrap text-gray-500 hover:text-purple-700 transition-colors flex items-center gap-2"
-        >
-          <BarChart3 className="w-4 h-4" /> Аналитика
-        </Link>
-      </div>
 
       {/* Вкладка: Профиль */}
       {activeTab === 'profile' && (

@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
-import Breadcrumbs from '@/components/Breadcrumbs'
+import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { useToast, ToastProvider } from '@/components/Toast'
 import {
   createAgentKey,
@@ -88,10 +87,8 @@ function ApiKeysContent() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      <Breadcrumbs />
-      <Link href="/dashboard/ai" className="text-sm text-gray-600 hover:text-purple-600 transition-colors">
-        ← К разделу «Управление с ИИ»
-      </Link>
+      {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
+      <MentorSectionNav className="mb-6" />
       <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mt-2 mb-2">
         API-ключи агента
       </h1>

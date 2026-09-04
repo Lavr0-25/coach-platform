@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import FileUploader from '@/components/FileUploader'
 import RichTextEditor from '@/components/editor/RichTextEditor'
+import { MentorSectionNav } from '@/components/MentorSectionNav'
 
 const CONTENT_TYPES = [
   {
@@ -315,15 +316,9 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 pt-24 sm:pt-28 max-w-4xl">
+      {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
+      <MentorSectionNav className="mb-6" />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-2 text-sm text-gray-600 flex-wrap">
-          <Link href="/dashboard/mentor" className="hover:text-purple-600 transition-colors">Кабинет автора</Link>
-          <span>/</span>
-          <Link href="/dashboard/mentor/lessons" className="hover:text-purple-600 transition-colors">Мои уроки</Link>
-          <span>/</span>
-          <span className="text-gray-900 font-medium">Редактировать урок</span>
-        </div>
-
         <Link
           href={`/lesson/${lessonId}`}
           className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-green-500/30 transition-colors inline-flex items-center gap-2 self-start sm:self-auto"

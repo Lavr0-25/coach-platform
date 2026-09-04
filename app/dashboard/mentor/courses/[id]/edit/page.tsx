@@ -6,6 +6,7 @@ import { updateCourse, attachLessonToCourse, detachLessonFromCourse, reorderCour
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import FileUploader from '@/components/FileUploader'
+import { MentorSectionNav } from '@/components/MentorSectionNav'
 
 interface Course {
   id: string
@@ -278,17 +279,10 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-6xl pt-24 sm:pt-28">
-      {/* Хлебные крошки */}
+      {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
+      <MentorSectionNav className="mb-6" />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Link href="/dashboard/mentor" className="hover:text-purple-600 transition-colors">
-            Кабинет наставника
-          </Link>
-          <span>/</span>
-          <Link href="/dashboard/mentor/courses" className="hover:text-purple-600 transition-colors">
-            Мои курсы
-          </Link>
-          <span>/</span>
           <span className="text-gray-900 font-medium">Редактировать курс</span>
         </div>
 
@@ -303,12 +297,6 @@ function EditCourseForm({ courseId }: { courseId: string }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
             <span className="hidden sm:inline">Как видят студенты</span>
-          </Link>
-          <Link
-            href="/dashboard/mentor/courses"
-            className="bg-white text-gray-700 border border-purple-200 px-5 py-2.5 rounded-xl font-semibold hover:bg-purple-50 transition-colors"
-          >
-            Назад
           </Link>
         </div>
       </div>
