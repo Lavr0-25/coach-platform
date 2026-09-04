@@ -8,46 +8,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import FileUploader from '@/components/FileUploader'
 import RichTextEditor from '@/components/editor/RichTextEditor'
+import HiddenLessonPanel from '@/components/HiddenLessonPanel'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 
-const CONTENT_TYPES = [
-  {
-    value: 'video',
-    label: '🎥 Видео',
-    hint: 'Ссылка на видео (YouTube, VK Видео, RuTube, Дзен или другая площадка)',
-    placeholder: 'https://...'
-  },
-  {
-    value: 'text',
-    label: '📝 Текстовый урок',
-    hint: 'Статья в визуальном редакторе: заголовки, списки, картинки и видео прямо в тексте',
-    placeholder: ''
-  },
-  { 
-    value: 'pdf', 
-    label: '📄 Документ PDF', 
-    hint: 'Загрузите PDF файл или вставьте ссылку',
-    placeholder: 'https://... или загрузите файл'
-  },
-  { 
-    value: 'image', 
-    label: '🖼️ Фото/Изображение', 
-    hint: 'Загрузите изображение или вставьте ссылку',
-    placeholder: 'https://... или загрузите файл'
-  },
-  { 
-    value: 'storage', 
-    label: '📁 Файловое хранилище', 
-    hint: 'Ссылка на Яндекс.Диск, Google Drive или другое хранилище',
-    placeholder: 'https://disk.yandex.ru/... или https://drive.google.com/...'
-  },
-  { 
-    value: 'other', 
-    label: '🔗 Другое', 
-    hint: 'Любая другая ссылка',
-    placeholder: 'https://...'
-  },
-]
+// На платформе только текстовые уроки: тип контента фиксирован ('text'),
+// содержимое правится в WYSIWYG-редакторе. Старые не-текстовые записи в БД
+// при загрузке просто не показывают поле ссылки — редактор текста основной.
 
 export default function EditLessonPage({ params }: { params: Promise<{ id: string }> }) {
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
@@ -84,6 +50,10 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   const [scheduleValue, setScheduleValue] = useState('')
   const [scheduling, setScheduling] = useState(false)
   const [isPublished, setIsPublished] = useState(false)
+  // Скрытый режим: is_hidden + link_access из БД (панель сама вызывает экшены)
+  const [isHidden, setIsHidden] = useState(false)
+  const [linkAccess, setLinkAccess] = useState(true)
+  const [courseId, setCourseId] = useState<string | null>(null)
   const [hasSavedContent, setHasSavedContent] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -94,13 +64,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   const [isFreePreview, setIsFreePreview] = useState(false)
   const [coverImage, setCoverImage] = useState('')
 
-  const [contentType, setContentType] = useState('video')
-  const [contentUrl, setContentUrl] = useState('')
-  const [contentTitle, setContentTitle] = useState('')
   const [contentHtml, setContentHtml] = useState('')
-  
-  const [uploadedFileUrl, setUploadedFileUrl] = useState('')
-  const [uploadedFileName, setUploadedFileName] = useState('')
 
   useEffect(() => {
     loadLesson()
@@ -127,7 +91,17 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
         setIsFreePreview(lesson.is_free_preview || false)
         setIsPublished(lesson.is_published || false)
         setPublishAt(lesson.publish_at || null)
+        setIsHidden(lesson.is_hidden || false)
+        setLinkAccess(lesson.link_access !== false)
         setCoverImage(lesson.cover_image || '')
+
+        // Связь с курсом — отдельная join-таблица course_lessons
+        const { data: courseLink } = await supabase
+          .from('course_lessons')
+          .select('course_id')
+          .eq('lesson_id', lessonId)
+          .limit(1)
+        setCourseId(courseLink?.[0]?.course_id || null)
 
         const { data: content } = await supabase
           .from('lesson_content')
@@ -137,38 +111,19 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           .limit(1)
 
         if (content && content.length > 0) {
-          // Маппинг старых типов на новые, если в базе остались старые значения
-          let type = content[0].content_type || 'video'
-          if (['youtube', 'vk_video', 'vkvideo', 'vk'].includes(type)) type = 'video'
-          if (['yandex_disk', 'presentation', 'yandexdisk', 'googledrive'].includes(type)) type = 'storage'
-
-          setContentType(type)
-          setContentUrl(content[0].content_url || '')
           setContentHtml(content[0].content_html || '')
 
-          // Контент считается сохранённым, если запись непустая по сути:
-          // текст — есть текст вне тегов, остальные — есть ссылка/файл
-          const row = content[0]
-          const nonEmpty = type === 'text'
-            ? !!(row.content_html || '').replace(/<[^>]*>/g, '').trim()
-            : !!(row.content_url || '').trim()
+          // Контент считается сохранённым, если в записи есть текст вне тегов
+          const nonEmpty = !!(content[0].content_html || '').replace(/<[^>]*>/g, '').trim()
           setHasSavedContent(nonEmpty)
-          
-          // Если это файловый тип и URL есть, считаем его загруженным файлом для превью
-          if (type === 'pdf' || type === 'image') {
-            setUploadedFileUrl(content[0].content_url || '')
-            setUploadedFileName(content[0].content_url ? decodeURIComponent(content[0].content_url.split('/').pop() || '') : '')
-          }
         }
-    } catch (error: any) {
+  } catch (error: any) {
       console.error('Error loading lesson:', error)
       setError('Ошибка загрузки урока')
     } finally {
       setLoading(false)
     }
   }
-
-  const isFileType = contentType === 'pdf' || contentType === 'image'
 
   // Публикация по расписанию: ставим/отменяем publish_at (сервер проверит
   // права, черновик, контент и что время в будущем)
@@ -252,18 +207,10 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
       return
     }
 
-    // Для файловых типов проверяем uploadedFileUrl, для остальных - contentUrl
-    const finalUrl = isFileType ? uploadedFileUrl : contentUrl
-
     // Текстовый урок: проверяем, что в редакторе есть хоть какой-то текст
     // (Tiptap пустого документа отдаёт '<p></p>' — после снятия тегов остаётся пусто)
-    if (contentType === 'text' && !contentHtml.replace(/<[^>]*>/g, '').trim()) {
+    if (!contentHtml.replace(/<[^>]*>/g, '').trim()) {
       setError('Напишите текст урока в редакторе')
-      return
-    }
-
-    if (!finalUrl.trim() && contentType !== 'text') {
-      setError(isFileType ? 'Загрузите файл' : 'Введите ссылку на контент')
       return
     }
 
@@ -279,10 +226,10 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
         cover_image: coverImage || null,
       },
       {
-        content_type: contentType,
-        content_url: contentType === 'text' ? '' : finalUrl.trim(),
-        title: contentTitle.trim() || null,
-        content_html: contentType === 'text' ? contentHtml : null,
+        content_type: 'text',
+        content_url: '',
+        title: null,
+        content_html: contentHtml,
       }
     )
 
@@ -312,8 +259,6 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
     )
   }
 
-  const selectedContentType = CONTENT_TYPES.find(t => t.value === contentType)
-
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 pt-24 sm:pt-28 max-w-4xl">
       {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
@@ -328,13 +273,27 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
           </svg>
-          <span className="hidden sm:inline">Как видят студенты</span>
+          <span className="hidden sm:inline">{isHidden ? 'Открыть урок' : 'Как видят студенты'}</span>
         </Link>
       </div>
 
       <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-8">Редактировать урок</h1>
 
-      {/* Статус публикации: всегда виден, меняется отдельной кнопкой (не через «Сохранить») */}
+      {/* Статус публикации: меняется отдельными кнопками (не через «Сохранить»).
+          Скрытый режим управляется панелью внизу страницы — здесь только статус. */}
+      {isHidden ? (
+        <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <span className="text-xl leading-none mt-0.5">🔒</span>
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">Урок скрыт</p>
+              <p className="text-sm text-gray-600">
+                Открыт только допущенным — настройка доступа внизу страницы, рядом с «Цена и доступ»
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className={`rounded-xl border p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isPublished ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
         <div className="flex items-start gap-3">
           <span className="text-xl leading-none mt-0.5">{isPublished ? '🟢' : publishAt ? '🗓' : '🟡'}</span>
@@ -422,6 +381,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           </button>
         )}
       </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-6">
@@ -483,104 +443,22 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
         <div className="style-card p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Контент урока</h2>
           <div className="space-y-6">
+            {/* WYSIWYG-редактор — единственный тип контента */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Тип контента</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {CONTENT_TYPES.map((type) => (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() => {
-                      setContentType(type.value)
-                      setContentUrl('')
-                      setContentHtml('')
-                      setUploadedFileUrl('')
-                      setUploadedFileName('')
-                    }}
-                    className={`p-4 border-2 rounded-xl text-left transition-colors ${
-                      contentType === type.value
-                        ? 'border-purple-500 bg-purple-50 shadow-md'
-                        : 'border-purple-100 hover:border-purple-300 hover:bg-purple-50/30'
-                    }`}
-                  >
-                    <div className="text-2xl mb-2">{type.label.split(' ')[0]}</div>
-                    <div className="font-semibold text-gray-900 text-sm">{type.label.split(' ').slice(1).join(' ')}</div>
-                  </button>
-                ))}
-              </div>
-              <p className="text-sm text-gray-500 mt-3">{selectedContentType?.hint}</p>
+              <RichTextEditor value={contentHtml} onChange={setContentHtml} lessonId={lessonId} />
+              <p className="text-sm text-gray-500 mt-2">
+                Совет: начните с заголовка (кнопка H1), картинки и видео вставляются кнопками на панели сверху
+              </p>
             </div>
-
-            {/* Для файловых типов (PDF и Image) - показываем загрузчик */}
-            {isFileType && (
-              <div>
-                <FileUploader
-                  currentFile={uploadedFileUrl}
-                  onFileUpload={(url, name) => {
-                    setUploadedFileUrl(url)
-                    setUploadedFileName(name)
-                  }}
-                  entityType="lesson_content"
-                  acceptedTypes={contentType === 'pdf' ? ['application/pdf'] : ['image/*']}
-                  maxSizeMB={10}
-                  label={contentType === 'pdf' ? '📄 Загрузите PDF файл' : '🖼️ Загрузите изображение'}
-                  placeholder={contentType === 'pdf' ? 'Загрузите PDF файл (drag-and-drop или Ctrl+V)' : 'Загрузите изображение (drag-and-drop или Ctrl+V)'}
-                />
-              </div>
-            )}
-
-            {/* Для остальных типов (video, storage, other) - показываем поле для ссылки */}
-            {!isFileType && contentType !== 'text' && (
-              <div>
-                <label htmlFor="contentUrl" className="block text-sm font-semibold text-gray-700 mb-1">
-                  Ссылка на контент *
-                </label>
-                <input
-                  id="contentUrl"
-                  type="url"
-                  required
-                  value={contentUrl}
-                  onChange={(e) => setContentUrl(e.target.value)}
-                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
-                  placeholder={selectedContentType?.placeholder}
-                />
-              </div>
-            )}
-
-            {/* Текстовый урок — WYSIWYG-редактор */}
-            {contentType === 'text' && (
-              <div>
-                <RichTextEditor value={contentHtml} onChange={setContentHtml} lessonId={lessonId} />
-                <p className="text-sm text-gray-500 mt-2">
-                  Совет: начните с заголовка (кнопка H1), картинки и видео вставляются кнопками на панели сверху
-                </p>
-              </div>
-            )}
-
-            {contentType !== 'text' && (
-              <div>
-                <label htmlFor="contentTitle" className="block text-sm font-semibold text-gray-700 mb-1">
-                  Заголовок контента (необязательно)
-                </label>
-                <input
-                  id="contentTitle"
-                  type="text"
-                  value={contentTitle}
-                  onChange={(e) => setContentTitle(e.target.value)}
-                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
-                  placeholder="Например: Видеоурок №1"
-                />
-              </div>
-            )}
           </div>
         </div>
 
         {/* Настройки */}
         <div className="style-card p-6 sm:p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Настройки урока</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Цена и доступ</h2>
           <div className="space-y-4">
             <div>
-              <label htmlFor="price" className="block text-sm font-semibold text-gray-700 mb-1">Цена (₽)</label>
+              <label htmlFor="price" className="block text-sm font-semibold text-gray-700 mb-1">Цена урока, ₽</label>
               <input
                 id="price"
                 type="number"
@@ -591,26 +469,49 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                 className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                 placeholder="0"
               />
-              <p className="text-sm text-gray-500 mt-1">Установите 0 для бесплатного урока</p>
             </div>
 
-            <div className="flex items-start">
-              <div className="flex items-center h-5">
-                <input
-                  id="isFreePreview"
-                  type="checkbox"
-                  checked={isFreePreview}
-                  onChange={(e) => setIsFreePreview(e.target.checked)}
-                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                />
+            {parseFloat(price) > 0 ? (
+              <>
+                <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-4 text-sm">
+                  <p className="font-semibold text-gray-900">💰 Платный урок — {price} ₽</p>
+                  <p className="text-gray-500 mt-0.5">Студент покупает урок, чтобы смотреть. Поставьте 0 — урок станет бесплатным.</p>
+                </div>
+
+                <div className="flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      id="isFreePreview"
+                      type="checkbox"
+                      checked={isFreePreview}
+                      onChange={(e) => setIsFreePreview(e.target.checked)}
+                      className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                    />
+                  </div>
+                  <div className="ml-3 text-sm">
+                    <label htmlFor="isFreePreview" className="font-semibold text-gray-700 cursor-pointer">Открыть целиком как бесплатный образец</label>
+                    <p className="text-gray-500">Урок полностью доступен без покупки — например, чтобы студент оценил стиль автора перед курсом</p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm">
+                <p className="font-semibold text-green-800">🟢 Бесплатный урок — открыт всем</p>
+                <p className="text-green-700 mt-0.5">Укажите цену выше, чтобы сделать урок платным.</p>
               </div>
-              <div className="ml-3 text-sm">
-                <label htmlFor="isFreePreview" className="font-semibold text-gray-700">Сделать бесплатным превью</label>
-                <p className="text-gray-500">Пользователи смогут посмотреть урок бесплатно перед покупкой</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
+
+        {/* Скрытый режим: панель доступа (внизу, рядом с «Цена и доступ») */}
+        <HiddenLessonPanel
+          lessonId={lessonId}
+          courseId={courseId}
+          hasSavedContent={hasSavedContent}
+          isHidden={isHidden}
+          linkAccess={linkAccess}
+          onHiddenChanged={(h) => { setIsHidden(h); setIsPublished(true) }}
+        />
 
         {/* Кнопки */}
         <div className="flex flex-col sm:flex-row gap-4 pt-4">

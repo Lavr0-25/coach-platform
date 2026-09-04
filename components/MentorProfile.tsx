@@ -95,12 +95,14 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
 
       setCourses(coursesData || [])
 
-      // Получаем отдельные уроки (не входящие ни в один курс, только опубликованные)
+      // Получаем отдельные уроки (не входящие ни в один курс, только опубликованные;
+      // скрытые уроки — приватный канал автора, в публичном профиле не показываем)
       const { data: lessonsData } = await supabase
         .from('lessons')
         .select('id, title, description, price, is_free_preview, is_published, created_at, cover_image')
         .eq('coach_id', coachData.id)
         .eq('is_published', true)
+        .eq('is_hidden', false)
         .order('created_at', { ascending: false })
 
       const { data: linkedIds } = await supabase
@@ -110,11 +112,12 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
       const linked = new Set((linkedIds || []).map((r: any) => r.lesson_id))
       setLessons((lessonsData || []).filter(l => !linked.has(l.id)))
 
-      // 🔥 Подсчёт ВСЕХ уроков автора (включая те, что в курсах)
+      // 🔥 Подсчёт ВСЕХ уроков автора (включая те, что в курсах; скрытые не считаем)
       const { data: allLessonsData } = await supabase
         .from('lessons')
         .select('id')
         .eq('coach_id', coachData.id)
+        .eq('is_hidden', false)
 
       setTotalLessonsCount(allLessonsData?.length || 0)
 

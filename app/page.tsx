@@ -19,6 +19,7 @@ export default async function Home() {
         .from('lessons')
         .select('id, title, description, cover_image, price, is_free_preview, created_at, coach_id, coach:coaches!lessons_coach_id_fkey(display_name, avatar_url)')
         .eq('is_published', true)
+        .eq('is_hidden', false)
         .order('created_at', { ascending: false }),
       supabase
         .from('courses')

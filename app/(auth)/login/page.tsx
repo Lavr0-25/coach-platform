@@ -53,8 +53,11 @@ export default function LoginPage() {
         return
       }
 
-      // Успешный вход — перенаправляем на главную или в кабинет
-      router.push('/')
+      // Успешный вход — на страницу, с которой пришли (?next=/...), иначе на главную.
+      // Защита от open redirect: принимаем только внутренние пути (начинаются с «/»).
+      const next = new URLSearchParams(window.location.search).get('next')
+      const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/'
+      router.push(safeNext)
 
     } catch (err: any) {
       setError('Произошла непредвиденная ошибка. Попробуйте позже.')

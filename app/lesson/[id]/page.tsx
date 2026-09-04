@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getVideoEmbedUrl } from '@/lib/video-embed'
 import { sanitizeLessonHtml } from '@/lib/editor/sanitizeLessonHtml'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
@@ -27,16 +28,66 @@ interface LessonPageProps {
   }>
 }
 
+// Скрытый урок + приём по ссылке: разрываем замкнутый круг RLS (пока нет строки в
+// lesson_access — урок не читается). ДО чтения урока проверяем режим сервисным
+// клиентом и вставляем самоприглашение от лица пользователя (политика
+// lesson_access_self_insert разрешает). Вставка ДО чтения — принципиально:
+// перечитывание после первого запроса не работает (Next.js мемоизирует fetch
+// внутри рендера — тот же URL вернул бы кэш). Вызывается и в generateMetadata,
+// и в самой странице: они рендерятся параллельно, и у каждого свой запрос урока.
+// upsert с ignoreDuplicates идемпотентен: повторный вызов (двойной рендер в dev,
+// параллельный вызов из метаданных) молча пропускается; отозванному пользователю
+// строка (revoked=true) не восстанавливается — чтение урока даст 404.
+async function ensureLinkAccess(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  admin: ReturnType<typeof createAdminClient>,
+  lessonId: string,
+  userId: string
+) {
+  if (!admin) return
+  const { data: hidden } = await admin
+    .from('lessons')
+    .select('is_hidden, link_access')
+    .eq('id', lessonId)
+    .maybeSingle()
+
+  if (hidden?.is_hidden && hidden.link_access) {
+    await supabase
+      .from('lesson_access')
+      .upsert(
+        { lesson_id: lessonId, user_id: userId, source: 'link' },
+        { onConflict: 'lesson_id,user_id', ignoreDuplicates: true }
+      )
+  }
+}
+
 // Мета-теги страницы урока — для поисковиков и ИИ-агентов
 export async function generateMetadata({ params }: LessonPageProps): Promise<Metadata> {
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: lesson } = await supabase
+  let { data: lesson } = await supabase
     .from('lessons')
     .select('title, description, cover_image, coach:coaches(display_name)')
     .eq('id', id)
     .maybeSingle()
+
+  // Первый заход по ссылке: строка допуска могла ещё не существовать на момент
+  // запроса — пробуем создать самоприглашение и перечитываем (limit(1) меняет URL,
+  // чтобы обойти мемоизацию fetch первого запроса).
+  if (!lesson) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await ensureLinkAccess(supabase, createAdminClient(), id, user.id)
+      const { data: refetched } = await supabase
+        .from('lessons')
+        .select('title, description, cover_image, coach:coaches(display_name)')
+        .eq('id', id)
+        .limit(1)
+        .maybeSingle()
+      lesson = refetched
+    }
+  }
 
   if (!lesson) return { title: 'Урок не найден' }
 
@@ -76,10 +127,15 @@ export default async function LessonPage({ params }: LessonPageProps) {
       })
   }
 
-  // Получаем данные урока
-  const { data: lesson, error: lessonError } = await supabase
-    .from('lessons')
-    .select(`
+  // Самоприглашение по ссылке — см. комментарий к ensureLinkAccess.
+  const admin = createAdminClient()
+  if (user) {
+    await ensureLinkAccess(supabase, admin, id, user.id)
+  }
+
+  // Получаем данные урока. RLS сам решает, кого пускать (опубликованные — всем,
+  // скрытые — автору и допущенным), поэтому не увиденный урок приходит как null.
+  const LESSON_SELECT = `
       *,
       coaches (
         id,
@@ -95,20 +151,35 @@ export default async function LessonPage({ params }: LessonPageProps) {
         content_html,
         order_index
       )
-    `)
-    .eq('id', id)
-    .single()
+    `
 
-  if (lessonError || !lesson) {
+  const { data: lesson } = await supabase
+    .from('lessons')
+    .select(LESSON_SELECT)
+    .eq('id', id)
+    .maybeSingle()
+
+  if (!lesson) {
+    // Аноним: если урок вообще существует (скрытый или черновик) — просим войти
+    // и возвращаем на этот же урок после входа. Несуществующий id — обычная 404.
+    if (!user && admin) {
+      const { data: exists } = await admin
+        .from('lessons')
+        .select('id')
+        .eq('id', id)
+        .maybeSingle()
+      if (exists) {
+        redirect(`/login?next=/lesson/${id}`)
+      }
+    }
     notFound()
   }
 
   const coach = Array.isArray(lesson.coaches) ? lesson.coaches[0] : lesson.coaches
   const isOwner = user?.id === coach?.user_id
 
-  // Черновик урока: виден только автору, остальным — 404.
-  // Урок внутри курса не прячем: видимость курса определяется курсом.
-  if (!lesson.is_published && !isOwner && !lesson.course_id) {
+  // Черновик урока: виден только автору, остальным — 404 (остальных RLS уже отсёк выше).
+  if (!lesson.is_published && !isOwner) {
     notFound()
   }
 
@@ -125,7 +196,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
       .eq('user_id', user.id)
       .eq('lesson_id', id)
       .eq('payment_status', 'completed')
-      .single()
+      .maybeSingle()
     isPurchased = !!purchase
   }
 

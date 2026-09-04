@@ -9,7 +9,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const [courses, lessons, coaches] = await Promise.all([
     supabase.from('courses').select('id, updated_at').eq('is_published', true),
-    supabase.from('lessons').select('id, updated_at').eq('is_published', true),
+    supabase.from('lessons').select('id, updated_at').eq('is_published', true).eq('is_hidden', false),
     supabase.from('coaches').select('id, created_at'),
   ])
 

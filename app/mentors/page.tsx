@@ -36,7 +36,7 @@ export default async function MentorsPage({ searchParams }: MentorsPageProps) {
   // затем группируем по coach_id в коде — меньше сетевых кругов, страница грузится быстрее
   const [{ data: courseRows }, { data: lessonRows }] = await Promise.all([
     supabase.from('courses').select('coach_id').eq('is_published', true),
-    supabase.from('lessons').select('coach_id'),
+    supabase.from('lessons').select('coach_id').eq('is_published', true).eq('is_hidden', false),
   ])
 
   const coursesByCoach = new Map<string, number>()

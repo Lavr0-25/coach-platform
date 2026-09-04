@@ -7,44 +7,8 @@ import Link from 'next/link'
 import FileUploader from '@/components/FileUploader'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 
-const CONTENT_TYPES = [
-  {
-    value: 'video',
-    label: '🎥 Видео',
-    hint: 'Ссылка на видео (YouTube, VK Видео, RuTube, Дзен или другая площадка)',
-    placeholder: 'https://...'
-  },
-  {
-    value: 'text',
-    label: '📝 Текстовый урок',
-    hint: 'Статья в визуальном редакторе — напишете текст на следующем шаге',
-    placeholder: ''
-  },
-  { 
-    value: 'pdf', 
-    label: '📄 Документ PDF', 
-    hint: 'Загрузите PDF файл или вставьте ссылку',
-    placeholder: 'https://... или загрузите файл'
-  },
-  { 
-    value: 'image', 
-    label: '🖼️ Фото/Изображение', 
-    hint: 'Загрузите изображение или вставьте ссылку',
-    placeholder: 'https://... или загрузите файл'
-  },
-  { 
-    value: 'storage', 
-    label: '📁 Файловое хранилище', 
-    hint: 'Ссылка на Яндекс.Диск, Google Drive или другое хранилище',
-    placeholder: 'https://disk.yandex.ru/... или https://drive.google.com/...'
-  },
-  { 
-    value: 'other', 
-    label: '🔗 Другое', 
-    hint: 'Любая другая ссылка',
-    placeholder: 'https://...'
-  },
-]
+// На платформе только текстовые уроки: тип контента не выбирается,
+// текст пишется в WYSIWYG-редакторе на странице урока.
 
 export default function NewLessonPage() {
   const supabase = createClient()
@@ -59,13 +23,6 @@ export default function NewLessonPage() {
   const [price, setPrice] = useState('0')
   const [isFreePreview, setIsFreePreview] = useState(false)
   const [coverImage, setCoverImage] = useState('')
-  
-  const [contentType, setContentType] = useState('video')
-  const [contentUrl, setContentUrl] = useState('')
-  const [contentTitle, setContentTitle] = useState('')
-  
-  const [uploadedFileUrl, setUploadedFileUrl] = useState('')
-  const [uploadedFileName, setUploadedFileName] = useState('')
 
   useEffect(() => {
     const getCoachId = async () => {
@@ -90,14 +47,12 @@ export default function NewLessonPage() {
     getCoachId()
   }, [])
 
-  const isFileType = contentType === 'pdf' || contentType === 'image'
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // 🛡️ Предотвращаем двойное выполнение (исправление дублирования)
     if (loading) return
-    
+
     setError('')
 
     if (!coachId) {
@@ -107,15 +62,6 @@ export default function NewLessonPage() {
 
     if (!title.trim()) {
       setError('Введите название урока')
-      return
-    }
-
-    // Для файловых типов проверяем загруженный файл
-    const finalUrl = isFileType ? uploadedFileUrl : contentUrl
-
-    // Текстовый урок создаём без контента: текст пишется в редакторе на следующем шаге
-    if (!finalUrl.trim() && contentType !== 'text') {
-      setError(isFileType ? 'Загрузите файл' : 'Введите ссылку на контент')
       return
     }
 
@@ -139,27 +85,9 @@ export default function NewLessonPage() {
 
       if (lessonError) throw lessonError
 
-      // Текстовый урок: контент появится после первого сохранения в редакторе —
-      // ведём сразу на страницу редактирования
-      if (contentType === 'text') {
-        router.push(`/dashboard/mentor/lessons/${lesson.id}/edit`)
-        return
-      }
-
-      const { error: contentError } = await supabase
-        .from('lesson_content')
-        .insert({
-          lesson_id: lesson.id,
-          content_type: contentType,
-          content_url: finalUrl.trim(),
-          title: contentTitle.trim() || null,
-          order_index: 1,
-        })
-
-      if (contentError) throw contentError
-
-      alert('✅ Урок успешно создан!')
-      router.push('/dashboard/mentor/lessons')
+      // Текстовый урок создаём без контента: текст пишется в WYSIWYG-редакторе —
+      // сразу ведём на страницу редактирования
+      router.push(`/dashboard/mentor/lessons/${lesson.id}/edit`)
     } catch (error: any) {
       console.error('Error creating lesson:', error)
       setError(error.message || 'Ошибка при создании урока')
@@ -167,8 +95,6 @@ export default function NewLessonPage() {
       setLoading(false)
     }
   }
-
-  const selectedContentType = CONTENT_TYPES.find(t => t.value === contentType)
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl pt-24 sm:pt-28">
@@ -230,90 +156,16 @@ export default function NewLessonPage() {
           </div>
         </div>
 
-        {/* Контент урока */}
+        {/* Контент урока — только текст в WYSIWYG-редакторе */}
         <div className="style-card p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Контент урока</h2>
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Тип контента *</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {CONTENT_TYPES.map((type) => (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() => {
-                      setContentType(type.value)
-                      // Сбрасываем URL и файл при смене типа
-                      setContentUrl('')
-                      setUploadedFileUrl('')
-                      setUploadedFileName('')
-                    }}
-                    className={`p-4 border-2 rounded-xl text-left transition-colors ${
-                      contentType === type.value
-                        ? 'border-purple-500 bg-purple-50 shadow-md'
-                        : 'border-purple-100 hover:border-purple-300 hover:bg-purple-50/30'
-                    }`}
-                  >
-                    <div className="text-2xl mb-2">{type.label.split(' ')[0]}</div>
-                    <div className="font-semibold text-gray-900 text-sm">{type.label.split(' ').slice(1).join(' ')}</div>
-                  </button>
-                ))}
-              </div>
-              <p className="text-sm text-gray-500 mt-3">{selectedContentType?.hint}</p>
-            </div>
-
-            {/* Для файловых типов (PDF и Image) - показываем загрузчик */}
-            {isFileType && (
-              <div>
-                <FileUploader
-                  currentFile={uploadedFileUrl}
-                  onFileUpload={(url, name) => {
-                    setUploadedFileUrl(url)
-                    setUploadedFileName(name)
-                  }}
-                  entityType="lesson_content"
-                  acceptedTypes={contentType === 'pdf' ? ['application/pdf'] : ['image/*']}
-                  maxSizeMB={10}
-                  label={contentType === 'pdf' ? '📄 Загрузите PDF файл' : '🖼️ Загрузите изображение'}
-                  placeholder={contentType === 'pdf' ? 'Загрузите PDF файл (drag-and-drop или Ctrl+V)' : 'Загрузите изображение (drag-and-drop или Ctrl+V)'}
-                />
-              </div>
-            )}
-
-            {/* Для остальных типов (video, storage, other) - показываем поле для ссылки.
-                Для текстового урока поля нет: текст пишется в редакторе на следующем шаге */}
-            {!isFileType && contentType !== 'text' && (
-              <div>
-                <label htmlFor="contentUrl" className="block text-sm font-semibold text-gray-700 mb-1">
-                  Ссылка на контент *
-                </label>
-                <input
-                  id="contentUrl"
-                  type="url"
-                  required={!isFileType}
-                  value={contentUrl}
-                  onChange={(e) => setContentUrl(e.target.value)}
-                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
-                  placeholder={selectedContentType?.placeholder}
-                />
-              </div>
-            )}
-
-            {contentTitle && (
-              <div>
-                <label htmlFor="contentTitle" className="block text-sm font-semibold text-gray-700 mb-1">
-                  Заголовок контента (необязательно)
-                </label>
-                <input
-                  id="contentTitle"
-                  type="text"
-                  value={contentTitle}
-                  onChange={(e) => setContentTitle(e.target.value)}
-                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
-                  placeholder="Например: Видеоурок №1"
-                />
-              </div>
-            )}
+          <div className="flex items-start gap-3 bg-purple-50/50 border border-purple-100 rounded-xl p-4">
+            <span className="text-xl leading-none mt-0.5">📝</span>
+            <p className="text-sm text-gray-600">
+              Урок — это статья в визуальном редакторе. Сразу после создания урока
+              откроется страница редактирования, где вы напишете текст: заголовки,
+              списки, картинки и видео прямо в тексте.
+            </p>
           </div>
         </div>
 
@@ -322,7 +174,7 @@ export default function NewLessonPage() {
           <h2 className="text-xl font-bold text-gray-900 mb-4">Цена и доступ</h2>
           <div className="space-y-4">
             <div>
-              <label htmlFor="price" className="block text-sm font-semibold text-gray-700 mb-1">Цена урока (руб.)</label>
+              <label htmlFor="price" className="block text-sm font-semibold text-gray-700 mb-1">Цена урока, ₽</label>
               <input
                 id="price"
                 type="number"
@@ -333,24 +185,37 @@ export default function NewLessonPage() {
                 className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                 placeholder="0"
               />
-              <p className="text-sm text-gray-500 mt-1">Оставьте 0, если урок бесплатный</p>
             </div>
 
-            <div className="flex items-start">
-              <div className="flex items-center h-5">
-                <input
-                  id="isFreePreview"
-                  type="checkbox"
-                  checked={isFreePreview}
-                  onChange={(e) => setIsFreePreview(e.target.checked)}
-                  className="h-5 w-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
-                />
+            {parseFloat(price) > 0 ? (
+              <>
+                <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-4 text-sm">
+                  <p className="font-semibold text-gray-900">💰 Платный урок — {price} ₽</p>
+                  <p className="text-gray-500 mt-0.5">Студент покупает урок, чтобы смотреть. Поставьте 0 — урок станет бесплатным.</p>
+                </div>
+
+                <div className="flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      id="isFreePreview"
+                      type="checkbox"
+                      checked={isFreePreview}
+                      onChange={(e) => setIsFreePreview(e.target.checked)}
+                      className="h-5 w-5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                    />
+                  </div>
+                  <div className="ml-3 text-sm">
+                    <label htmlFor="isFreePreview" className="font-semibold text-gray-900 cursor-pointer">Открыть целиком как бесплатный образец</label>
+                    <p className="text-gray-500 mt-0.5">Урок полностью доступен без покупки — например, чтобы студент оценил стиль автора перед курсом</p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm">
+                <p className="font-semibold text-green-800">🟢 Бесплатный урок — открыт всем</p>
+                <p className="text-green-700 mt-0.5">Укажите цену выше, чтобы сделать урок платным.</p>
               </div>
-              <div className="ml-3 text-sm">
-                <label htmlFor="isFreePreview" className="font-semibold text-gray-900 cursor-pointer">Бесплатный превью</label>
-                <p className="text-gray-500 mt-0.5">Этот урок будет доступен для просмотра без покупки</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 

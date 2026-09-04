@@ -72,11 +72,13 @@ export default function Navbar() {
 
         if (user) {
           try {
+            // maybeSingle: у пользователя может не быть строки coaches (406 с single,
+            // если строк нет) — это норма, шапка просто покажет имя без роли
             const { data: coachData, error: coachError } = await supabase
               .from('coaches')
               .select('id, display_name, avatar_url, role')
               .eq('user_id', user.id)
-              .single()
+              .maybeSingle()
 
             if (!mounted) return
 
