@@ -4,6 +4,7 @@ import { Manrope, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import BanCheck from "@/components/BanCheck";
+import HelpLink from "@/components/HelpLink";
 import { SearchProvider } from "@/components/SearchContext";
 
 export const dynamic = 'force-dynamic'
@@ -87,6 +88,8 @@ export default function RootLayout({
               </Link>
               {/* Ссылки переносятся на узких экранах, а не распирают подвал */}
               <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-gray-500">
+                <HelpLink />
+                <span className="text-purple-200">·</span>
                 <Link href="/terms" className="hover:text-purple-600 transition-colors">
                   Условия использования
                 </Link>
