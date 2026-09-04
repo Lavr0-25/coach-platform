@@ -2,8 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
-import { KeyRound, ListChecks, ChevronRight } from 'lucide-react'
+import { KeyRound, ListChecks, ChevronRight, CalendarClock } from 'lucide-react'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import { PublishTimeForm } from './PublishTimeForm'
 
 // Хаб раздела «Управление с ИИ»: всё, чем автор управляет ИИ-агентом, —
 // в одном месте. Рабочие инструменты автора (уроки, курсы, профиль) остаются
@@ -33,6 +34,13 @@ export default async function AiHubPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Текущее время публикации — для формы настройки (coaches.ai_publish_time)
+  const { data: coach } = await supabase
+    .from('coaches')
+    .select('ai_publish_time')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl pt-24 sm:pt-28">
       {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
@@ -42,6 +50,23 @@ export default async function AiHubPage() {
         Всё, что нужно для работы вашего ИИ-агента: он пишет уроки по вашему плану тем
         и подключается к платформе по персональному ключу.
       </p>
+
+      {/* Расписание публикации: агент пишет когда удобно, выходит урок в заданное время */}
+      <Card padding="lg" className="mb-4 border border-purple-100">
+        <div className="flex items-start gap-4 mb-4">
+          <div className="w-11 h-11 rounded-xl gradient-icon flex items-center justify-center flex-shrink-0">
+            <CalendarClock className="w-5 h-5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="font-semibold text-gray-900">Время публикации</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Агент создаёт уроки, когда запускается (например, ночью), а читатели
+              видят их в указанное время. Пусто — агент публикует на своё усмотрение.
+            </p>
+          </div>
+        </div>
+        <PublishTimeForm initialTime={coach?.ai_publish_time ?? null} />
+      </Card>
 
       <div className="grid sm:grid-cols-2 gap-4">
         {TOOLS.map(({ href, icon: Icon, title, description }) => (
