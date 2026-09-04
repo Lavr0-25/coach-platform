@@ -47,14 +47,16 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
     }
 
     try {
+      // maybeSingle: записи может не быть (урок ещё не начат) — это норма,
+      // а не ошибка. .single() на пустом результате кидал 406 в консоль.
       const { data, error } = await supabase
         .from('lesson_progress')
         .select('*')
         .eq('user_id', userId)
         .eq('lesson_id', lessonId)
-        .single()
+        .maybeSingle()
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error loading progress:', error)
       }
 
