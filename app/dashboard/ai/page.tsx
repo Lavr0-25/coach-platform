@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
-import { KeyRound, ListChecks, ChevronRight, CalendarClock } from 'lucide-react'
+import { KeyRound, ListChecks, ChevronRight, CalendarClock, FileDown } from 'lucide-react'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { PublishTimeForm } from './PublishTimeForm'
 
@@ -23,7 +23,15 @@ const TOOLS = [
     icon: KeyRound,
     title: 'API-ключи агента',
     description:
-      'Персональные ключи для ИИ-агента (например, Claude Code). Виден один раз, отзыв — мгновенно.',
+      'Персональные ключи для ИИ-агента (например, Claude Code, Codex CLI). Виден один раз, отзыв — мгновенно.',
+  },
+  {
+    href: '/agent-setup.md',
+    icon: FileDown,
+    title: 'Инструкция для агента',
+    description:
+      'Файл-задание для вашего ИИ-агента (Claude Code, Codex, Gemini CLI или другой): скачайте и отдайте ему — он сам настроит рабочее место, подключит ключ и поставит расписание.',
+    download: true,
   },
 ]
 
@@ -69,8 +77,9 @@ export default async function AiHubPage() {
       </Card>
 
       <div className="grid sm:grid-cols-2 gap-4">
-        {TOOLS.map(({ href, icon: Icon, title, description }) => (
-          <Link key={href} href={href} className="group">
+        {TOOLS.map(({ href, icon: Icon, title, description, download }) => {
+          // download — статический файл (public/), отдаётся прямой ссылкой
+          const inner = (
             <Card padding="lg" className="h-full hover:shadow-lg transition-colors border border-purple-100 group-hover:border-purple-200">
               <div className="flex items-start gap-4">
                 <div className="w-11 h-11 rounded-xl gradient-icon flex items-center justify-center flex-shrink-0">
@@ -79,14 +88,27 @@ export default async function AiHubPage() {
                 <div className="min-w-0">
                   <h2 className="font-semibold text-gray-900 flex items-center gap-1">
                     {title}
-                    <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all" />
+                    {download ? (
+                      <FileDown className="w-4 h-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all" />
+                    )}
                   </h2>
                   <p className="text-sm text-gray-600 mt-1">{description}</p>
                 </div>
               </div>
             </Card>
-          </Link>
-        ))}
+          )
+          return download ? (
+            <a key={href} href={href} download className="group">
+              {inner}
+            </a>
+          ) : (
+            <Link key={href} href={href} className="group">
+              {inner}
+            </Link>
+          )
+        })}
       </div>
     </main>
   )

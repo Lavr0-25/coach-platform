@@ -1,4 +1,5 @@
 {
   "api_key": "ВСТАВЬ_СЮДА_КЛЮЧ_ИЗ_/dashboard/ai/keys",
-  "base_url": "https://coach-platform-pi.vercel.app"
+  "base_url": "https://coach-platform-pi.vercel.app",
+  "cli": "claude"
 }

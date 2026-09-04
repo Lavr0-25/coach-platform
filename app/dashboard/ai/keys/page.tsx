@@ -86,14 +86,15 @@ function ApiKeysContent() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    // pt-24/28 — место под липкую шапку (иначе навигация разделов уезжает под неё)
+    <div className="max-w-5xl mx-auto px-4 pt-24 sm:pt-28 pb-8">
       {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
       <MentorSectionNav className="mb-6" />
       <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mt-2 mb-2">
         API-ключи агента
       </h1>
       <p className="text-gray-600 mb-8">
-        Персональный ключ, с которым ИИ-агент (например, Claude Code) работает с вашими данными
+        Персональный ключ, с которым ИИ-агент (например, Claude Code или Codex CLI) работает с вашими данными
         из этой платформы. Ключ действует с правами вашей учётной записи и виден только один раз —
         сразу после создания.
       </p>
