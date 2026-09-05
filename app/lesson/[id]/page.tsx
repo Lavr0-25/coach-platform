@@ -9,15 +9,16 @@ import dynamic from 'next/dynamic'
 import type { Metadata } from 'next'
 import FavoriteButton from '@/components/FavoriteButton'
 import LessonProgress from '@/components/LessonProgress'
+import { Card } from '@/components/ui/Card'
 
 const LessonComments = dynamic(
   () => import('@/components/LessonComments'),
   { 
     loading: () => (
-      <div className="style-card p-6 animate-pulse space-y-4">
+      <Card variant="glow" padding="none" className="p-6 animate-pulse space-y-4">
         <div className="h-8 bg-purple-100 rounded w-1/4"></div>
         <div className="h-32 bg-purple-100 rounded"></div>
-      </div>
+      </Card>
     )
   }
 )
@@ -336,7 +337,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
       </div>
 
       {/* Заголовок урока */}
-      <div className="style-card p-6 sm:p-8 mb-6 relative">
+      <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-6 relative">
         <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-4 leading-tight">
           {lesson.title}
         </h1>
@@ -405,11 +406,11 @@ export default async function LessonPage({ params }: LessonPageProps) {
             <p className="text-sm text-gray-500 self-center">Онлайн-оплата появится скоро</p>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Контент урока */}
       {(isFree || isPurchased || isOwner) && (
-        <div className="style-card p-6 sm:p-8 mb-6">
+        <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
               {getContentTypeIcon(content?.content_type)}
@@ -417,7 +418,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
             Содержание урока
           </h2>
           {renderContent()}
-        </div>
+        </Card>
       )}
 
       {/* Прогресс обучения (для анонима компонент сам скрывается) */}
@@ -429,7 +430,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
       {/* Описание */}
       {lesson.description && (
-        <div className="style-card p-6 sm:p-8 mb-6">
+        <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
             <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,7 +442,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
           <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-base sm:text-lg">
             {lesson.description}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Комментарии */}

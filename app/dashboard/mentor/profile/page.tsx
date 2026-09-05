@@ -8,6 +8,7 @@ import Image from 'next/image'
 import FileUploader from '@/components/FileUploader'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 export default function MentorProfilePage() {
   const supabase = createClient()
@@ -333,7 +334,7 @@ export default function MentorProfilePage() {
       {activeTab === 'profile' && (
         <div className="space-y-6">
           {/* Информация о профиле с кнопкой Настройки */}
-          <div className="style-card p-6 sm:p-8">
+          <Card variant="glow" padding="none" className="p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row items-start gap-6">
               <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center flex-shrink-0">
                 {avatarUrl ? (
@@ -394,7 +395,7 @@ export default function MentorProfilePage() {
                 )}
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Поиск по контенту */}
           <div>
@@ -554,7 +555,7 @@ export default function MentorProfilePage() {
 
           {/* Если ничего не найдено */}
           {filteredCourses.length === 0 && filteredLessons.length === 0 && (
-            <div className="style-card p-12 text-center">
+            <Card variant="glow" padding="none" className="p-12 text-center">
               <div className="text-6xl mb-4">🔍</div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 {debouncedSearch ? 'Ничего не найдено' : 'Пока нет материалов'}
@@ -581,7 +582,7 @@ export default function MentorProfilePage() {
                   </Button>
                 </div>
               )}
-            </div>
+            </Card>
           )}
         </div>
       )}

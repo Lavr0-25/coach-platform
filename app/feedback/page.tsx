@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Input, Textarea, Label } from '@/components/ui/Input'
 import type { BadgeProps } from '@/components/ui/Badge'
 import { Bug, Lightbulb, Pencil, Trash2 } from 'lucide-react'
+import { Card } from '@/components/ui/Card'
 
 // Статусы и подписи — как в админке (/admin/feedback), чтобы пользователь
 // видел то же самое, что видит админ
@@ -269,7 +270,7 @@ export default function FeedbackPage() {
         </p>
       </div>
 
-      <div className="style-card p-6 sm:p-8">
+      <Card variant="glow" padding="none" className="p-6 sm:p-8">
         {/* Режим правки — подсказка, что форма сейчас изменяет существующее обращение */}
         {editingId && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-blue-700 flex items-start gap-3">
@@ -466,7 +467,7 @@ export default function FeedbackPage() {
             )}
           </div>
         </form>
-      </div>
+      </Card>
 
       {/* ─── Мои обращения: история со статусами ─── */}
       <section className="mt-10">
@@ -481,9 +482,9 @@ export default function FeedbackPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
           </div>
         ) : myFeedbacks.length === 0 ? (
-          <div className="style-card p-8 text-center text-gray-500">
+          <Card variant="glow" padding="none" className="p-8 text-center text-gray-500">
             Вы ещё ничего не отправляли — первое обращение появится здесь.
-          </div>
+          </Card>
         ) : (
           <div className="space-y-4">
             {myFeedbacks.map((fb) => {
@@ -492,7 +493,7 @@ export default function FeedbackPage() {
               const canEdit = fb.status === 'new'
               const images: string[] = fb.images || []
               return (
-                <div key={fb.id} className="style-card p-5 sm:p-6">
+                <Card key={fb.id} variant="glow" padding="none" className="p-5 sm:p-6">
                   {/* Шапка: тип + заголовок + статус */}
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="min-w-0">
@@ -579,7 +580,7 @@ export default function FeedbackPage() {
                       </button>
                     </div>
                   )}
-                </div>
+                </Card>
               )
             })}
           </div>

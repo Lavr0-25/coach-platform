@@ -11,6 +11,7 @@ import { deleteLesson } from '@/app/actions/deleteLesson'
 import { setLessonPublishAt } from '@/app/actions/updateLesson'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 export default function MentorLessonsPage() {
   // Провайдер глобальный (app/layout.tsx)
@@ -226,41 +227,41 @@ export default function MentorLessonsPage() {
 
         {/* Статистика */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-          <div className="style-card p-4 text-center">
+          <Card variant="glow" padding="none" className="p-4 text-center">
             <div className="text-3xl font-bold gradient-text mb-1">
               {filteredLessons.length}
             </div>
             <div className="text-sm text-gray-600">
               Всего уроков
             </div>
-          </div>
+          </Card>
           
-          <div className="style-card p-4 text-center">
+          <Card variant="glow" padding="none" className="p-4 text-center">
             <div className="text-3xl font-bold gradient-text mb-1">
               {lessonsInCourses.length}
             </div>
             <div className="text-sm text-gray-600">
               В курсах
             </div>
-          </div>
+          </Card>
           
-          <div className="style-card p-4 text-center">
+          <Card variant="glow" padding="none" className="p-4 text-center">
             <div className="text-3xl font-bold gradient-text mb-1">
               {lessonsWithoutCourse.length}
             </div>
             <div className="text-sm text-gray-600">
               Отдельные
             </div>
-          </div>
+          </Card>
           
-          <div className="style-card p-4 text-center">
+          <Card variant="glow" padding="none" className="p-4 text-center">
             <div className="text-3xl font-bold gradient-text mb-1">
               {freeLessons.length}
             </div>
             <div className="text-sm text-gray-600">
               Бесплатных
             </div>
-          </div>
+          </Card>
         </div>
       </div>
 
@@ -278,10 +279,7 @@ export default function MentorLessonsPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {lessonsInCourses.map((lesson) => (
-              <div
-                key={lesson.id}
-                className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100 relative"
-              >
+              <Card key={lesson.id} variant="glow" padding="none" className="p-5 hover:shadow-lg transition-colors group border border-purple-100 relative">
                 {/* Кнопка удаления — поверх карточки (внутрь <Link> класть нельзя) */}
                 {confirmingId === lesson.id ? (
                   <button
@@ -398,7 +396,7 @@ export default function MentorLessonsPage() {
                   </div>
                 </div>
               </Link>
-            </div>
+            </Card>
             ))}
           </div>
         </div>
@@ -418,10 +416,7 @@ export default function MentorLessonsPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {lessonsWithoutCourse.map((lesson) => (
-              <div
-                key={lesson.id}
-                className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100 relative"
-              >
+              <Card key={lesson.id} variant="glow" padding="none" className="p-5 hover:shadow-lg transition-colors group border border-purple-100 relative">
                 {/* Кнопка удаления — поверх карточки (внутрь <Link> класть нельзя) */}
                 {confirmingId === lesson.id ? (
                   <button
@@ -526,7 +521,7 @@ export default function MentorLessonsPage() {
                   </div>
                 </div>
               </Link>
-            </div>
+            </Card>
             ))}
           </div>
         </div>
@@ -534,7 +529,7 @@ export default function MentorLessonsPage() {
 
       {/* Если уроков нет или ничего не найдено */}
       {filteredLessons.length === 0 && (
-        <div className="style-card p-12 text-center">
+        <Card variant="glow" padding="none" className="p-12 text-center">
           <div className="text-6xl mb-4">🔍</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {debouncedSearch ? 'Ничего не найдено' : 'Пока нет уроков'}
@@ -553,7 +548,7 @@ export default function MentorLessonsPage() {
               Создать урок
             </Button>
           )}
-        </div>
+        </Card>
       )}
     </main>
   )

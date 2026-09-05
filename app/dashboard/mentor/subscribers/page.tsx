@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import { Card } from '@/components/ui/Card'
 
 interface Subscriber {
   user_id: string
@@ -230,7 +231,7 @@ export default function SubscribersPage() {
       {loading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="style-card p-4 animate-pulse">
+            <Card key={i} variant="glow" padding="none" className="p-4 animate-pulse">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
                 <div className="flex-1 space-y-2">
@@ -238,11 +239,11 @@ export default function SubscribersPage() {
                   <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       ) : subscribers.length === 0 ? (
-        <div className="style-card p-12 text-center">
+        <Card variant="glow" padding="none" className="p-12 text-center">
           <div className="text-6xl mb-4">👥</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {debouncedSearch ? 'Ничего не найдено' : 'Пока нет подписчиков'}
@@ -260,15 +261,12 @@ export default function SubscribersPage() {
               Сбросить поиск
             </button>
           )}
-        </div>
+        </Card>
       ) : (
         <>
           <div className="space-y-3">
             {subscribers.map((subscriber) => (
-              <div
-                key={subscriber.user_id}
-                className="style-card p-4 hover:shadow-md transition-colors group"
-              >
+              <Card key={subscriber.user_id} variant="glow" padding="none" className="p-4 hover:shadow-md transition-colors group">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
@@ -305,7 +303,7 @@ export default function SubscribersPage() {
                     </svg>
                   </Link>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
 

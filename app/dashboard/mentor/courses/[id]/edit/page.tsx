@@ -9,6 +9,7 @@ import FileUploader from '@/components/FileUploader'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { useToast } from '@/components/Toast'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 interface Course {
   id: string
@@ -425,7 +426,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
           </form>
 
           {/* Уроки курса */}
-          <div className="style-card p-6 sm:p-8">
+          <Card variant="glow" padding="none" className="p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
@@ -515,7 +516,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
             {/* Модальное окно добавления урока */}
             {showAddLesson && (
               <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="style-card max-w-2xl w-full max-h-[80vh] flex flex-col">
+                <Card variant="glow" padding="none" className="max-w-2xl w-full max-h-[80vh] flex flex-col">
                   <div className="p-6 border-b border-purple-100 flex items-center justify-between flex-shrink-0">
                     <h3 className="text-xl font-bold text-gray-900">
                       Добавить свой урок в курс
@@ -599,15 +600,15 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                       </div>
                     )}
                   </div>
-                </div>
+                </Card>
               </div>
             )}
-          </div>
+          </Card>
         </div>
 
         {/* Правая колонка: Статистика */}
         <div className="space-y-6">
-          <div className="style-card p-6">
+          <Card variant="glow" padding="none" className="p-6">
             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
               <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -641,7 +642,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                 </span>
               </div>
             </div>
-          </div>
+          </Card>
 
           <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-5">
             <div className="flex items-start gap-3">

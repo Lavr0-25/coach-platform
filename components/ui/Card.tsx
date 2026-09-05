@@ -13,9 +13,16 @@ const ROUNDED = {
 
 export interface CardProps {
   children: React.ReactNode
+  /**
+   * Стиль карточки:
+   * - plain (по умолчанию) — белая карточка с тонкой рамкой;
+   * - glow — «светящаяся» карточка (класс .style-card: градиентная рамка
+   *   и подсветка при наведении; скругление и ховер задаёт CSS).
+   */
+  variant?: 'plain' | 'glow'
   /** Внутренние отступы: none/sm/md/lg (по умолчанию md) */
   padding?: keyof typeof PADDING
-  /** Скругление углов: lg/xl/2xl (по умолчанию xl) */
+  /** Скругление углов: lg/xl/2xl (по умолчанию xl; в glow игнорируется — задаёт CSS) */
   rounded?: keyof typeof ROUNDED
   /** Подъём карточки при наведении (для кликабельных карточек-ссылок) */
   hover?: boolean
@@ -24,15 +31,17 @@ export interface CardProps {
 
 export function Card({
   children,
+  variant = 'plain',
   padding = 'md',
   rounded = 'xl',
   hover = false,
   className = '',
 }: CardProps) {
+  const isGlow = variant === 'glow'
   const cls = [
-    'bg-white border border-purple-100 shadow-sm',
+    isGlow ? 'style-card' : 'bg-white border border-purple-100 shadow-sm',
     PADDING[padding],
-    ROUNDED[rounded],
+    !isGlow && ROUNDED[rounded],
     hover && 'transition-[box-shadow,transform] hover:shadow-lg hover:-translate-y-1',
     className,
   ]

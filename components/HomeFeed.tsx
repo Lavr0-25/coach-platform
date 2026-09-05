@@ -9,6 +9,7 @@ import Link from 'next/link'
 import FavoriteButton from '@/components/FavoriteButton'
 import { useSearch } from '@/components/SearchContext'
 import { useToast } from '@/components/Toast'
+import { Card } from '@/components/ui/Card'
 
 export interface HomeItem {
   id: string
@@ -268,7 +269,7 @@ export default function HomeFeed({
           {/* Боковая панель */}
           <aside className="hidden lg:block w-72 flex-shrink-0">
             <div className="sticky top-32">
-              <div className="style-card p-5">
+              <Card variant="glow" padding="none" className="p-5">
                 {/* Поиск по авторам */}
                 <div className="mb-4 relative">
                   <input
@@ -442,7 +443,7 @@ export default function HomeFeed({
                     </Link>
                   </div>
                 )}
-              </div>
+              </Card>
             </div>
           </aside>
 
@@ -570,7 +571,7 @@ export default function HomeFeed({
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {displayedContent.map((item) => (
-                    <div key={`${item.type}-${item.id}`} className="group style-card overflow-hidden relative">
+                    <Card key={`${item.type}-${item.id}`} variant="glow" padding="none" className="group overflow-hidden relative">
                       <Link
                         href={`/${item.type === 'lesson' ? 'lesson' : 'course'}/${item.id}`}
                         className="block"
@@ -694,7 +695,7 @@ export default function HomeFeed({
                           </div>
                         </div>
                       </Link>
-                    </div>
+                    </Card>
                   ))}
                 </div>
 

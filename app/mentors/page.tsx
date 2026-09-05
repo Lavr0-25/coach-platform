@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
+import { Card } from '@/components/ui/Card'
 
 export const metadata: Metadata = {
   title: 'Наставники',
@@ -224,7 +225,7 @@ export default async function MentorsPage({ searchParams }: MentorsPageProps) {
           ))}
         </div>
       ) : (
-        <div className="style-card p-12 text-center">
+        <Card variant="glow" padding="none" className="p-12 text-center">
           <div className="text-6xl mb-4">🔍</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {search ? 'Ничего не найдено' : 'Пока нет авторов'}
@@ -250,7 +251,7 @@ export default async function MentorsPage({ searchParams }: MentorsPageProps) {
               Стать автором
             </Link>
           )}
-        </div>
+        </Card>
       )}
     </main>
   )

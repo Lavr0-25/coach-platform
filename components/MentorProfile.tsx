@@ -10,6 +10,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import FavoriteButton from '@/components/FavoriteButton'
 import ProfileActions from '@/components/ProfileActions'
+import { Card } from '@/components/ui/Card'
 
 interface Course {
   id: string
@@ -214,7 +215,7 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
       </div>
 
       {/* Профиль автора */}
-      <div className="style-card p-6 sm:p-8 mb-8">
+      <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-8">
         <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
           {/* Аватар */}
           <div className="flex-shrink-0">
@@ -272,11 +273,11 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Раздел "Об Авторе" */}
       {coach.bio && (
-        <div className="style-card p-6 sm:p-8 mb-8">
+        <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
             <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm"></span>
             Об авторе
@@ -296,7 +297,7 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
               </div>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Поиск */}
@@ -351,7 +352,7 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
               const courseLessonsCount = course.course_lessons?.length || 0
               
               return (
-                <div key={course.id} className="style-card overflow-hidden hover:shadow-lg transition-colors group border border-purple-100">
+                <Card key={course.id} variant="glow" padding="none" className="overflow-hidden hover:shadow-lg transition-colors group border border-purple-100">
                   <Link href={`/course/${course.id}`} className="block">
                     <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 relative overflow-hidden">
                       {course.cover_image ? (
@@ -401,7 +402,7 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
                       </div>
                     </div>
                   </Link>
-                </div>
+                </Card>
               )
             })}
           </div>
@@ -419,7 +420,7 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredLessons.map((lesson) => {
               return (
-                <div key={lesson.id} className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100">
+                <Card key={lesson.id} variant="glow" padding="none" className="p-5 hover:shadow-lg transition-colors group border border-purple-100">
                   <Link href={`/lesson/${lesson.id}`} className="block">
                     <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden relative">
                       {lesson.cover_image ? (
@@ -470,7 +471,7 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
                       </div>
                     </div>
                   </Link>
-                </div>
+                </Card>
               )
             })}
           </div>
@@ -479,7 +480,7 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
 
       {/* Если ничего не найдено */}
       {(filteredCourses.length === 0 && filteredLessons.length === 0) && (
-        <div className="style-card p-12 text-center">
+        <Card variant="glow" padding="none" className="p-12 text-center">
           <div className="text-6xl mb-4"></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {debouncedSearch ? 'Ничего не найдено' : 'Пока нет материалов'}
@@ -490,7 +491,7 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
               : 'Автор пока не добавил курсы или уроки'
             }
           </p>
-        </div>
+        </Card>
       )}
     </main>
   )

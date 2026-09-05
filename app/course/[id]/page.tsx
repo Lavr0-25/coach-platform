@@ -5,15 +5,16 @@ import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import type { Metadata } from 'next'
 import FavoriteButton from '@/components/FavoriteButton'
+import { Card } from '@/components/ui/Card'
 
 const ReviewsSection = dynamic(
   () => import('@/components/CourseReviews'),
   { 
     loading: () => (
-      <div className="style-card p-6 animate-pulse space-y-4">
+      <Card variant="glow" padding="none" className="p-6 animate-pulse space-y-4">
         <div className="h-8 bg-purple-100 rounded w-1/4"></div>
         <div className="h-24 bg-purple-100 rounded"></div>
-      </div>
+      </Card>
     )
   }
 )
@@ -22,10 +23,10 @@ const CourseComments = dynamic(
   () => import('@/components/LessonComments'),
   { 
     loading: () => (
-      <div className="style-card p-6 animate-pulse space-y-4">
+      <Card variant="glow" padding="none" className="p-6 animate-pulse space-y-4">
         <div className="h-8 bg-purple-100 rounded w-1/4"></div>
         <div className="h-32 bg-purple-100 rounded"></div>
-      </div>
+      </Card>
     )
   }
 )
@@ -198,7 +199,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
       </div>
 
       {/* Заголовок курса */}
-      <div className="style-card p-6 sm:p-8 mb-6">
+      <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-6">
         {course.cover_image_url || course.cover_image ? (
           <div className="mb-6">
             <div className="relative aspect-video rounded-xl overflow-hidden shadow-lg">
@@ -303,11 +304,11 @@ export default async function CoursePage({ params }: CoursePageProps) {
             )}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Программа курса */}
       {directLessons && directLessons.length > 0 ? (
-        <div className="style-card p-6 sm:p-8 mb-6">
+        <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -358,9 +359,9 @@ export default async function CoursePage({ params }: CoursePageProps) {
               )
             })}
           </div>
-        </div>
+        </Card>
       ) : (
-        <div className="style-card p-12 text-center mb-6">
+        <Card variant="glow" padding="none" className="p-12 text-center mb-6">
           <div className="text-6xl mb-4"></div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">
             Уроки пока не добавлены
@@ -368,12 +369,12 @@ export default async function CoursePage({ params }: CoursePageProps) {
           <p className="text-gray-500">
             Автор ещё не добавил уроки в этот курс
           </p>
-        </div>
+        </Card>
       )}
 
       {/* Описание */}
       {course.description && (
-        <div className="style-card p-6 sm:p-8 mb-6">
+        <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
             <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -385,7 +386,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
           <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-base sm:text-lg">
             {course.description}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Отзывы */}

@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import { Card } from '@/components/ui/Card'
 
 export default function AnalyticsPage() {
   const supabase = createClient()
@@ -181,7 +182,7 @@ export default function AnalyticsPage() {
 
       {/* Основные метрики */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="style-card p-6">
+        <Card variant="glow" padding="none" className="p-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl">
               📚
@@ -191,9 +192,9 @@ export default function AnalyticsPage() {
               <div className="text-sm text-gray-600">Всего уроков</div>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="style-card p-6">
+        <Card variant="glow" padding="none" className="p-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl">
               🎓
@@ -203,7 +204,7 @@ export default function AnalyticsPage() {
               <div className="text-sm text-gray-600">Всего курсов</div>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* 🔥 КЛИКАБЕЛЬНАЯ ССЫЛКА НА ОТДЕЛЬНУЮ СТРАНИЦУ (исправлен путь) */}
         <Link 
@@ -221,7 +222,7 @@ export default function AnalyticsPage() {
           </div>
         </Link>
 
-        <div className="style-card p-6">
+        <Card variant="glow" padding="none" className="p-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl">
               👁️
@@ -231,11 +232,11 @@ export default function AnalyticsPage() {
               <div className="text-sm text-gray-600">Просмотров</div>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* График активности с сеткой */}
-      <div className="style-card p-6 sm:p-8 mb-8">
+      <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-8">
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
           <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📊</span>
           Активность за последние 30 дней
@@ -352,7 +353,7 @@ export default function AnalyticsPage() {
             </p>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Таблица уроков */}
       {lessonsStats.length > 0 && (
@@ -364,7 +365,7 @@ export default function AnalyticsPage() {
             </Link>
           </div>
 
-          <div className="style-card overflow-hidden border border-purple-100">
+          <Card variant="glow" padding="none" className="overflow-hidden border border-purple-100">
             {/* Заголовок таблицы (скрыт на мобильных) */}
             <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-purple-50 border-b border-purple-100 text-sm font-semibold text-gray-700">
               <div className="col-span-4">Урок</div>
@@ -446,13 +447,13 @@ export default function AnalyticsPage() {
                 </Link>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
       {/* Если уроков нет */}
       {lessonsStats.length === 0 && (
-        <div className="style-card p-12 text-center mb-8">
+        <Card variant="glow" padding="none" className="p-12 text-center mb-8">
           <div className="text-6xl mb-4">📭</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Пока нет уроков</h2>
           <p className="text-gray-600 mb-6">
@@ -467,7 +468,7 @@ export default function AnalyticsPage() {
             </svg>
             Создать урок
           </Link>
-        </div>
+        </Card>
       )}
     </main>
   )

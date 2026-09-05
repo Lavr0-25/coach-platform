@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { BookOpen, FileText } from 'lucide-react'
 import RemoveFavoriteButton from '@/components/RemoveFavoriteButton'
+import { Card } from '@/components/ui/Card'
 
 export default function FavoritesPage() {
   const [loading, setLoading] = useState(true)
@@ -214,7 +215,7 @@ export default function FavoritesPage() {
 
       {/* Если пусто (и нет поиска) */}
       {favCourses.length === 0 && favLessons.length === 0 && (
-        <div className="style-card p-12 text-center">
+        <Card variant="glow" padding="none" className="p-12 text-center">
           <div className="text-6xl mb-4">💜</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Список избранного пуст</h2>
           <p className="text-gray-600 mb-6 max-w-md mx-auto">
@@ -226,12 +227,12 @@ export default function FavoritesPage() {
           >
             Найти авторов и материалы
           </Link>
-        </div>
+        </Card>
       )}
 
       {/* Если ничего не найдено по поиску */}
       {debouncedSearch && totalFavorites === 0 && (
-        <div className="style-card p-12 text-center">
+        <Card variant="glow" padding="none" className="p-12 text-center">
           <div className="text-6xl mb-4">🔍</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Ничего не найдено</h2>
           <p className="text-gray-600 max-w-md mx-auto">
@@ -243,7 +244,7 @@ export default function FavoritesPage() {
           >
             Сбросить поиск
           </button>
-        </div>
+        </Card>
       )}
 
       {/* Избранные курсы */}
@@ -258,7 +259,7 @@ export default function FavoritesPage() {
             {filteredCourses.map((course) => {
               const lessonsCount = course.course_lessons?.length || 0
               return (
-                <div key={course.id} className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100 relative">
+                <Card key={course.id} variant="glow" padding="none" className="p-5 hover:shadow-lg transition-colors group border border-purple-100 relative">
                   <RemoveFavoriteButton 
                     itemId={course.id} 
                     itemType="course" 
@@ -306,7 +307,7 @@ export default function FavoritesPage() {
                       </span>
                     </div>
                   </Link>
-                </div>
+                </Card>
               )
             })}
           </div>
@@ -323,7 +324,7 @@ export default function FavoritesPage() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredLessons.map((lesson) => (
-              <div key={lesson.id} className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100 relative">
+              <Card key={lesson.id} variant="glow" padding="none" className="p-5 hover:shadow-lg transition-colors group border border-purple-100 relative">
                 <RemoveFavoriteButton 
                   itemId={lesson.id} 
                   itemType="lesson" 
@@ -377,7 +378,7 @@ export default function FavoritesPage() {
                     </div>
                   </div>
                 </Link>
-              </div>
+              </Card>
             ))}
           </div>
         </div>

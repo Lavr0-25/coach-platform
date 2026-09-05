@@ -7,6 +7,7 @@ import type { Metadata } from 'next'
 import { Lock } from 'lucide-react'
 import FavoriteButton from '@/components/FavoriteButton'
 import ProfileActions from '@/components/ProfileActions'
+import { Card } from '@/components/ui/Card'
 
 // Публичная страница профиля: канонические страницы материалов автора — /mentor/[id],
 // поэтому если id принадлежит автору — редиректим туда. Для студента (и любого
@@ -84,7 +85,7 @@ export default async function ProfilePage({ params }: MentorPageProps) {
   if (!canViewProfile) {
     return (
       <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-7xl pt-24 sm:pt-28">
-        <div className="style-card p-12 text-center">
+        <Card variant="glow" padding="none" className="p-12 text-center">
           <div className="gradient-icon w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-white" />
           </div>
@@ -92,7 +93,7 @@ export default async function ProfilePage({ params }: MentorPageProps) {
           <p className="text-gray-600 max-w-md mx-auto">
             Пользователь ограничил доступ к своему профилю
           </p>
-        </div>
+        </Card>
       </main>
     )
   }
@@ -153,7 +154,7 @@ export default async function ProfilePage({ params }: MentorPageProps) {
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-7xl pt-24 sm:pt-28">
       {/* Профиль пользователя */}
-      <div className="style-card p-6 sm:p-8 mb-8">
+      <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-8">
         <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
           <div className="flex-shrink-0">
             <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden border-4 border-white shadow-xl bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center">
@@ -200,7 +201,7 @@ export default async function ProfilePage({ params }: MentorPageProps) {
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Купленные курсы */}
       {courses.length > 0 && (
@@ -213,7 +214,7 @@ export default async function ProfilePage({ params }: MentorPageProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map((course: any) => (
               <Link key={course.id} href={`/course/${course.id}`} className="block group">
-                <div className="style-card overflow-hidden hover:shadow-lg transition-colors border border-purple-100">
+                <Card variant="glow" padding="none" className="overflow-hidden hover:shadow-lg transition-colors border border-purple-100">
                   <div className="aspect-video bg-gradient-to-br from-purple-500 to-blue-600 relative overflow-hidden">
                     {course.cover_image ? (
                       <Image src={course.cover_image} alt={course.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="w-full h-full object-cover" />
@@ -233,7 +234,7 @@ export default async function ProfilePage({ params }: MentorPageProps) {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                     </div>
                   </div>
-                </div>
+                </Card>
               </Link>
             ))}
           </div>
@@ -251,7 +252,7 @@ export default async function ProfilePage({ params }: MentorPageProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {lessons.map((lesson: any) => (
               <Link key={lesson.id} href={`/lesson/${lesson.id}`} className="block group">
-                <div className="style-card p-5 hover:shadow-lg transition-colors border border-purple-100">
+                <Card variant="glow" padding="none" className="p-5 hover:shadow-lg transition-colors border border-purple-100">
                   <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden relative">
                     {lesson.cover_image ? (
                       <Image src={lesson.cover_image} alt={lesson.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="w-full h-full object-cover" />
@@ -273,7 +274,7 @@ export default async function ProfilePage({ params }: MentorPageProps) {
                       <span className="text-purple-600 font-semibold text-sm">Подробнее</span>
                     </div>
                   </div>
-                </div>
+                </Card>
               </Link>
             ))}
           </div>
@@ -282,13 +283,13 @@ export default async function ProfilePage({ params }: MentorPageProps) {
 
       {/* Пока нет ничего */}
       {courses.length === 0 && lessons.length === 0 && (
-        <div className="style-card p-12 text-center">
+        <Card variant="glow" padding="none" className="p-12 text-center">
           <div className="text-6xl mb-4">🎓</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Пока нет пройденных курсов</h2>
           <p className="text-gray-600 max-w-md mx-auto">
             Здесь появятся курсы и уроки, которые пользователь прошёл или купил
           </p>
-        </div>
+        </Card>
       )}
     </main>
   )

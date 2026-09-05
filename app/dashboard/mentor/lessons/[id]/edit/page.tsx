@@ -11,6 +11,7 @@ import RichTextEditor from '@/components/editor/RichTextEditor'
 import HiddenLessonPanel from '@/components/HiddenLessonPanel'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 // На платформе только текстовые уроки: тип контента фиксирован ('text'),
 // содержимое правится в WYSIWYG-редакторе. Старые не-текстовые записи в БД
@@ -464,7 +465,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Обложка */}
-        <div className="style-card p-6 sm:p-8">
+        <Card variant="glow" padding="none" className="p-6 sm:p-8">
           <FileUploader
             currentFile={coverImage}
             onFileUpload={(url) => setCoverImage(url)}
@@ -475,10 +476,10 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
             label="Обложка урока"
             placeholder="Нажмите, перетащите или вставьте скриншот"
           />
-        </div>
+        </Card>
 
         {/* Основная информация */}
-        <div className="style-card p-6 sm:p-8">
+        <Card variant="glow" padding="none" className="p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Основная информация</h2>
           <div className="space-y-4">
             <div>
@@ -505,10 +506,10 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
               />
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Контент урока */}
-        <div className="style-card p-6 sm:p-8">
+        <Card variant="glow" padding="none" className="p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Контент урока</h2>
           <div className="space-y-6">
             {/* WYSIWYG-редактор — единственный тип контента */}
@@ -519,10 +520,10 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Настройки */}
-        <div className="style-card p-6 sm:p-8">
+        <Card variant="glow" padding="none" className="p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Цена и доступ</h2>
           <div className="space-y-4">
             <div>
@@ -569,7 +570,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
         {/* Скрытый режим: панель доступа (внизу, рядом с «Цена и доступ») */}
         <HiddenLessonPanel

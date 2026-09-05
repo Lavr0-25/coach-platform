@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import FileUploader from '@/components/FileUploader'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 // На платформе только текстовые уроки: тип контента не выбирается,
 // текст пишется в WYSIWYG-редакторе на странице урока.
@@ -114,7 +115,7 @@ export default function NewLessonPage() {
         )}
 
         {/* Обложка */}
-        <div className="style-card p-6 sm:p-8">
+        <Card variant="glow" padding="none" className="p-6 sm:p-8">
           <FileUploader
             currentFile={coverImage}
             onFileUpload={(url) => setCoverImage(url)}
@@ -124,10 +125,10 @@ export default function NewLessonPage() {
             label="Обложка урока"
             placeholder="Нажмите, перетащите или вставьте скриншот"
           />
-        </div>
+        </Card>
 
         {/* Основная информация */}
-        <div className="style-card p-6 sm:p-8">
+        <Card variant="glow" padding="none" className="p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Основная информация</h2>
           <div className="space-y-4">
             <div>
@@ -154,10 +155,10 @@ export default function NewLessonPage() {
               />
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Контент урока — только текст в WYSIWYG-редакторе */}
-        <div className="style-card p-6 sm:p-8">
+        <Card variant="glow" padding="none" className="p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Контент урока</h2>
           <div className="flex items-start gap-3 bg-purple-50/50 border border-purple-100 rounded-xl p-4">
             <span className="text-xl leading-none mt-0.5">📝</span>
@@ -167,10 +168,10 @@ export default function NewLessonPage() {
               списки, картинки и видео прямо в тексте.
             </p>
           </div>
-        </div>
+        </Card>
 
         {/* Цена и доступ */}
-        <div className="style-card p-6 sm:p-8">
+        <Card variant="glow" padding="none" className="p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Цена и доступ</h2>
           <div className="space-y-4">
             <div>
@@ -217,7 +218,7 @@ export default function NewLessonPage() {
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
         {/* Кнопки */}
         <div className="flex flex-col sm:flex-row gap-4 pt-4">

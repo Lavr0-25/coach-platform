@@ -8,6 +8,7 @@ import Image from 'next/image'
 import { createCourse } from '@/app/actions/createCourse'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 export default function MentorCoursesPage() {
   const [courses, setCourses] = useState<any[]>([])
@@ -231,7 +232,7 @@ export default function MentorCoursesPage() {
           ))}
         </div>
       ) : (
-        <div className="style-card p-12 text-center">
+        <Card variant="glow" padding="none" className="p-12 text-center">
           <div className="text-6xl mb-4">🔍</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {debouncedSearch ? 'Ничего не найдено' : 'Пока нет курсов'}
@@ -252,7 +253,7 @@ export default function MentorCoursesPage() {
               </Button>
             </form>
           )}
-        </div>
+        </Card>
       )}
     </main>
   )
