@@ -22,6 +22,8 @@ export default function AnalyticsPage() {
     subscribers: 0,
     totalViews: 0,
     totalCompleted: 0,
+    totalLikes: 0,
+    totalFavorites: 0,
   })
   const [chartData, setChartData] = useState<any[]>([])
   const [lessonsStats, setLessonsStats] = useState<any[]>([])
@@ -59,6 +61,18 @@ export default function AnalyticsPage() {
         .order('created_at', { ascending: false })
 
       const lessonIds = allLessons?.map(l => l.id) || []
+
+      // Лайки и избранное по урокам: SQL-функция (security definer), т.к. RLS favorites
+      // не даёт автору читать чужие строки избранного даже на своих уроках
+      let socialByLesson = new Map<string, { likes: number; favorites: number }>()
+      if (lessonIds.length > 0) {
+        const { data: socialData } = await supabase.rpc('get_lesson_social_counts', {
+          p_lesson_ids: lessonIds,
+        })
+        for (const row of socialData || []) {
+          socialByLesson.set(row.lesson_id, { likes: row.likes || 0, favorites: row.favorites || 0 })
+        }
+      }
 
       // Общая статистика
       const totalLessons = allLessons?.length || 0
@@ -131,6 +145,7 @@ export default function AnalyticsPage() {
           totalViews: totalLessonViews,
           monthViews,
           dayViews,
+          social: socialByLesson.get(lesson.id) || { likes: 0, favorites: 0 },
         }
       }) || []
 
@@ -140,6 +155,8 @@ export default function AnalyticsPage() {
         subscribers: subscribersCount,
         totalViews,
         totalCompleted,
+        totalLikes: [...socialByLesson.values()].reduce((s, v) => s + v.likes, 0),
+        totalFavorites: [...socialByLesson.values()].reduce((s, v) => s + v.favorites, 0),
       })
 
       setChartData(chart)
@@ -182,7 +199,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Основные метрики */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <Card variant="glow" padding="none" className="p-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl">
@@ -208,8 +225,8 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* 🔥 КЛИКАБЕЛЬНАЯ ССЫЛКА НА ОТДЕЛЬНУЮ СТРАНИЦУ (исправлен путь) */}
-        <Link 
-          href="/dashboard/mentor/subscribers" 
+        <Link
+          href="/dashboard/mentor/subscribers"
           className="style-card p-6 hover:shadow-lg transition-colors group block"
         >
           <div className="flex items-center gap-3">
@@ -231,6 +248,31 @@ export default function AnalyticsPage() {
             <div>
               <div className="text-2xl font-bold gradient-text">{stats.totalViews}</div>
               <div className="text-sm text-gray-600">Просмотров</div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Реакции учеников: лайки и избранное по всем урокам */}
+        <Card variant="glow" padding="none" className="p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-2xl">
+              ❤️
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-red-600">{stats.totalLikes}</div>
+              <div className="text-sm text-gray-600">Лайков</div>
+            </div>
+          </div>
+        </Card>
+
+        <Card variant="glow" padding="none" className="p-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-2xl">
+              ⭐
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-amber-600">{stats.totalFavorites}</div>
+              <div className="text-sm text-gray-600">В избранном</div>
             </div>
           </div>
         </Card>
@@ -369,10 +411,11 @@ export default function AnalyticsPage() {
           <Card variant="glow" padding="none" className="overflow-hidden border border-purple-100">
             {/* Заголовок таблицы (скрыт на мобильных) */}
             <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-purple-50 border-b border-purple-100 text-sm font-semibold text-gray-700">
-              <div className="col-span-4">Урок</div>
+              <div className="col-span-3">Урок</div>
               <div className="col-span-2 text-center">Всего просмотров</div>
               <div className="col-span-2 text-center">За месяц</div>
-              <div className="col-span-2 text-center">За день</div>
+              <div className="col-span-1 text-center">За день</div>
+              <div className="col-span-2 text-center">Реакции</div>
               <div className="col-span-2 text-center">Статус</div>
             </div>
 
@@ -385,7 +428,7 @@ export default function AnalyticsPage() {
                   className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-6 py-4 hover:bg-purple-50/50 transition-colors group"
                 >
                   {/* Урок (картинка + название) */}
-                  <div className="col-span-4 flex items-center gap-3">
+                  <div className="col-span-3 flex items-center gap-3">
                     <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-blue-600 flex-shrink-0 flex items-center justify-center">
                       {lesson.cover_image ? (
                         <Image
@@ -426,10 +469,28 @@ export default function AnalyticsPage() {
                   </div>
 
                   {/* За день */}
-                  <div className="col-span-2 flex items-center justify-center">
+                  <div className="col-span-1 flex items-center justify-center">
                     <div className="text-center">
                       <div className="text-lg font-bold text-blue-600">{lesson.dayViews}</div>
                       <div className="text-xs text-gray-500 md:hidden">За день</div>
+                    </div>
+                  </div>
+
+                  {/* Реакции: лайки (сердечко) и избранное (звезда) */}
+                  <div className="col-span-2 flex items-center justify-center">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex items-center gap-1 text-sm font-semibold text-red-600" title="Лайки">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                        {lesson.social.likes}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-sm font-semibold text-amber-500" title="В избранном">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                        </svg>
+                        {lesson.social.favorites}
+                      </span>
                     </div>
                   </div>
 

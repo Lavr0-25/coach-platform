@@ -8,6 +8,7 @@ import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import type { Metadata } from 'next'
 import FavoriteButton from '@/components/FavoriteButton'
+import LikeButton from '@/components/LikeButton'
 import LessonProgress from '@/components/LessonProgress'
 import { Card } from '@/components/ui/Card'
 
@@ -201,6 +202,15 @@ export default async function LessonPage({ params }: LessonPageProps) {
     isPurchased = !!purchase
   }
 
+  // Лайки: счётчик читается всеми (RLS «Anyone can view likes»), свой лайк — по user_id
+  const [{ count: likeCount }, likeRes] = await Promise.all([
+    supabase.from('likes').select('id', { count: 'exact', head: true }).eq('lesson_id', id),
+    user
+      ? supabase.from('likes').select('id').eq('lesson_id', id).eq('user_id', user.id).maybeSingle()
+      : Promise.resolve({ data: null } as { data: { id: string } | null }),
+  ])
+  const likedByMe = !!likeRes.data
+
   const getContentTypeIcon = (contentType: string | null) => {
     const icons: Record<string, string> = {
       video: '🎬',
@@ -378,6 +388,18 @@ export default async function LessonPage({ params }: LessonPageProps) {
             </svg>
             {new Date(lesson.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
           </span>
+
+          {/* Лайк (сердечко) и избранное (звезда) — в общем ряду статистики.
+              Автор видит только число лайков, лайкнуть своё нельзя. */}
+          {isOwner ? (
+            <LikeButton lessonId={id} initialCount={likeCount || 0} readOnly />
+          ) : (
+            <LikeButton
+              lessonId={id}
+              initialCount={likeCount || 0}
+              initialLiked={likedByMe}
+            />
+          )}
 
           {/* Кнопка избранного — в общем ряду, без наложения на бейджи */}
           {!isOwner && (

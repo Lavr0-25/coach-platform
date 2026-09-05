@@ -75,6 +75,9 @@ export default function MentorLessonsPage() {
     // Связи с курсами: урок может быть в нескольких курсах (таблица course_lessons)
     const lessonIds = (lessonsData || []).map(l => l.id)
     let coursesByLesson = new Map<string, { id: string; title: string }[]>()
+    // Лайки и избранное по урокам: SQL-функция (security definer), т.к. RLS favorites
+    // не даёт автору читать чужие строки избранного даже на своих уроках
+    let statsByLesson = new Map<string, { likes: number; favorites: number }>()
     if (lessonIds.length > 0) {
       const { data: linksData } = await supabase
         .from('course_lessons')
@@ -88,11 +91,19 @@ export default function MentorLessonsPage() {
         list.push(course as { id: string; title: string })
         coursesByLesson.set(link.lesson_id, list)
       }
+
+      const { data: statsData } = await supabase.rpc('get_lesson_social_counts', {
+        p_lesson_ids: lessonIds,
+      })
+      for (const row of statsData || []) {
+        statsByLesson.set(row.lesson_id, { likes: row.likes || 0, favorites: row.favorites || 0 })
+      }
     }
 
     setLessons((lessonsData || []).map(l => ({
       ...l,
       courses: coursesByLesson.get(l.id) || [],
+      social: statsByLesson.get(l.id) || { likes: 0, favorites: 0 },
     })))
     setLoading(false)
   }
@@ -375,6 +386,22 @@ export default function MentorLessonsPage() {
                   </div>
                 )}
 
+                {/* Социальные показатели: лайки (сердечко) и избранное (звезда) */}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-lg whitespace-nowrap">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    {lesson.social.likes}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg whitespace-nowrap">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                    {lesson.social.favorites}
+                  </span>
+                </div>
+
                 {/* Мета-информация */}
                 <div className="flex items-center justify-between pt-3 border-t border-purple-100">
                   <div className="flex items-center gap-2">
@@ -499,6 +526,22 @@ export default function MentorLessonsPage() {
                     )}
                   </div>
                 )}
+
+                {/* Социальные показатели: лайки (сердечко) и избранное (звезда) */}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-lg whitespace-nowrap">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    {lesson.social.likes}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg whitespace-nowrap">
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                    {lesson.social.favorites}
+                  </span>
+                </div>
 
                 {/* Мета-информация */}
                 <div className="flex items-center justify-between pt-3 border-t border-purple-100">
