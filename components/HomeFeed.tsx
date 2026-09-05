@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import FavoriteButton from '@/components/FavoriteButton'
 import { useSearch } from '@/components/SearchContext'
+import { useToast } from '@/components/Toast'
 
 export interface HomeItem {
   id: string
@@ -53,6 +54,7 @@ export default function HomeFeed({
   initialUser: { id: string } | null
   initialSubscriptions: HomeSubscription[]
 }) {
+  const toast = useToast()
   const supabase = createClient()
   const [user, setUser] = useState<{ id: string } | null>(initialUser)
   const [subscriptions, setSubscriptions] = useState<HomeSubscription[]>(initialSubscriptions)
@@ -152,7 +154,7 @@ export default function HomeFeed({
 
   const handleSubscribe = async (coachUserId: string) => {
     if (!user) {
-      alert('Сначала войдите в систему')
+      toast.showToast('Сначала войдите в систему', 'info')
       return
     }
 
@@ -165,7 +167,7 @@ export default function HomeFeed({
 
       if (error) {
         if (error.code === '23505') {
-          alert('Вы уже подписаны на этого автора')
+          toast.showToast('Вы уже подписаны на этого автора', 'info')
         } else throw error
         return
       }
@@ -187,7 +189,7 @@ export default function HomeFeed({
       setSubscriptions(normalized)
     } catch (error) {
       console.error('Error subscribing:', error)
-      alert('Ошибка при подписке')
+      toast.showToast('Ошибка при подписке', 'error')
     } finally {
       setSubscribing(null)
     }
@@ -209,7 +211,7 @@ export default function HomeFeed({
       setSubscriptions(prev => prev.filter(sub => sub.coach_id !== coachUserId))
     } catch (error) {
       console.error('Error unsubscribing:', error)
-      alert('Ошибка при отписке')
+      toast.showToast('Ошибка при отписке', 'error')
     }
   }
 

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { addBannedWord, addBannedWordsBatch, deleteBannedWord, clearBannedWords } from '@/app/admin/actions'
 import Link from 'next/link'
+import { useToast } from '@/components/Toast'
 
 interface BannedWord {
   id: string
@@ -12,6 +13,7 @@ interface BannedWord {
 }
 
 export default function BannedWordsPage() {
+  const toast = useToast()
   const supabase = createClient()
   const [words, setWords] = useState<BannedWord[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,7 +44,7 @@ export default function BannedWordsPage() {
       setWords(data || [])
     } catch (error) {
       console.error('Error loading banned words:', error)
-      alert('Ошибка при загрузке списка слов')
+      toast.showToast('Ошибка при загрузке списка слов', 'error')
     } finally {
       setLoading(false)
     }
@@ -52,7 +54,7 @@ export default function BannedWordsPage() {
     e.preventDefault()
 
     if (!newWord.trim()) {
-      alert('Введите слово')
+      toast.showToast('Введите слово', 'info')
       return
     }
 
@@ -61,17 +63,17 @@ export default function BannedWordsPage() {
     try {
       const result = await addBannedWord(newWord)
       if (!result.ok) {
-        alert(result.error)
+        toast.showToast(result.error || 'Не удалось добавить слово', 'error')
         return
       }
 
       setNewWord('')
       setCurrentPage(1)
       await loadWords()
-      alert('✅ Слово добавлено в список запрещённых')
+      toast.showToast('Слово добавлено в список запрещённых', 'success')
     } catch (error: any) {
       console.error('Error adding word:', error)
-      alert('Ошибка: ' + (error.message || 'Не удалось добавить слово'))
+      toast.showToast('Ошибка: ' + (error.message || 'Не удалось добавить слово'), 'error')
     } finally {
       setSubmitting(false)
     }
@@ -82,7 +84,7 @@ export default function BannedWordsPage() {
     if (!file) return
 
     if (!file.name.endsWith('.txt') && !file.name.endsWith('.csv')) {
-      alert('Поддерживаются только файлы .txt и .csv')
+      toast.showToast('Поддерживаются только файлы .txt и .csv', 'info')
       return
     }
 
@@ -98,7 +100,7 @@ export default function BannedWordsPage() {
         .filter(w => w.length > 0)
 
       if (wordsList.length === 0) {
-        alert('Файл пуст или не содержит слов')
+        toast.showToast('Файл пуст или не содержит слов', 'info')
         setFileUploading(false)
         return
       }
@@ -106,7 +108,7 @@ export default function BannedWordsPage() {
       // Пакетная вставка одним запросом — дубли сервер игнорирует сам
       const result = await addBannedWordsBatch(wordsList)
       if (!result.ok) {
-        alert('Ошибка при загрузке файла: ' + (result.error || 'Неизвестная ошибка'))
+        toast.showToast('Ошибка при загрузке файла: ' + (result.error || 'Неизвестная ошибка'), 'error')
         setFileUploading(false)
         return
       }
@@ -120,7 +122,7 @@ export default function BannedWordsPage() {
       }
     } catch (error: any) {
       console.error('Error uploading file:', error)
-      alert('Ошибка при загрузке файла: ' + (error.message || 'Неизвестная ошибка'))
+      toast.showToast('Ошибка при загрузке файла: ' + (error.message || 'Неизвестная ошибка'), 'error')
     } finally {
       setFileUploading(false)
     }
@@ -135,7 +137,7 @@ export default function BannedWordsPage() {
       await loadWords()
     } catch (error: any) {
       console.error('Error deleting word:', error)
-      alert('Ошибка при удалении')
+      toast.showToast('Ошибка при удалении', 'error')
     } finally {
       setDeletingId(null)
     }
@@ -149,10 +151,10 @@ export default function BannedWordsPage() {
       setShowClearModal(false)
       setCurrentPage(1)
       await loadWords()
-      alert('✅ Все слова удалены')
+      toast.showToast('Все слова удалены', 'success')
     } catch (error: any) {
       console.error('Error clearing all:', error)
-      alert('Ошибка при очистке')
+      toast.showToast('Ошибка при очистке', 'error')
     }
   }
 

@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import BanCheck from "@/components/BanCheck";
 import HelpLink from "@/components/HelpLink";
 import { SearchProvider } from "@/components/SearchContext";
+import { ToastProvider } from "@/components/Toast";
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -73,9 +74,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col">
         <SearchProvider>
-          <Navbar />
-          <BanCheck />
-          <main className="flex-1 bg-gray-50 text-gray-900">{children}</main>
+          <ToastProvider>
+            <Navbar />
+            <BanCheck />
+            <main className="flex-1 bg-gray-50 text-gray-900">{children}</main>
+          </ToastProvider>
         </SearchProvider>
         <footer className="bg-white border-t border-purple-100 flex-shrink-0">
           <div className="container mx-auto px-4 py-6">

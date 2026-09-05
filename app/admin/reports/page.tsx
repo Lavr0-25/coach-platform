@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { deleteReport, upsertStopList } from '@/app/admin/actions'
 import Link from 'next/link'
+import { useToast } from '@/components/Toast'
 
 interface Report {
   id: string
@@ -16,6 +17,7 @@ interface Report {
 }
 
 export default function ReportsPage() {
+  const toast = useToast()
   const supabase = createClient()
   const [commentReports, setCommentReports] = useState<Report[]>([])
   const [reviewReports, setReviewReports] = useState<Report[]>([])
@@ -57,7 +59,7 @@ export default function ReportsPage() {
     const result = await deleteReport(id, type)
     if (!result.ok) {
       console.error('Error deleting report:', result.error)
-      alert(result.error || 'Ошибка при удалении жалобы')
+      toast.showToast(result.error || 'Ошибка при удалении жалобы', 'error')
     } else {
       await loadReports()
     }
@@ -71,7 +73,7 @@ export default function ReportsPage() {
 
   const submitBan = async () => {
     if (!selectedUserId || !banReason || !banDuration) {
-      alert('Заполните все поля')
+      toast.showToast('Заполните все поля', 'info')
       return
     }
 
@@ -83,9 +85,9 @@ export default function ReportsPage() {
     const result = await upsertStopList(selectedUserId, banReason, bannedUntil)
 
     if (!result.ok) {
-      alert(result.error || 'Ошибка: не удалось заблокировать')
+      toast.showToast(result.error || 'Ошибка: не удалось заблокировать', 'error')
     } else {
-      alert('✅ Пользователь заблокирован')
+      toast.showToast('Пользователь заблокирован', 'success')
       setShowBanModal(false)
       setSelectedUserId('')
       setBanReason('')

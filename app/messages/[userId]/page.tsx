@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { X } from 'lucide-react'
 import EmojiPicker from '@/components/EmojiPicker'
 import { useMobileChat } from '@/components/MessagesLayoutShell'
+import { useToast } from '@/components/Toast'
 
 function MessageContent({ content }: { content: string }) {
   const [lessonInfo, setLessonInfo] = useState<{ id: string; title: string; type: 'lesson' | 'course' } | null>(null)
@@ -83,6 +84,7 @@ export default function ChatPage() {
   const router = useRouter()
   const userId = params.userId as string
   const supabase = createClient()
+  const toast = useToast()
   const { setIsMobileChatOpen } = useMobileChat()
   
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -173,7 +175,7 @@ export default function ChatPage() {
     if (!newMessage.trim() || !currentUser) return
 
     if (blockedBy) {
-      alert('Вы не можете отправлять сообщения - вас заблокировали')
+      toast.showToast('Вы не можете отправлять сообщения - вас заблокировали', 'info')
       return
     }
 
@@ -199,7 +201,7 @@ export default function ChatPage() {
     if (error) {
       console.error('Ошибка отправки:', error)
       setMessages(prev => prev.filter(m => m.id !== tempMessage.id))
-      alert('Ошибка при отправке сообщения')
+      toast.showToast('Ошибка при отправке сообщения', 'error')
     } else if (data) {
       setMessages(prev => prev.map(m => m.id === tempMessage.id ? data : m))
     }
@@ -215,7 +217,7 @@ export default function ChatPage() {
     if (!confirm('Заблокировать этого пользователя? Вы не сможете получать от него сообщений.')) return
     const { error } = await supabase.from('blocked_users').insert({ blocker_id: currentUser.id, blocked_id: userId })
     if (error) {
-      alert('Ошибка при блокировке пользователя')
+      toast.showToast('Ошибка при блокировке пользователя', 'error')
       return
     }
     setIsBlocked(true)
@@ -226,7 +228,7 @@ export default function ChatPage() {
     if (!confirm('Разблокировать этого пользователя?')) return
     const { error } = await supabase.from('blocked_users').delete().eq('blocker_id', currentUser.id).eq('blocked_id', userId)
     if (error) {
-      alert('Ошибка при разблокировке пользователя')
+      toast.showToast('Ошибка при разблокировке пользователя', 'error')
       return
     }
     setIsBlocked(false)

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { updateFeedbackStatus, bulkUpdateFeedbackStatus } from '@/app/admin/actions'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useToast } from '@/components/Toast'
 
 interface Feedback {
   id: string
@@ -22,6 +23,7 @@ interface Feedback {
 }
 
 export default function AdminFeedbackPage() {
+  const toast = useToast()
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'new' | 'in_progress' | 'resolved' | 'rejected'>('all')
@@ -76,7 +78,7 @@ export default function AdminFeedbackPage() {
       await loadFeedbacks()
     } catch (err) {
       console.error('Error updating feedback:', err)
-      alert('Ошибка при обновлении статуса')
+      toast.showToast('Ошибка при обновлении статуса', 'error')
     } finally {
       setUpdatingId(null)
     }
@@ -110,7 +112,7 @@ export default function AdminFeedbackPage() {
       await loadFeedbacks()
     } catch (err) {
       console.error('Error bulk updating feedback:', err)
-      alert('Ошибка при массовом обновлении статуса')
+      toast.showToast('Ошибка при массовом обновлении статуса', 'error')
     } finally {
       setBulkUpdating(false)
     }

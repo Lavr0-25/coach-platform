@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
-import { useToast, ToastProvider } from '@/components/Toast'
+import { useToast } from '@/components/Toast'
 import {
   createAgentKey,
   listAgentKeys,
@@ -19,16 +19,7 @@ function formatDate(iso: string) {
 }
 
 export default function ApiKeysPage() {
-  // Провайдер локальный: ToastProvider подключён в app/admin/layout, а эта страница
-  // живёт вне админки — и не должна зависеть от админского доступа
-  return (
-    <ToastProvider>
-      <ApiKeysContent />
-    </ToastProvider>
-  )
-}
-
-function ApiKeysContent() {
+  // Провайдер глобальный (app/layout.tsx) — локальный не нужен
   const toast = useToast()
   const [keys, setKeys] = useState<AgentKeyInfo[]>([])
   const [loading, setLoading] = useState(true)

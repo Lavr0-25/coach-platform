@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { checkBannedWords } from '@/lib/banned-words'
+import { useToast } from '@/components/Toast'
 
 interface Review {
   id: string
@@ -22,6 +23,7 @@ interface ReviewsSectionProps {
 }
 
 export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionProps) {
+  const toast = useToast()
   const supabase = createClient()
   const [reviews, setReviews] = useState<Review[]>([])
   const [averageRating, setAverageRating] = useState<number>(0)
@@ -204,19 +206,19 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
     e.preventDefault()
     
     if (!userId) {
-      alert('Войдите, чтобы оставить отзыв')
+      toast.showToast('Войдите, чтобы оставить отзыв', 'info')
       return
     }
 
     if (isBanned) {
-      alert(`⛔ Вы заблокированы до ${banInfo ? new Date(banInfo.until).toLocaleString('ru-RU') : ''}. Причина: ${banInfo?.reason || 'Нарушение правил'}`)
+      toast.showToast(`Вы заблокированы до ${banInfo ? new Date(banInfo.until).toLocaleString('ru-RU') : ''}. Причина: ${banInfo?.reason || 'Нарушение правил'}`, 'error')
       return
     }
 
     if (newComment.trim()) {
       const { hasBanned, foundWord } = await checkBannedWords(newComment)
       if (hasBanned) {
-        alert(`⛔ Отзыв содержит запрещённое слово: "${foundWord}". Пожалуйста, измените текст.`)
+        toast.showToast(`Отзыв содержит запрещённое слово: "${foundWord}". Пожалуйста, измените текст.`, 'error')
         return
       }
     }
@@ -243,10 +245,10 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
       if (error) throw error
 
       await loadReviews()
-      alert('✅ Отзыв сохранён!')
+      toast.showToast('Отзыв сохранён!', 'success')
     } catch (error: any) {
       console.error('Error saving review:', error)
-      alert('Ошибка: ' + (error.message || 'Не удалось сохранить отзыв'))
+      toast.showToast('Ошибка: ' + (error.message || 'Не удалось сохранить отзыв'), 'error')
     } finally {
       setSubmitting(false)
     }
@@ -274,21 +276,21 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
       await loadReviews()
       setUserReview(null)
       setNewComment('')
-      alert('Отзыв удалён')
+      toast.showToast('Отзыв удалён', 'info')
     } catch (error: any) {
       console.error('Error deleting review:', error)
-      alert('Ошибка при удалении отзыва')
+      toast.showToast('Ошибка при удалении отзыва', 'error')
     }
   }
 
   const handleReport = async (reviewId: string, reportedUserId: string) => {
     if (!userId) {
-      alert('Войдите, чтобы пожаловаться')
+      toast.showToast('Войдите, чтобы пожаловаться', 'info')
       return
     }
 
     if (!reportReason.trim()) {
-      alert('Укажите причину жалобы')
+      toast.showToast('Укажите причину жалобы', 'info')
       return
     }
 
@@ -306,7 +308,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
 
       if (reportError) {
         if (reportError.code === '23505') {
-          alert('⚠️ Вы уже жаловались на этот отзыв')
+          toast.showToast('Вы уже жаловались на этот отзыв', 'error')
         } else {
           throw reportError
         }
@@ -321,9 +323,9 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
       const reportCount = count || 0
 
       if (reportCount >= banThreshold) {
-        alert(`️ Жалоба отправлена. Отзыв будет удалён автоматически (${reportCount}/${banThreshold})`)
+        toast.showToast(`️ Жалоба отправлена. Отзыв будет удалён автоматически (${reportCount}/${banThreshold})`, 'info')
       } else {
-        alert(`✅ Жалоба отправлена (${reportCount}/${banThreshold})`)
+        toast.showToast(`Жалоба отправлена (${reportCount}/${banThreshold})`, 'success')
       }
 
       setReportingReviewId(null)
@@ -331,7 +333,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
       await loadReviews()
     } catch (error: any) {
       console.error('Error reporting:', error)
-      alert('Ошибка: ' + (error.message || 'Не удалось отправить жалобу'))
+      toast.showToast('Ошибка: ' + (error.message || 'Не удалось отправить жалобу'), 'error')
     } finally {
       setReporting(false)
     }

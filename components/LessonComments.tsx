@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { checkBannedWords } from '@/lib/banned-words'
 import { Flag, Pencil, Trash2 } from 'lucide-react'
+import { useToast } from '@/components/Toast'
 
 interface UserInfo {
   id: string
@@ -31,6 +32,7 @@ interface LessonCommentsProps {
 }
 
 export default function LessonComments({ lessonId, courseId }: LessonCommentsProps) {
+  const toast = useToast()
   const supabase = createClient()
   const [comments, setComments] = useState<Comment[]>([])
   const [usersMap, setUsersMap] = useState<Record<string, UserInfo>>({})
@@ -258,13 +260,13 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
     if (!content.trim() || !userId) return
 
     if (isBanned) {
-      alert('⛔ Вам запрещено оставлять комментарии.')
+      toast.showToast('Вам запрещено оставлять комментарии.', 'error')
       return
     }
 
     const { hasBanned, foundWord } = await checkBannedWords(content)
     if (hasBanned) {
-      alert(`⛔ Комментарий содержит запрещённое слово: "${foundWord}".`)
+      toast.showToast(`Комментарий содержит запрещённое слово: "${foundWord}".`, 'error')
       return
     }
 
@@ -281,7 +283,7 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
 
       if (!parentId && newRating !== null) {
         if (userHasReview) {
-          alert('⚠️ Вы уже оставляли отзыв с оценкой. Вы можете отредактировать его.')
+          toast.showToast('Вы уже оставляли отзыв с оценкой. Вы можете отредактировать его.', 'error')
           setSubmitting(false)
           return
         }
@@ -300,7 +302,7 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
       await checkUserReview()
     } catch (error: any) {
       console.error('Error posting comment:', error)
-      alert('Ошибка: ' + (error.message || 'Не удалось отправить комментарий'))
+      toast.showToast('Ошибка: ' + (error.message || 'Не удалось отправить комментарий'), 'error')
     } finally {
       setSubmitting(false)
     }
@@ -314,12 +316,12 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
 
   const handleUpdateComment = async (commentId: string) => {
     if (!editContent.trim()) {
-      alert('Комментарий не может быть пустым')
+      toast.showToast('Комментарий не может быть пустым', 'info')
       return
     }
     const { hasBanned, foundWord } = await checkBannedWords(editContent)
     if (hasBanned) {
-      alert(`⛔ Комментарий содержит запрещённое слово: "${foundWord}".`)
+      toast.showToast(`Комментарий содержит запрещённое слово: "${foundWord}".`, 'error')
       return
     }
     setUpdating(true)
@@ -338,10 +340,10 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
       setEditRating(null)
       await loadComments()
       await checkUserReview()
-      alert('✅ Комментарий обновлён')
+      toast.showToast('Комментарий обновлён', 'success')
     } catch (error: any) {
       console.error('Error updating comment:', error)
-      alert('Ошибка: ' + (error.message || 'Не удалось обновить комментарий'))
+      toast.showToast('Ошибка: ' + (error.message || 'Не удалось обновить комментарий'), 'error')
     } finally {
       setUpdating(false)
     }
@@ -362,13 +364,13 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
       await checkUserReview()
     } catch (error: any) {
       console.error('Error deleting comment:', error)
-      alert('Ошибка при удалении')
+      toast.showToast('Ошибка при удалении', 'error')
     }
   }
 
   const handleReport = async (commentId: string, reportedUserId: string) => {
-    if (!userId) { alert('Войдите, чтобы пожаловаться'); return }
-    if (!reportReason.trim()) { alert('Укажите причину жалобы'); return }
+    if (!userId) { toast.showToast('Войдите, чтобы пожаловаться', 'info'); return }
+    if (!reportReason.trim()) { toast.showToast('Укажите причину жалобы', 'info'); return }
     setReporting(true)
     try {
       const { error: reportError } = await supabase.from('reports').insert({
@@ -379,7 +381,7 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
         lesson_id: lessonId || null,
       })
       if (reportError) {
-        if (reportError.code === '23505') alert('⚠️ Вы уже жаловались на этот комментарий')
+        if (reportError.code === '23505') toast.showToast('Вы уже жаловались на этот комментарий', 'error')
         else throw reportError
         return
       }
@@ -387,14 +389,14 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
       // Подсчёт жалоб теперь мгновенный из локального состояния, но для алерта сделаем запрос
       const { count } = await supabase.from('reports').select('*', { count: 'exact', head: true }).eq('comment_id', commentId)
       const newCount = count || 0
-      if (newCount >= banThreshold) alert(`⚠️ Жалоба отправлена. Комментарий будет удалён автоматически (${newCount}/${banThreshold})`)
-      else alert(`✅ Жалоба отправлена (${newCount}/${banThreshold})`)
+      if (newCount >= banThreshold) toast.showToast(`Жалоба отправлена. Комментарий будет удалён автоматически (${newCount}/${banThreshold})`, 'info')
+      else toast.showToast(`Жалоба отправлена (${newCount}/${banThreshold})`, 'success')
       
       setReportingCommentId(null)
       setReportReason('')
     } catch (error: any) {
       console.error('Error reporting:', error)
-      alert('Ошибка: ' + (error.message || 'Не удалось отправить жалобу'))
+      toast.showToast('Ошибка: ' + (error.message || 'Не удалось отправить жалобу'), 'error')
     } finally {
       setReporting(false)
     }

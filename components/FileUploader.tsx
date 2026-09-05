@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Camera, FileText, Lightbulb, Paperclip } from 'lucide-react'
+import { useToast } from '@/components/Toast'
 
 interface FileUploaderProps {
   currentFile?: string | null
@@ -31,6 +32,7 @@ export default function FileUploader({
   placeholder,
   hint
 }: FileUploaderProps) {
+  const toast = useToast()
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(currentFile || null)
   const [fileName, setFileName] = useState('')
@@ -45,7 +47,7 @@ export default function FileUploader({
 
   const handleFile = async (file: File) => {
     if (file.size > maxSizeMB * 1024 * 1024) {
-      alert(`Файл слишком большой. Максимальный размер ${maxSizeMB}MB`)
+      toast.showToast(`Файл слишком большой. Максимальный размер ${maxSizeMB}MB`, 'info')
       return
     }
 
@@ -53,7 +55,7 @@ export default function FileUploader({
     const isPdf = file.type === 'application/pdf'
 
     if (!isImage && !isPdf && acceptedTypes[0] !== '*/*') {
-      alert('Неподдерживаемый тип файла')
+      toast.showToast('Неподдерживаемый тип файла', 'info')
       return
     }
 
@@ -84,7 +86,7 @@ export default function FileUploader({
       onFileUpload(publicUrl, file.name)
     } catch (error) {
       console.error('Error uploading file:', error)
-      alert('Ошибка при загрузке файла')
+      toast.showToast('Ошибка при загрузке файла', 'error')
     } finally {
       setUploading(false)
     }

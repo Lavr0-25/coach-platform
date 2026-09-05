@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { banUser, unbanUser } from '@/app/admin/actions'
+import { useToast } from '@/components/Toast'
 
 export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
+  const toast = useToast()
   const [users, setUsers] = useState(initialUsers || [])
   const [loading, setLoading] = useState<string | null>(null)
   const [showBanModal, setShowBanModal] = useState(false)
@@ -31,9 +33,9 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
 
     if (!result.ok) {
       console.error('Error banning user:', result.error)
-      alert(result.error || 'Ошибка при блокировке пользователя')
+      toast.showToast(result.error || 'Ошибка при блокировке пользователя', 'error')
     } else {
-      alert(`Пользователь ${selectedUser.email} заблокирован`)
+      toast.showToast(`Пользователь ${selectedUser.email} заблокирован`, 'info')
       window.location.reload()
     }
 
@@ -49,9 +51,9 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
 
     if (!result.ok) {
       console.error('Error unbanning user:', result.error)
-      alert(result.error || 'Ошибка при разблокировке')
+      toast.showToast(result.error || 'Ошибка при разблокировке', 'error')
     } else {
-      alert(`Пользователь ${email} разблокирован`)
+      toast.showToast(`Пользователь ${email} разблокирован`, 'info')
       window.location.reload()
     }
 

@@ -6,22 +6,13 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Trash2 } from 'lucide-react'
-import { ToastProvider, useToast } from '@/components/Toast'
+import { useToast } from '@/components/Toast'
 import { deleteLesson } from '@/app/actions/deleteLesson'
 import { setLessonPublishAt } from '@/app/actions/updateLesson'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 
 export default function MentorLessonsPage() {
-  // Провайдер локальный: ToastProvider подключён в админском layout,
-  // а эта страница живёт в кабинете
-  return (
-    <ToastProvider>
-      <LessonsContent />
-    </ToastProvider>
-  )
-}
-
-function LessonsContent() {
+  // Провайдер глобальный (app/layout.tsx)
   const toast = useToast()
   const [lessons, setLessons] = useState<any[]>([])
   const [loading, setLoading] = useState(true)

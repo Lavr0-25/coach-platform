@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import FileUploader from '@/components/FileUploader'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import { useToast } from '@/components/Toast'
 
 interface Course {
   id: string
@@ -51,6 +52,7 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
 }
 
 function EditCourseForm({ courseId }: { courseId: string }) {
+  const toast = useToast()
   const supabase = createClient()
   const router = useRouter()
   
@@ -212,7 +214,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
     if (!result.ok) {
       console.error('Error adding lesson:', result.error)
-      alert(result.error)
+      toast.showToast(result.error, 'info')
       return
     }
 
@@ -235,7 +237,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
     if (!result.ok) {
       console.error('Error removing lesson:', result.error)
-      alert(result.error)
+      toast.showToast(result.error, 'info')
       return
     }
 
@@ -261,7 +263,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
     if (!result.ok) {
       console.error('Error reordering lessons:', result.error)
-      alert(result.error)
+      toast.showToast(result.error, 'info')
       loadData()
     }
   }

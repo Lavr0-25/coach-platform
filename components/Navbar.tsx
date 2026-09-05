@@ -9,6 +9,7 @@ import MessagesBell from './MessagesBell'
 import ThemeSettings from './ThemeSettings'
 import { useSearch } from './SearchContext'
 import { Crown, SquarePen } from 'lucide-react'
+import { useToast } from '@/components/Toast'
 
 interface Profile {
   display_name?: string
@@ -18,6 +19,7 @@ interface Profile {
 }
 
 export default function Navbar() {
+  const toast = useToast()
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [coachId, setCoachId] = useState<string | null>(null)
@@ -175,11 +177,11 @@ export default function Navbar() {
       
       setIsMentor(true)
       setProfile(prev => ({ ...prev, role: 'mentor' }))
-      alert('✅ Теперь вы автор! Теперь вы можете создавать уроки.')
+      toast.showToast('Теперь вы автор! Теперь вы можете создавать уроки.', 'success')
       router.refresh()
     } catch (error: any) {
       console.error('Error becoming mentor:', error)
-      alert('Ошибка: ' + (error.message || 'Не удалось стать автором'))
+      toast.showToast('Ошибка: ' + (error.message || 'Не удалось стать автором'), 'error')
     }
   }
 
@@ -196,7 +198,7 @@ export default function Navbar() {
       router.refresh()
     } catch (error) {
       console.error('Ошибка при выходе:', error)
-      alert('Не удалось выйти из системы')
+      toast.showToast('Не удалось выйти из системы', 'error')
     }
   }
 

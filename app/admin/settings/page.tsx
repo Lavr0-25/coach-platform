@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { saveSystemSettings } from '@/app/admin/actions'
 import Link from 'next/link'
+import { useToast } from '@/components/Toast'
 
 export default function SettingsPage() {
+  const toast = useToast()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -54,7 +56,7 @@ export default function SettingsPage() {
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (error: any) {
       console.error('Error saving settings:', error)
-      alert('Ошибка: ' + (error.message || 'Не удалось сохранить'))
+      toast.showToast('Ошибка: ' + (error.message || 'Не удалось сохранить'), 'error')
     } finally {
       setSaving(false)
     }

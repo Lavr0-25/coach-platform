@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/Toast'
 
 interface LessonProgress {
   id: string
@@ -19,6 +20,7 @@ interface LessonProgressProps {
 }
 
 export default function LessonProgress({ lessonId }: LessonProgressProps) {
+  const toast = useToast()
   const supabase = createClient()
   const [progress, setProgress] = useState<LessonProgress | null>(null)
   const [loading, setLoading] = useState(true)
@@ -101,7 +103,7 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
       await loadProgress()
     } catch (error: any) {
       console.error('Error starting lesson:', error)
-      alert('Ошибка: ' + (error.message || 'Не удалось начать урок'))
+      toast.showToast('Ошибка: ' + (error.message || 'Не удалось начать урок'), 'error')
     } finally {
       setUpdating(false)
     }
@@ -138,10 +140,10 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
       if (error) throw error
 
       await loadProgress()
-      alert('🎉 Поздравляем! Урок отмечен как пройденный!')
+      toast.showToast('🎉 Поздравляем! Урок отмечен как пройденный!', 'info')
     } catch (error: any) {
       console.error('Error completing lesson:', error)
-      alert('Ошибка: ' + (error.message || 'Не удалось отметить урок'))
+      toast.showToast('Ошибка: ' + (error.message || 'Не удалось отметить урок'), 'error')
     } finally {
       setUpdating(false)
     }
@@ -165,7 +167,7 @@ export default function LessonProgress({ lessonId }: LessonProgressProps) {
       setProgress(null)
     } catch (error: any) {
       console.error('Error resetting progress:', error)
-      alert('Ошибка: ' + (error.message || 'Не удалось сбросить прогресс'))
+      toast.showToast('Ошибка: ' + (error.message || 'Не удалось сбросить прогресс'), 'error')
     } finally {
       setUpdating(false)
     }

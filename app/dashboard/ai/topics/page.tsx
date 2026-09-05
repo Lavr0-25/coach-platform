@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
-import { useToast, ToastProvider } from '@/components/Toast'
+import { useToast } from '@/components/Toast'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -35,14 +35,7 @@ const STATUS: Record<TopicRow['status'], { label: string; variant: 'gray' | 'ora
 }
 
 export default function TopicsPage() {
-  return (
-    <ToastProvider>
-      <TopicsContent />
-    </ToastProvider>
-  )
-}
-
-function TopicsContent() {
+  // Провайдер глобальный (app/layout.tsx)
   const toast = useToast()
   const supabase = createClient()
 
