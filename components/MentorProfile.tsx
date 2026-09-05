@@ -9,6 +9,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import FavoriteButton from '@/components/FavoriteButton'
+import ProfileActions from '@/components/ProfileActions'
 
 interface Course {
   id: string
@@ -51,13 +52,18 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
   const [uniqueStudents, setUniqueStudents] = useState(0)
   const [experienceYears, setExperienceYears] = useState(0)
   const [totalLessonsCount, setTotalLessonsCount] = useState(0)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!coachId) return
 
     const loadData = async () => {
       const supabase = createClient()
-      
+
+      // Кто смотрит профиль (кнопки «Написать»/«Подписаться» скрываем у самого автора)
+      const { data: { user } } = await supabase.auth.getUser()
+      setCurrentUserId(user?.id ?? null)
+
       // Получаем данные автора
       const { data: coachData } = await supabase
         .from('coaches')
@@ -225,12 +231,17 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
           
           <div className="flex-1">
             {/* Имя и специализация */}
-            <div className="mb-4">
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-                {coach.display_name || 'Автор'}
-              </h1>
-              {coach.specialization && (
-                <p className="text-lg text-purple-600 font-medium">{coach.specialization}</p>
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+                  {coach.display_name || 'Автор'}
+                </h1>
+                {coach.specialization && (
+                  <p className="text-lg text-purple-600 font-medium">{coach.specialization}</p>
+                )}
+              </div>
+              {currentUserId && currentUserId !== coach.user_id && (
+                <ProfileActions profileId={coach.user_id} />
               )}
             </div>
 
