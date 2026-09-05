@@ -434,18 +434,16 @@ export default function ChatPage() {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
                 <div className="absolute right-0 top-12 z-50 w-56 bg-white rounded-xl shadow-lg border border-purple-100 py-1.5 animate-in fade-in zoom-in duration-150">
-                  {/* Профиль есть только у наставников (/mentor); у студентов
-                      публичной страницы пока нет (бэклог №19) — пункт скрываем */}
-                  {otherIsCoach && (
-                    <Link
-                      href={`/mentor/${userId}`}
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                      Профиль собеседника
-                    </Link>
-                  )}
+                  {/* Автор — его богатая страница /mentor, остальные — публичный
+                      профиль студента (/profile). /mentor/<id> принимает оба ключа */}
+                  <Link
+                    href={otherIsCoach ? `/mentor/${otherUser?.id ?? userId}` : `/profile/${userId}`}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    Профиль собеседника
+                  </Link>
                   {isBlocked ? (
                     <button
                       onClick={() => { setIsMenuOpen(false); handleUnblockUser() }}

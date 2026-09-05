@@ -170,9 +170,11 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
 
                     {/* Правая часть: Кнопки действий */}
                     <div className="flex flex-col sm:flex-row gap-2 lg:ml-4 w-full sm:w-auto">
-                      {coachInfo && !isBanned && (
+                      {/* Профиль доступен для любого пользователя: автор — его
+                          богатая страница, остальные — публичный профиль студента */}
+                      {!isBanned && (
                         <Link
-                          href={`/mentor/${coachInfo.id}`}
+                          href={coachInfo ? `/mentor/${coachInfo.id}` : `/profile/${user.id}`}
                           className="w-full sm:w-auto text-center px-4 py-2.5 bg-white border border-purple-200 text-purple-700 rounded-xl text-sm font-medium hover:bg-purple-50 transition-colors"
                         >
                           👁️ Профиль
