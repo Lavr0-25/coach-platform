@@ -3,6 +3,7 @@ import CabinetHelp from "./cabinet";
 import LessonsHelp from "./lessons";
 import CoursesHelp from "./courses";
 import SubscribersHelp from "./subscribers";
+import MessagesHelp from "./messages";
 import AnalyticsHelp from "./analytics";
 import ProfileHelp from "./profile";
 import AiHelp from "./ai";
@@ -58,6 +59,13 @@ export const SECTIONS: HelpSection[] = [
     emoji: "📊",
     match: (p) => p.startsWith("/mentor/analytics"),
     content: <AnalyticsHelp />,
+  },
+  {
+    id: "messages",
+    title: "Личные сообщения",
+    emoji: "💬",
+    match: (p) => p === "/messages" || p.startsWith("/messages/"),
+    content: <MessagesHelp />,
   },
   {
     id: "profile",

@@ -103,6 +103,21 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
         })
       })
 
+      // Собеседники-не-авторы (студенты): имя и аватар из profiles
+      const missingIds = Array.from(otherUserIds).filter(id => !userMap.has(id))
+      if (missingIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url')
+          .in('id', missingIds)
+        profilesData?.forEach((profile: any) => {
+          userMap.set(profile.id, {
+            display_name: profile.full_name,
+            avatar_url: profile.avatar_url
+          })
+        })
+      }
+
       const conversationsMap = new Map<string, Conversation>()
 
       for (const message of allMessages) {
@@ -328,7 +343,7 @@ export default function MessagesSidebar({ coaches }: MessagesSidebarProps) {
                     
                     <button
                       onClick={(e) => hideConversation(conv.userId, e)}
-                      className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                      className="relative self-center p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 z-20 opacity-100 md:opacity-0 md:group-hover:opacity-100"
                       title="Скрыть диалог"
                       type="button"
                     >

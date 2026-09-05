@@ -6,10 +6,13 @@ interface Toast {
   id: string
   message: string
   type: 'success' | 'error' | 'info'
+  actionLabel?: string
+  onAction?: () => void
 }
 
 interface ToastContextType {
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void
+  showActionToast: (message: string, actionLabel: string, onAction: () => void, durationMs?: number) => void
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
@@ -20,10 +23,21 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     const id = Math.random().toString(36).substring(7)
     setToasts(prev => [...prev, { id, message, type }])
-    
+
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id))
     }, 4000)
+  }
+
+  // Тост с кнопкой действия (например «Вернуть» после удаления) — не исчезает
+  // при наведении, чтобы можно было спокойно нажать
+  const showActionToast = (message: string, actionLabel: string, onAction: () => void, durationMs = 5000) => {
+    const id = Math.random().toString(36).substring(7)
+    setToasts(prev => [...prev, { id, message, type: 'info', actionLabel, onAction }])
+
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id))
+    }, durationMs)
   }
 
   const removeToast = (id: string) => {
@@ -31,7 +45,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={{ showToast, showActionToast }}>
       {children}
       <div className="fixed top-20 right-4 z-[10000] space-y-2 pointer-events-none">
         {toasts.map(toast => (
@@ -60,6 +74,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 )}
               </div>
               <div className="flex-1 text-sm font-medium">{toast.message}</div>
+              {toast.actionLabel && (
+                <button
+                  onClick={() => { toast.onAction?.(); removeToast(toast.id) }}
+                  className="flex-shrink-0 text-sm font-bold underline underline-offset-2 hover:opacity-80"
+                >
+                  {toast.actionLabel}
+                </button>
+              )}
               <button
                 onClick={() => removeToast(toast.id)}
                 className="flex-shrink-0 text-gray-400 hover:text-gray-600"

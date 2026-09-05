@@ -35,10 +35,9 @@ function MessageContent({ content }: { content: string }) {
   }, [content])
 
   if (lessonInfo) {
-    const icon = lessonInfo.type === 'lesson' ? '' : ''
     const href = lessonInfo.type === 'lesson' ? `/lesson/${lessonInfo.id}` : `/course/${lessonInfo.id}`
     const textWithoutUrl = content.replace(/https?:\/\/[^\s]+/, '').trim()
-    
+
     return (
       <div className="space-y-2">
         {textWithoutUrl && <p className="break-words">{textWithoutUrl}</p>}
@@ -47,7 +46,6 @@ function MessageContent({ content }: { content: string }) {
           className="inline-flex items-center gap-2 px-3 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
           target="_blank"
         >
-          <span className="text-lg">{icon}</span>
           <span className="font-medium text-sm">{lessonInfo.title}</span>
         </Link>
       </div>
@@ -55,7 +53,7 @@ function MessageContent({ content }: { content: string }) {
   }
 
   const parts = content.split(/(https?:\/\/[^\s]+)/g)
-  
+
   return (
     <p className="break-words">
       {parts.map((part, i) => {
@@ -86,16 +84,21 @@ export default function ChatPage() {
   const supabase = createClient()
   const toast = useToast()
   const { setIsMobileChatOpen } = useMobileChat()
-  
+
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [otherUser, setOtherUser] = useState<any>(null)
+  const [otherIsCoach, setOtherIsCoach] = useState(false)
   const [messages, setMessages] = useState<any[]>([])
+  const [firstUnreadIndex, setFirstUnreadIndex] = useState<number | null>(null)
   const [newMessage, setNewMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isBlocked, setIsBlocked] = useState(false)
   const [blockedBy, setBlockedBy] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Устанавливаем isMobileChatOpen при загрузке чата
   useEffect(() => {
@@ -121,9 +124,17 @@ export default function ChatPage() {
         if (!mounted) return
         setCurrentUser(user)
 
+        // Каскад имени/аватара: сначала coaches (авторы), иначе profiles (студенты)
         const { data: coach } = await supabase.from('coaches').select('*').eq('user_id', userId).maybeSingle()
         if (!mounted) return
-        if (coach) setOtherUser(coach)
+        if (coach) {
+          setOtherUser(coach)
+          setOtherIsCoach(true)
+        } else {
+          const { data: profile } = await supabase.from('profiles').select('id, full_name, avatar_url').eq('id', userId).maybeSingle()
+          if (!mounted) return
+          if (profile) setOtherUser({ display_name: profile.full_name, avatar_url: profile.avatar_url })
+        }
 
         const { data: iBlockedHim } = await supabase.from('blocked_users').select('id').eq('blocker_id', user.id).eq('blocked_id', userId).maybeSingle()
         const { data: heBlockedMe } = await supabase.from('blocked_users').select('id').eq('blocker_id', userId).eq('blocked_id', user.id).maybeSingle()
@@ -136,21 +147,6 @@ export default function ChatPage() {
         setIsBlocked(blocked)
         setBlockedBy(blockedByOther)
 
-        if (!blocked && !blockedByOther) {
-          const { data: unreadMessages } = await supabase.from('messages').select('id').eq('receiver_id', user.id).eq('sender_id', userId).eq('is_read', false)
-
-          if (unreadMessages && unreadMessages.length > 0) {
-            await supabase.from('messages').update({ is_read: true }).in('id', unreadMessages.map(m => m.id))
-            window.dispatchEvent(new CustomEvent('messages-read', { detail: { userId } }))
-          }
-        }
-
-        if (blocked || blockedByOther) {
-          setMessages([])
-          setIsLoading(false)
-          return
-        }
-
         const { data: msgs } = await supabase
           .from('messages')
           .select('*')
@@ -158,7 +154,31 @@ export default function ChatPage() {
           .order('created_at', { ascending: true })
 
         if (!mounted) return
-        if (msgs) setMessages(msgs)
+
+        if (msgs) {
+          // Границу «Непрочитанные» считаем ДО пометки прочитанными
+          const unreadCount = msgs.filter(m => m.sender_id === userId && !m.is_read).length
+          if (unreadCount > 0) {
+            const idx = msgs.findIndex(m => m.sender_id === userId && !m.is_read)
+            setFirstUnreadIndex(idx)
+          } else {
+            setFirstUnreadIndex(null)
+          }
+
+          if (!blocked && !blockedByOther && unreadCount > 0) {
+            const unreadIds = msgs.filter((m: any) => m.sender_id === userId && !m.is_read).map((m: any) => m.id)
+            await supabase.from('messages').update({ is_read: true }).in('id', unreadIds)
+            // Уведомления об этом диалоге в колокольчике прочитаны вместе с сообщениями
+            await supabase
+              .from('notifications')
+              .update({ is_read: true })
+              .eq('type', 'new_message')
+              .eq('link', `/messages/${userId}`)
+            window.dispatchEvent(new CustomEvent('messages-read', { detail: { userId } }))
+          }
+
+          setMessages(blocked || blockedByOther ? [] : msgs)
+        }
         setIsLoading(false)
       } catch (error) {
         console.error('Error:', error)
@@ -169,6 +189,40 @@ export default function ChatPage() {
     loadData()
     return () => { mounted = false }
   }, [userId])
+
+  // Реагируем на новые входящие сообщения, пока чат открыт
+  useEffect(() => {
+    if (!currentUser || isBlocked || blockedBy) return
+
+    const channel = supabase
+      .channel(`chat-${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        const msg = payload.new as any
+        if (msg.sender_id !== userId || msg.receiver_id !== currentUser.id) return
+        setMessages(prev => (prev.some(m => m.id === msg.id) ? prev : [...prev, msg]))
+        supabase.from('messages').update({ is_read: true }).eq('id', msg.id).then(() => {
+          window.dispatchEvent(new CustomEvent('messages-read', { detail: { userId } }))
+        })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [currentUser, userId, isBlocked, blockedBy])
+
+  const autoGrow = () => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 132) + 'px' // ~5 строк
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter — отправить; Shift+Enter — новая строка (как в мессенджерах)
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend(e as unknown as React.FormEvent)
+    }
+  }
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -191,6 +245,7 @@ export default function ChatPage() {
 
     setMessages(prev => [...prev, tempMessage])
     setNewMessage('')
+    requestAnimationFrame(autoGrow)
 
     const { data, error } = await supabase
       .from('messages')
@@ -209,8 +264,25 @@ export default function ChatPage() {
 
   const handleDelete = async (messageId: string) => {
     if (!confirm('Удалить сообщение?')) return
+    const deleted = messages.find(m => m.id === messageId)
+    if (!deleted) return
+
     await supabase.from('messages').delete().eq('id', messageId)
     setMessages(prev => prev.filter(m => m.id !== messageId))
+
+    // Undo: возвращаем сообщение тем же содержимым в течение 5 секунд
+    toast.showActionToast('Сообщение удалено', 'Вернуть', async () => {
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({ sender_id: deleted.sender_id, receiver_id: deleted.receiver_id, content: deleted.content, is_read: deleted.is_read })
+        .select()
+        .single()
+      if (!error && data) {
+        setMessages(prev => [...prev.filter(m => m.id !== data.id), data].sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        ))
+      }
+    })
   }
 
   const handleBlockUser = async () => {
@@ -228,7 +300,7 @@ export default function ChatPage() {
     if (!confirm('Разблокировать этого пользователя?')) return
     const { error } = await supabase.from('blocked_users').delete().eq('blocker_id', currentUser.id).eq('blocked_id', userId)
     if (error) {
-      toast.showToast('Ошибка при разблокировке пользователя', 'error')
+      toast.showToast('Ошибка при разблокировке', 'error')
       return
     }
     setIsBlocked(false)
@@ -241,9 +313,11 @@ export default function ChatPage() {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     const now = new Date()
-    const days = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-    if (days === 0) return 'Сегодня'
-    if (days === 1) return 'Вчера'
+    // Сравниваем календарные дни (не «24 часа назад»: иначе поздно-вечернее
+    // вчерашнее сообщение показывается как «Сегодня» и разделители ломаются)
+    const day = date.toDateString()
+    if (day === now.toDateString()) return 'Сегодня'
+    if (day === new Date(now.getTime() - 86400000).toDateString()) return 'Вчера'
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
   }
 
@@ -279,44 +353,118 @@ export default function ChatPage() {
   }
 
   return (
-    //  (убираем pt полностью):
-<div className="flex flex-col h-full">
-      
-      {/* Шапка чата */}
-      <div className="bg-white border-b border-purple-100 px-4 flex items-center gap-4 flex-shrink-0 h-[72px]">
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-            {otherUser?.display_name?.[0]?.toUpperCase() || '?'}
-          </div>
-          <h2 className="font-semibold text-gray-900 text-lg whitespace-nowrap">
+    <div className="flex flex-col h-full">
+      {/* Шапка чата — единственная на мобильном (кнопка «‹» внутри) */}
+      <div className="bg-white border-b border-purple-100 px-3 md:px-4 flex items-center gap-2 md:gap-4 flex-shrink-0 h-[64px] md:h-[72px]">
+        <button
+          onClick={() => setIsMobileChatOpen(false)}
+          className="md:hidden p-2 -ml-1 text-gray-600 hover:text-purple-600 hover:bg-purple-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+          title="К списку диалогов"
+          aria-label="К списку диалогов"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
+          {otherUser?.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={otherUser.avatar_url}
+              alt={otherUser.display_name || 'Собеседник'}
+              className="w-10 h-10 rounded-full object-cover border border-purple-100 flex-shrink-0"
+            />
+          ) : (
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+              {otherUser?.display_name?.[0]?.toUpperCase() || '?'}
+            </div>
+          )}
+          <h2 className="font-semibold text-gray-900 text-base md:text-lg whitespace-nowrap overflow-hidden text-ellipsis">
             {otherUser?.display_name || 'Пользователь'}
           </h2>
-          
-          <button
-            onClick={handleBlockUser}
-            className="ml-1 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            title="Заблокировать пользователя"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-            </svg>
-          </button>
         </div>
-        
-        <div className="flex-1 max-w-md ml-auto min-w-0">
+
+        <div className="ml-auto flex items-center gap-1 flex-shrink-0">
+          {isSearchOpen ? (
+            <div className="relative w-40 sm:w-56 md:w-64">
+              <input
+                type="text"
+                placeholder="Поиск по чату..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+                className="w-full px-3 py-2 pl-9 border border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 text-sm transition-[box-shadow,border-color,background-color,color]"
+              />
+              <svg className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              {searchQuery ? (
+                <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600" aria-label="Очистить поиск"><X className="w-5 h-5" /></button>
+              ) : (
+                <button onClick={() => { setIsSearchOpen(false); setSearchQuery('') }} className="absolute -right-8 top-1/2 transform -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600" aria-label="Закрыть поиск"><X className="w-5 h-5" /></button>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+              title="Поиск по чату"
+              aria-label="Поиск по чату"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          )}
+
+          {/* Деструктивные действия — только в меню «⋯» */}
           <div className="relative">
-            <input
-              type="text"
-              placeholder="Поиск по чату..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 pl-10 border border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 text-sm transition-[box-shadow,border-color,background-color,color]"
-            />
-            <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600" aria-label="Очистить поиск"><X className="w-5 h-5" /></button>
+            <button
+              onClick={() => setIsMenuOpen(prev => !prev)}
+              className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+              title="Ещё"
+              aria-label="Меню чата"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
+              </svg>
+            </button>
+            {isMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
+                <div className="absolute right-0 top-12 z-50 w-56 bg-white rounded-xl shadow-lg border border-purple-100 py-1.5 animate-in fade-in zoom-in duration-150">
+                  {/* Профиль есть только у наставников (/mentor); у студентов
+                      публичной страницы пока нет (бэклог №19) — пункт скрываем */}
+                  {otherIsCoach && (
+                    <Link
+                      href={`/mentor/${userId}`}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                      Профиль собеседника
+                    </Link>
+                  )}
+                  {isBlocked ? (
+                    <button
+                      onClick={() => { setIsMenuOpen(false); handleUnblockUser() }}
+                      className="w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-sm text-green-700 hover:bg-green-50 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>
+                      Разблокировать
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => { setIsMenuOpen(false); handleBlockUser() }}
+                      className="w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                      Заблокировать
+                    </button>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -332,7 +480,11 @@ export default function ChatPage() {
           filteredMessages.map((msg, index) => {
             const isMyMessage = msg.sender_id === currentUser?.id
             const prevMsg = filteredMessages[index - 1]
+            const nextMsg = filteredMessages[index + 1]
             const showDate = !prevMsg || formatDate(prevMsg.created_at) !== formatDate(msg.created_at)
+            // Группировка: подряд идущие сообщения одного автора — время только у последнего
+            const isLastOfGroup = !nextMsg || nextMsg.sender_id !== msg.sender_id ||
+              formatDate(nextMsg.created_at) !== formatDate(msg.created_at)
 
             return (
               <div key={msg.id}>
@@ -344,18 +496,29 @@ export default function ChatPage() {
                   </div>
                 )}
 
-                <div className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'} mb-2 group`}>
-                  <div className={`max-w-[85%] md:max-w-[70%] px-4 py-2 rounded-2xl relative ${
+                {/* Разделитель «Непрочитанные» */}
+                {firstUnreadIndex === index && !searchQuery && (
+                  <div className="flex items-center gap-3 my-4">
+                    <div className="flex-1 h-px bg-purple-300" />
+                    <span className="text-xs font-semibold text-purple-600 uppercase tracking-wider">Непрочитанные</span>
+                    <div className="flex-1 h-px bg-purple-300" />
+                  </div>
+                )}
+
+                <div className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'} ${isLastOfGroup ? 'mb-2' : 'mb-0.5'} group`}>
+                  <div className={`max-w-[85%] md:max-w-[70%] px-4 ${isLastOfGroup ? 'py-2' : 'py-1.5'} rounded-2xl relative ${
                     isMyMessage ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-br-sm' : 'bg-white border border-purple-100 rounded-bl-sm shadow-sm'
                   }`}>
                     <MessageContent content={msg.content} />
-                    <div className={`flex items-center justify-end gap-1 mt-1 text-xs ${
-                      isMyMessage ? 'text-purple-100' : 'text-gray-500'
-                    }`}>
-                      <span className="flex-shrink-0">{formatTime(msg.created_at)}</span>
-                      {isMyMessage && <span className="flex-shrink-0">{msg.is_read ? '✓✓' : '✓'}</span>}
-                    </div>
-                    
+                    {isLastOfGroup && (
+                      <div className={`flex items-center justify-end gap-1 mt-1 text-xs ${
+                        isMyMessage ? 'text-purple-100' : 'text-gray-500'
+                      }`}>
+                        <span className="flex-shrink-0">{formatTime(msg.created_at)}</span>
+                        {isMyMessage && <span className="flex-shrink-0">{msg.is_read ? '✓✓' : '✓'}</span>}
+                      </div>
+                    )}
+
                     {isMyMessage && (
                       <button
                         onClick={() => handleDelete(msg.id)}
@@ -376,17 +539,19 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Поле ввода */}
+      {/* Поле ввода: textarea с авто-ростом */}
       <form onSubmit={handleSend} className="bg-white border-t border-purple-100 p-3 md:p-4 flex-shrink-0">
         <div className="flex items-end gap-2">
-          <input
-            type="text"
+          <textarea
+            ref={textareaRef}
+            rows={1}
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => { setNewMessage(e.target.value); autoGrow() }}
+            onKeyDown={handleKeyDown}
             placeholder="Сообщение..."
-            className="flex-1 px-4 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 min-w-0 h-[46px] bg-gray-50 transition-[box-shadow,border-color,background-color,color]"
+            className="flex-1 px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 min-w-0 resize-none bg-gray-50 text-sm leading-relaxed transition-[box-shadow,border-color,background-color,color]"
           />
-          
+
           {/* Эмодзи-пикер: СКРЫТ НА МОБИЛЬНЫХ */}
           <div className="hidden md:block">
             <EmojiPicker onEmojiSelect={(emoji) => setNewMessage(prev => prev + emoji)} />

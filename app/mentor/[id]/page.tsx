@@ -14,10 +14,12 @@ export async function generateMetadata({ params }: MentorPageProps): Promise<Met
   const { id } = await params
   const supabase = await createClient()
 
+  // В id может прийти как id наставника (coaches.id), так и user_id (id профиля) —
+  // в кодовой странице ссылаются и так, и так (чат, лента, подписчики)
   const { data: coach } = await supabase
     .from('coaches')
-    .select('display_name, specialization, bio, avatar_url')
-    .eq('id', id)
+    .select('id, display_name, specialization, bio, avatar_url')
+    .or(`id.eq.${id},user_id.eq.${id}`)
     .maybeSingle()
 
   if (!coach) return { title: 'Наставник не найден' }
@@ -43,14 +45,14 @@ export default async function MentorPage({ params }: MentorPageProps) {
   const supabase = await createClient()
 
   // Существование профиля проверяем на сервере — клиент не может
-  // вызывать notFound() до гидрации
+  // вызывать notFound() до гидрации. Принимаем и coaches.id, и user_id
   const { data: coach } = await supabase
     .from('coaches')
     .select('id')
-    .eq('id', id)
+    .or(`id.eq.${id},user_id.eq.${id}`)
     .maybeSingle()
 
   if (!coach) notFound()
 
-  return <MentorProfile coachId={id} />
+  return <MentorProfile coachId={coach.id} />
 }

@@ -40,24 +40,8 @@ export default function MessagesLayoutShell({ children, coaches }: { children: R
 
         {/* ПРАВАЯ ПАНЕЛЬ (чат) */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
-          
-          {/* Мобильная шапка - показывается только когда чат открыт */}
-          {isMobileChatOpen && (
-            <div className="md:hidden flex items-center justify-between p-3 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-blue-50 flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => setIsMobileChatOpen(false)}
-                  className="p-2 -ml-2 text-gray-600 hover:text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
-                  title="Список диалогов"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <span className="font-semibold text-gray-900">Чат</span>
-              </div>
-            </div>
-          )}
+          {/* Мобильная шапка «Чат» убрана: кнопка «‹» теперь внутри шапки самого чата,
+              чтобы на экране была одна полоса вместо двух */}
 
           {/* Контент чата - overflow-y-auto для мобильного скролла */}
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden overflow-y-auto">
