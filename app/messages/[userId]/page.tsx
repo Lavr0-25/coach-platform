@@ -21,12 +21,12 @@ function MessageContent({ content }: { content: string }) {
 
       if (lessonMatch) {
         const lessonId = lessonMatch[1]
-        supabase.from('lessons').select('id, title').eq('id', lessonId).single().then(({ data }) => {
+        supabase.from('lessons').select('id, title').eq('id', lessonId).maybeSingle().then(({ data }) => {
           if (data) setLessonInfo({ id: lessonId, title: data.title, type: 'lesson' })
         })
       } else if (courseMatch) {
         const courseId = courseMatch[1]
-        supabase.from('courses').select('id, title').eq('id', courseId).single().then(({ data }) => {
+        supabase.from('courses').select('id, title').eq('id', courseId).maybeSingle().then(({ data }) => {
           if (data) setLessonInfo({ id: courseId, title: data.title, type: 'course' })
         })
       }
@@ -119,7 +119,7 @@ export default function ChatPage() {
         if (!mounted) return
         setCurrentUser(user)
 
-        const { data: coach } = await supabase.from('coaches').select('*').eq('user_id', userId).single()
+        const { data: coach } = await supabase.from('coaches').select('*').eq('user_id', userId).maybeSingle()
         if (!mounted) return
         if (coach) setOtherUser(coach)
 

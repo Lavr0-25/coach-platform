@@ -55,7 +55,7 @@ function LessonsContent() {
       .from('coaches')
       .select('id')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (!coach) {
       redirect('/dashboard/mentor')

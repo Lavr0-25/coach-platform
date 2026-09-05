@@ -95,7 +95,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
       )
     `)
     .eq('id', id)
-    .single()
+    .maybeSingle()
 
   if (courseError || !course) {
     notFound()

@@ -71,7 +71,7 @@ export default function SubscribersPage() {
         .from('coaches')
         .select('id')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (coachError || !coachData) {
         console.error('Coach not found:', coachError)

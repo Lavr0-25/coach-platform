@@ -24,7 +24,7 @@ export async function deleteLesson(lessonId: string): Promise<ActionResult> {
     .from('coaches')
     .select('id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!coach) return { ok: false, error: 'Профиль наставника не найден' }
 

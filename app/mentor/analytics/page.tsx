@@ -41,7 +41,7 @@ export default function AnalyticsPage() {
         .from('coaches')
         .select('id, display_name, user_id')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (!coachData) {
         redirect('/dashboard/mentor')

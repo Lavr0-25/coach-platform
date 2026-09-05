@@ -63,7 +63,7 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
         .from('coaches')
         .select('id, user_id, display_name, avatar_url, bio, specialization, created_at')
         .eq('id', coachId)
-        .single()
+        .maybeSingle()
 
       if (!coachData) {
         notFound()

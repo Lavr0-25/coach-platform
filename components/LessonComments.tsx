@@ -70,7 +70,7 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
         .from('system_settings')
         .select('key, value')
         .in('key', ['auto_ban_threshold'])
-        .single()
+        .maybeSingle()
       
       if (data?.value) setBanThreshold(parseInt(data.value))
     } catch (error) {

@@ -19,7 +19,7 @@ export default async function StopListLayout({
     .from('coaches')
     .select('role')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (coach?.role !== 'admin') {
     redirect('/')

@@ -79,7 +79,7 @@ export default function MentorProfilePage() {
         .from('coaches')
         .select('id, user_id, display_name, bio, specialization, avatar_url')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (coachError) {
         console.error('❌ Coach error:', coachError)

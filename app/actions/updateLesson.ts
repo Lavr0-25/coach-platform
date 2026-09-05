@@ -20,7 +20,7 @@ export async function setLessonPublished(lessonId: string, published: boolean): 
     .from('coaches')
     .select('id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!coach) return { ok: false, error: 'Профиль наставника не найден' }
 
@@ -76,7 +76,7 @@ export async function setLessonPublishAt(lessonId: string, publishAt: string | n
     .from('coaches')
     .select('id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!coach) return { ok: false, error: 'Профиль наставника не найден' }
 
@@ -157,7 +157,7 @@ export async function updateLesson(
     .from('coaches')
     .select('id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!coach) return { ok: false, error: 'Профиль наставника не найден' }
 
@@ -192,7 +192,7 @@ export async function updateLesson(
     .from('lesson_content')
     .select('id')
     .eq('lesson_id', lessonId)
-    .single()
+    .maybeSingle()
 
   let contentError
   if (existingContent) {

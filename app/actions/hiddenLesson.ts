@@ -25,7 +25,7 @@ export async function setLessonHidden(lessonId: string, hidden: boolean): Promis
     .from('coaches')
     .select('id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!coach) return { ok: false, error: 'Профиль наставника не найден' }
 
@@ -97,7 +97,7 @@ export async function setLessonLinkAccess(lessonId: string, enabled: boolean): P
     .from('coaches')
     .select('id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!coach) return { ok: false, error: 'Профиль наставника не найден' }
 
@@ -124,7 +124,7 @@ export async function addLessonAccess(lessonId: string, targetUserId: string): P
     .from('coaches')
     .select('id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!coach) return { ok: false, error: 'Профиль наставника не найден' }
 
@@ -134,7 +134,7 @@ export async function addLessonAccess(lessonId: string, targetUserId: string): P
     .select('id, is_hidden')
     .eq('id', lessonId)
     .eq('coach_id', coach.id)
-    .single()
+    .maybeSingle()
 
   if (!lesson) return { ok: false, error: 'Урок не найден или нет прав на изменение' }
   if (!lesson.is_hidden) return { ok: false, error: 'Сначала включите скрытый режим урока' }
@@ -145,7 +145,7 @@ export async function addLessonAccess(lessonId: string, targetUserId: string): P
     .from('profiles')
     .select('id')
     .eq('id', targetUserId)
-    .single()
+    .maybeSingle()
 
   if (!profile) return { ok: false, error: 'Пользователь не найден' }
 
@@ -197,7 +197,7 @@ export async function revokeLessonAccess(lessonId: string, accessId: string): Pr
     .from('coaches')
     .select('id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!coach) return { ok: false, error: 'Профиль наставника не найден' }
 
@@ -208,7 +208,7 @@ export async function revokeLessonAccess(lessonId: string, accessId: string): Pr
     .select('id')
     .eq('id', lessonId)
     .eq('coach_id', coach.id)
-    .single()
+    .maybeSingle()
 
   if (!lesson) return { ok: false, error: 'Урок не найден или нет прав на изменение' }
 

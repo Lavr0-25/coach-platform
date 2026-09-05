@@ -21,7 +21,7 @@ async function getAdminClient() {
     .from('coaches')
     .select('role')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (coach?.role !== 'admin') return null
   return supabase

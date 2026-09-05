@@ -15,7 +15,7 @@ export async function createCourse() {
     .from('coaches')
     .select('id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!coach) {
     throw new Error('Coach не найден')

@@ -20,7 +20,7 @@ async function getCoachId(): Promise<{ coachId: string | null; error?: string }>
     .from('coaches')
     .select('id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!coach) return { coachId: null, error: 'Профиль наставника не найден' }
   return { coachId: coach.id }
@@ -33,7 +33,7 @@ async function assertCourseOwned(courseId: string, coachId: string): Promise<str
     .select('id')
     .eq('id', courseId)
     .eq('coach_id', coachId)
-    .single()
+    .maybeSingle()
 
   if (!course) return 'Курс не найден или нет прав на изменение'
   return null

@@ -36,7 +36,7 @@ export default function NewLessonPage() {
         .from('coaches')
         .select('id')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
       if (coach) {
         setCoachId(coach.id)

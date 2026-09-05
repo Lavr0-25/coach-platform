@@ -48,7 +48,7 @@ export default function NotificationsPage() {
         lessonComments,
         courseComments
       ] = await Promise.all([
-        supabase.from('coaches').select('id').eq('user_id', user.id).single(),
+        supabase.from('coaches').select('id').eq('user_id', user.id).maybeSingle(),
         supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(50),
         supabase.from('course_comments').select('*').order('created_at', { ascending: false }).limit(50)
       ])

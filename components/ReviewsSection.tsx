@@ -62,7 +62,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         .from('system_settings')
         .select('key, value')
         .eq('key', 'auto_ban_threshold')
-        .single()
+        .maybeSingle()
       
       if (data?.value) {
         setBanThreshold(parseInt(data.value))
