@@ -28,6 +28,7 @@ export default function MentorProfilePage() {
   const [bio, setBio] = useState('')
   const [specialization, setSpecialization] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [isPublic, setIsPublic] = useState(true)
   const [coachId, setCoachId] = useState<string>('')
   const [coachUserId, setCoachUserId] = useState<string>('')
   const [currentUserId, setCurrentUserId] = useState<string>('')
@@ -78,7 +79,7 @@ export default function MentorProfilePage() {
 
       const { data: coach, error: coachError } = await supabase
         .from('coaches')
-        .select('id, user_id, display_name, bio, specialization, avatar_url')
+        .select('id, user_id, display_name, bio, specialization, avatar_url, profiles(is_public)')
         .eq('user_id', user.id)
         .maybeSingle()
 
@@ -95,6 +96,7 @@ export default function MentorProfilePage() {
         setBio(coach.bio || '')
         setSpecialization(coach.specialization || '')
         setAvatarUrl(coach.avatar_url || '')
+        setIsPublic((coach as any).profiles?.is_public ?? true)
         setIsOwner(user.id === coach.user_id)
 
         // 🔥 Передаём и coach.id, и coach.user_id
@@ -209,6 +211,14 @@ export default function MentorProfilePage() {
         .eq('id', coachId)
 
       if (error) throw error
+
+      // Приватность профиля — отдельный запрос (вложенные update PostgREST не поддерживает)
+      const { error: privacyError } = await supabase
+        .from('profiles')
+        .update({ is_public: isPublic })
+        .eq('id', currentUserId)
+
+      if (privacyError) throw privacyError
 
       setSuccess('Профиль успешно обновлён!')
       window.dispatchEvent(new CustomEvent('profileUpdated', { 
@@ -653,6 +663,30 @@ export default function MentorProfilePage() {
                   label="Аватар"
                   hint="PNG, JPG до 5MB (рекомендуется 400×400px, 1:1)"
                 />
+              </div>
+
+              <div className="flex items-start justify-between gap-4 pt-5 border-t border-purple-100">
+                <div>
+                  <label htmlFor="isPublic" className="block text-sm font-semibold text-gray-700">
+                    Открытый профиль
+                  </label>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Когда выключено, профиль видите только вы и админ, остальные видят «Профиль скрыт»
+                  </p>
+                </div>
+                <button
+                  id="isPublic"
+                  type="button"
+                  role="switch"
+                  aria-checked={isPublic}
+                  onClick={() => setIsPublic(!isPublic)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors ${isPublic ? 'bg-purple-600' : 'bg-gray-300'}`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isPublic ? 'translate-x-6' : 'translate-x-1'}`}
+                    style={{ marginTop: '4px' }}
+                  />
+                </button>
               </div>
             </div>
 

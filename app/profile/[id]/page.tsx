@@ -1,9 +1,12 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { Lock } from 'lucide-react'
 import FavoriteButton from '@/components/FavoriteButton'
+import ProfileActions from '@/components/ProfileActions'
 
 // Публичная страница профиля: канонические страницы материалов автора — /mentor/[id],
 // поэтому если id принадлежит автору — редиректим туда. Для студента (и любого
@@ -46,6 +49,10 @@ export default async function ProfilePage({ params }: MentorPageProps) {
   const supabase = createAdminClient()
   if (!supabase) notFound()
 
+  // Кто смотрит профиль (для кнопки «Написать сообщение» и приватности)
+  const auth = await createServerClient()
+  const { data: { user: viewer } } = await auth.auth.getUser()
+
   // Автор? → его богатый профиль
   const { data: coach } = await supabase
     .from('coaches')
@@ -56,10 +63,39 @@ export default async function ProfilePage({ params }: MentorPageProps) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, created_at')
+    .select('id, full_name, avatar_url, created_at, role, is_public')
     .eq('id', id)
     .maybeSingle()
   if (!profile) notFound()
+
+  // Роль зрителя (админ видит и скрытые профили)
+  let viewerRole: string | null = null
+  if (viewer && viewer.id !== profile.id) {
+    const { data: viewerProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', viewer.id)
+      .maybeSingle()
+    viewerRole = viewerProfile?.role ?? null
+  }
+
+  // Профиль закрыт? → владелец и админ видят всё, остальным — заглушка
+  const canViewProfile = profile.is_public || viewer?.id === profile.id || viewerRole === 'admin'
+  if (!canViewProfile) {
+    return (
+      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-7xl pt-24 sm:pt-28">
+        <div className="style-card p-12 text-center">
+          <div className="gradient-icon w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Профиль скрыт</h1>
+          <p className="text-gray-600 max-w-md mx-auto">
+            Пользователь ограничил доступ к своему профилю
+          </p>
+        </div>
+      </main>
+    )
+  }
 
   // Купленные курсы (только оплаченные)
   const { data: purchases } = await supabase
@@ -132,11 +168,14 @@ export default async function ProfilePage({ params }: MentorPageProps) {
           </div>
 
           <div className="flex-1">
-            <div className="mb-4">
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-                {profile.full_name || 'Студент'}
-              </h1>
-              <p className="text-lg text-purple-600 font-medium">Студент платформы</p>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1">
+                  {profile.full_name || 'Студент'}
+                </h1>
+                <p className="text-lg text-purple-600 font-medium">Студент платформы</p>
+              </div>
+              {viewer && viewer.id !== profile.id && <ProfileActions profileId={profile.id} />}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
