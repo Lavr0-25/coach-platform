@@ -98,9 +98,18 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                     {/* Левая часть: Информация о пользователе */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 shadow-sm">
-                          {getInitials(user)}
-                        </div>
+                        {(user.coaches?.[0]?.avatar_url || user.avatar_url) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={user.coaches?.[0]?.avatar_url || user.avatar_url}
+                            alt={displayName}
+                            className="w-10 h-10 rounded-full object-cover flex-shrink-0 shadow-sm"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 shadow-sm">
+                            {getInitials(user)}
+                          </div>
+                        )}
                         <div className="min-w-0">
                           <h3 className="text-base md:text-lg font-semibold text-gray-900 truncate">
                             {displayName}

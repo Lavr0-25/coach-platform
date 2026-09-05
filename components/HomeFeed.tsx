@@ -135,9 +135,11 @@ export default function HomeFeed({
   const filteredBySearch = useMemo(() => {
     if (!searchQuery.trim()) return processedContent
     const query = searchQuery.toLowerCase()
+    // Ищем по названию, описанию и имени автора урока/курса
     return processedContent.filter(item =>
       item.title.toLowerCase().includes(query) ||
-      item.description?.toLowerCase().includes(query)
+      item.description?.toLowerCase().includes(query) ||
+      item.coach?.display_name?.toLowerCase().includes(query)
     )
   }, [processedContent, searchQuery])
 

@@ -10,6 +10,7 @@ import { useToast } from '@/components/Toast'
 import { deleteLesson } from '@/app/actions/deleteLesson'
 import { setLessonPublishAt } from '@/app/actions/updateLesson'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import { Button } from '@/components/ui/Button'
 
 export default function MentorLessonsPage() {
   // Провайдер глобальный (app/layout.tsx)
@@ -63,6 +64,7 @@ export default function MentorLessonsPage() {
         cover_image,
         is_published,
         publish_at,
+        published_at,
         created_at
       `)
       .eq('coach_id', coach.id)
@@ -122,6 +124,12 @@ export default function MentorLessonsPage() {
       day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
     })
 
+  // Дата фактической публикации (без времени — только день)
+  const formatPublishedDate = (iso: string) =>
+    new Date(iso).toLocaleDateString('ru-RU', {
+      day: 'numeric', month: 'short',
+    })
+
   // Фильтрация уроков
   const filteredLessons = debouncedSearch
     ? lessons.filter(l => 
@@ -163,15 +171,12 @@ export default function MentorLessonsPage() {
             </p>
           </div>
           
-          <Link
-            href="/dashboard/mentor/lessons/new"
-            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-colors inline-flex items-center justify-center gap-2"
-          >
+          <Button href="/dashboard/mentor/lessons/new">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Создать урок
-          </Link>
+          </Button>
         </div>
 
         {/* Поиск */}
@@ -338,6 +343,15 @@ export default function MentorLessonsPage() {
                   </div>
                 )}
 
+                {/* Дата публикации: когда урок реально открылся студентам */}
+                {lesson.is_published && lesson.published_at && (
+                  <div className="mb-3">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
+                      📅 {formatPublishedDate(lesson.published_at)}
+                    </span>
+                  </div>
+                )}
+
                 {/* Публикация по расписанию: бейдж + отмена (серверное действие) */}
                 {!lesson.is_published && lesson.publish_at && (
                   <div className="flex items-center gap-2 mb-3">
@@ -457,6 +471,15 @@ export default function MentorLessonsPage() {
                   </p>
                 )}
 
+                {/* Дата публикации: когда урок реально открылся студентам */}
+                {lesson.is_published && lesson.published_at && (
+                  <div className="mb-3">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
+                      📅 {formatPublishedDate(lesson.published_at)}
+                    </span>
+                  </div>
+                )}
+
                 {/* Публикация по расписанию: бейдж + отмена (серверное действие) */}
                 {!lesson.is_published && lesson.publish_at && (
                   <div className="flex items-center gap-2 mb-3">
@@ -523,15 +546,12 @@ export default function MentorLessonsPage() {
             }
           </p>
           {!debouncedSearch && (
-            <Link
-              href="/dashboard/mentor/lessons/new"
-              className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-colors inline-flex items-center gap-2"
-            >
+            <Button href="/dashboard/mentor/lessons/new">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               Создать урок
-            </Link>
+            </Button>
           )}
         </div>
       )}

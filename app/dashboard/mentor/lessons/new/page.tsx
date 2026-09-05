@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import FileUploader from '@/components/FileUploader'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import { Button } from '@/components/ui/Button'
 
 // На платформе только текстовые уроки: тип контента не выбирается,
 // текст пишется в WYSIWYG-редакторе на странице урока.
@@ -221,30 +221,13 @@ export default function NewLessonPage() {
 
         {/* Кнопки */}
         <div className="flex flex-col sm:flex-row gap-4 pt-4">
-          <button
-            type="submit"
-            disabled={loading}
-            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity text-center flex-1 sm:flex-none"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Создание...
-              </span>
-            ) : (
-              'Создать урок'
-            )}
-          </button>
-          
-          <Link
-            href="/dashboard/mentor/lessons"
-            className="bg-white text-gray-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-colors text-center flex-1 sm:flex-none"
-          >
+          <Button type="submit" loading={loading} className="flex-1 sm:flex-none">
+            {loading ? 'Создание...' : 'Создать урок'}
+          </Button>
+
+          <Button href="/dashboard/mentor/lessons" variant="outline" className="flex-1 sm:flex-none">
             Отмена
-          </Link>
+          </Button>
         </div>
       </form>
     </main>

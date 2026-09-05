@@ -45,7 +45,7 @@ export default async function AdminUsersPage({
   // 2. Получаем всех coaches
   const { data: coaches } = await supabase
     .from('coaches')
-    .select('id, user_id, display_name, role, is_verified')
+    .select('id, user_id, display_name, avatar_url, role, is_verified')
 
   // 3. Считаем ВСЕ уроки для каждого coach
   const { data: allLessons } = await supabase

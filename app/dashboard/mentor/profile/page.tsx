@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import FileUploader from '@/components/FileUploader'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import { Button } from '@/components/ui/Button'
 
 export default function MentorProfilePage() {
   const supabase = createClient()
@@ -556,24 +557,18 @@ export default function MentorProfilePage() {
               </p>
               {!debouncedSearch && (
                 <div className="flex flex-wrap justify-center gap-3">
-                  <Link
-                    href="/dashboard/mentor/lessons/new"
-                    className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-colors inline-flex items-center gap-2"
-                  >
+                  <Button href="/dashboard/mentor/lessons/new">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     Создать урок
-                  </Link>
-                  <Link
-                    href="/dashboard/mentor/courses"
-                    className="bg-white text-purple-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-colors inline-flex items-center gap-2"
-                  >
+                  </Button>
+                  <Button href="/dashboard/mentor/courses" variant="outline">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                     Мои курсы
-                  </Link>
+                  </Button>
                 </div>
               )}
             </div>
@@ -662,13 +657,9 @@ export default function MentorProfilePage() {
             </div>
 
             <div className="flex gap-3 pt-6 border-t border-purple-100">
-              <button
-                type="submit"
-                disabled={saving}
-                className="gradient-btn text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-              >
+              <Button type="submit" loading={saving} size="lg">
                 {saving ? 'Сохранение...' : 'Сохранить изменения'}
-              </button>
+              </Button>
             </div>
           </form>
 

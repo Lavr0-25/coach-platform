@@ -9,6 +9,8 @@ const VARIANTS = {
   primary: 'gradient-btn text-white shadow-lg shadow-purple-500/30',
   outline: 'border border-purple-200 text-purple-700 bg-transparent hover:bg-purple-50',
   danger: 'bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-500/30',
+  /** Контурная красная — удаление и другие деструктивные действия в ряду с обычными кнопками */
+  dangerOutline: 'border border-red-200 text-red-600 bg-transparent hover:bg-red-50',
   ghost: 'text-purple-700 bg-transparent hover:bg-purple-50',
 } as const
 

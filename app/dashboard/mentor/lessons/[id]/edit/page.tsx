@@ -10,6 +10,7 @@ import FileUploader from '@/components/FileUploader'
 import RichTextEditor from '@/components/editor/RichTextEditor'
 import HiddenLessonPanel from '@/components/HiddenLessonPanel'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import { Button } from '@/components/ui/Button'
 
 // На платформе только текстовые уроки: тип контента фиксирован ('text'),
 // содержимое правится в WYSIWYG-редакторе. Старые не-текстовые записи в БД
@@ -50,6 +51,8 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   const [scheduleValue, setScheduleValue] = useState('')
   const [scheduling, setScheduling] = useState(false)
   const [isPublished, setIsPublished] = useState(false)
+  // Фактический момент публикации (для статуса и карточек «Мои уроки»)
+  const [publishedAt, setPublishedAt] = useState<string | null>(null)
   // Скрытый режим: is_hidden + link_access из БД (панель сама вызывает экшены)
   const [isHidden, setIsHidden] = useState(false)
   const [linkAccess, setLinkAccess] = useState(true)
@@ -90,6 +93,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
         setPrice(lesson.price?.toString() || '0')
         setIsFreePreview(lesson.is_free_preview || false)
         setIsPublished(lesson.is_published || false)
+        setPublishedAt(lesson.published_at || null)
         setPublishAt(lesson.publish_at || null)
         setIsHidden(lesson.is_hidden || false)
         setLinkAccess(lesson.link_access !== false)
@@ -130,6 +134,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   const handleSchedule = async () => {
     if (!scheduleValue) return
     setScheduling(true)
+    const wasPublished = isPublished
     const result = await setLessonPublishAt(lessonId, new Date(scheduleValue).toISOString())
     setScheduling(false)
     if (!result.ok) {
@@ -138,10 +143,18 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
     }
     setError('')
     setPublishAt(new Date(scheduleValue).toISOString())
+    // Вариант А: расписание на опубликованном уроке снимает его с публикации —
+    // планировщик откроет урок в назначенное время
+    if (wasPublished) {
+      setIsPublished(false)
+      setPublishedAt(null)
+      setSuccess('Урок снят с публикации и откроется сам в назначенное время')
+    } else {
+      setSuccess('Публикация запланирована — урок откроется сам в назначенное время')
+    }
     setScheduleOpen(false)
     setScheduleValue('')
-    setSuccess('Публикация запланирована — урок откроется сам в назначенное время')
-    setTimeout(() => setSuccess(''), 3000)
+    setTimeout(() => setSuccess(''), 4000)
   }
 
   const handleCancelSchedule = async () => {
@@ -172,6 +185,13 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
     } else {
       const nowPublished = !isPublished
       setIsPublished(nowPublished)
+      if (nowPublished) {
+        setPublishedAt(new Date().toISOString())
+        setPublishAt(null)
+      } else {
+        setPublishedAt(null)
+        setPublishAt(null)
+      }
       setSuccess(nowPublished ? '✅ Урок опубликован — теперь его видят студенты' : 'Урок снят с публикации — студенты его больше не видят')
       setTimeout(() => setSuccess(''), 3000)
     }
@@ -299,7 +319,11 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
           <span className="text-xl leading-none mt-0.5">{isPublished ? '🟢' : publishAt ? '🗓' : '🟡'}</span>
           <div>
             <p className="font-semibold text-gray-900 text-sm">
-              {isPublished ? 'Урок опубликован' : publishAt ? `Публикация запланирована: ${formatSchedule(publishAt)}` : 'Урок — черновик'}
+              {isPublished
+                ? publishedAt
+                  ? `Урок опубликован: ${formatSchedule(publishedAt)}`
+                  : 'Урок опубликован'
+                : publishAt ? `Публикация запланирована: ${formatSchedule(publishAt)}` : 'Урок — черновик'}
             </p>
             <p className="text-sm text-gray-600">
               {isPublished
@@ -323,14 +347,9 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                   onChange={(e) => setScheduleValue(e.target.value)}
                   className="px-3 py-2 border border-purple-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400"
                 />
-                <button
-                  type="button"
-                  onClick={handleSchedule}
-                  disabled={scheduling || !scheduleValue}
-                  className="gradient-btn text-white px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                >
+                <Button size="sm" onClick={handleSchedule} loading={scheduling} disabled={!scheduleValue} className="whitespace-nowrap">
                   {scheduling ? 'Сохраняю…' : 'Запланировать'}
-                </button>
+                </Button>
                 <button
                   type="button"
                   onClick={() => { setScheduleOpen(false); setScheduleValue('') }}
@@ -359,26 +378,75 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                 🗓 По расписанию
               </button>
             )}
-            <button
-              type="button"
-              onClick={handleTogglePublish}
-              disabled={publishing || !hasSavedContent}
-              title={!hasSavedContent ? 'Сначала заполните и сохраните контент урока' : undefined}
-              className="gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-[box-shadow,border-color,background-color,color] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none whitespace-nowrap"
-            >
-              {publishing ? 'Меняем статус...' : 'Опубликовать сейчас'}
-            </button>
+            {/* Пока открыта панель расписания — «Опубликовать сейчас» скрываем:
+                две кнопки рядом вводят в заблуждение (скрин из scrin_bag) */}
+            {!scheduleOpen && (
+              <Button
+                type="button"
+                onClick={handleTogglePublish}
+                loading={publishing}
+                disabled={!hasSavedContent}
+                title={!hasSavedContent ? 'Сначала заполните и сохраните контент урока' : undefined}
+                className="whitespace-nowrap"
+              >
+                {publishing ? 'Меняем статус...' : 'Опубликовать сейчас'}
+              </Button>
+            )}
           </div>
         )}
         {isPublished && (
-          <button
-            type="button"
-            onClick={handleTogglePublish}
-            disabled={publishing}
-            className="bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap"
-          >
-            {publishing ? 'Меняем статус...' : 'Вернуть в черновик'}
-          </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {/* Расписание доступно и опубликованному уроку: установка снимает
+                его с публикации сейчас, планировщик откроет в выбранное время */}
+            {scheduleOpen ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="datetime-local"
+                  value={scheduleValue}
+                  onChange={(e) => setScheduleValue(e.target.value)}
+                  className="px-3 py-2 border border-purple-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleSchedule}
+                  loading={scheduling}
+                  disabled={!scheduleValue}
+                  title="Урок снимется с публикации сейчас и откроется сам в выбранное время"
+                  className="whitespace-nowrap"
+                >
+                  {scheduling ? 'Сохраняю…' : 'Запланировать'}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => { setScheduleOpen(false); setScheduleValue('') }}
+                  className="text-gray-500 hover:text-gray-700 text-sm px-2 py-2 whitespace-nowrap"
+                >
+                  Отмена
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setScheduleOpen(true)}
+                title="Урок снимется с публикации сейчас и откроется сам в выбранное время"
+                className="bg-white text-gray-700 border border-gray-300 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors whitespace-nowrap"
+              >
+                🗓 По расписанию
+              </button>
+            )}
+            {/* Пока открыта панель расписания — «Вернуть в черновик» скрываем:
+                две кнопки рядом вводят в заблуждение */}
+            {!scheduleOpen && (
+              <button
+                type="button"
+                onClick={handleTogglePublish}
+                disabled={publishing}
+                className="bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap"
+              >
+                {publishing ? 'Меняем статус...' : 'Вернуть в черновик'}
+              </button>
+            )}
+          </div>
         )}
       </div>
       )}
@@ -515,27 +583,20 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
 
         {/* Кнопки */}
         <div className="flex flex-col sm:flex-row gap-4 pt-4">
-          <button
-            type="submit"
-            disabled={saving}
-            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 disabled:opacity-50 transition-opacity text-center"
-          >
+          <Button type="submit" loading={saving}>
             {saving ? 'Сохранение...' : 'Сохранить изменения'}
-          </button>
-          <Link
-            href="/dashboard/mentor/lessons"
-            className="bg-white text-gray-700 border border-purple-200 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-colors text-center"
-          >
+          </Button>
+          <Button href="/dashboard/mentor/lessons" variant="outline">
             Отмена
-          </Link>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={handleDelete}
-            disabled={deleting}
-            className="bg-white text-red-600 border border-red-200 px-6 py-3 rounded-xl font-semibold hover:bg-red-50 transition-colors disabled:opacity-50 ml-auto text-center whitespace-nowrap"
+            variant="dangerOutline"
+            className="ml-auto whitespace-nowrap"
           >
             {deleting ? 'Удаление...' : 'Удалить урок'}
-          </button>
+          </Button>
         </div>
       </form>
     </main>

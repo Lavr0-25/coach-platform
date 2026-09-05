@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 // Показывается на всех страницах менторского раздела; текущая страница подсвечена.
 const SECTION_LINKS = [
   { href: '/dashboard/mentor', label: 'Кабинет' },
+  { href: '/dashboard/mentor/lessons', label: 'Мои уроки' },
   { href: '/dashboard/mentor/courses', label: 'Мои курсы' },
   { href: '/dashboard/mentor/subscribers', label: 'Подписчики' },
   { href: '/dashboard/ai', label: 'Управление с ИИ' },

@@ -8,6 +8,7 @@ import Link from 'next/link'
 import FileUploader from '@/components/FileUploader'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { useToast } from '@/components/Toast'
+import { Button } from '@/components/ui/Button'
 
 interface Course {
   id: string
@@ -318,16 +319,15 @@ function EditCourseForm({ courseId }: { courseId: string }) {
             </p>
           </div>
         </div>
-        <button
+        <Button
           type="button"
           onClick={handleTogglePublish}
-          disabled={publishing}
-          className={isPublished
-            ? 'bg-white text-gray-700 border border-gray-300 px-5 py-2.5 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap'
-            : 'gradient-btn text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-[box-shadow,border-color,background-color,color] disabled:opacity-50 whitespace-nowrap'}
+          loading={publishing}
+          variant={isPublished ? 'outline' : 'primary'}
+          className="border-gray-300 text-gray-700 hover:bg-gray-50 whitespace-nowrap"
         >
           {publishing ? 'Меняем статус...' : isPublished ? 'Вернуть в черновик' : 'Опубликовать курс'}
-        </button>
+        </Button>
       </div>
 
       {/* Уведомления */}
@@ -418,13 +418,9 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="gradient-btn text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <Button type="submit" loading={saving} size="lg">
                 {saving ? 'Сохранение...' : 'Сохранить изменения'}
-              </button>
+              </Button>
             </div>
           </form>
 
@@ -574,12 +570,9 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                                 {lesson.is_free_preview && ' • Превью'}
                               </p>
                             </div>
-                            <button
-                              onClick={() => handleAddLesson(lesson.id)}
-                              className="gradient-btn text-white px-4 py-2 rounded-lg font-medium shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transition-colors flex-shrink-0"
-                            >
+                            <Button size="sm" onClick={() => handleAddLesson(lesson.id)} className="flex-shrink-0">
                               Добавить
-                            </button>
+                            </Button>
                           </div>
                         ))}
                       </div>

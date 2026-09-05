@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createCourse } from '@/app/actions/createCourse'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import { Button } from '@/components/ui/Button'
 
 export default function MentorCoursesPage() {
   const [courses, setCourses] = useState<any[]>([])
@@ -111,15 +112,12 @@ export default function MentorCoursesPage() {
           </p>
         </div>
         <form action={createCourse}>
-          <button
-            type="submit"
-            className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-colors inline-flex items-center gap-2"
-          >
+          <Button type="submit">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Создать курс
-          </button>
+          </Button>
         </form>
       </div>
 
@@ -246,15 +244,12 @@ export default function MentorCoursesPage() {
           </p>
           {!debouncedSearch && (
             <form action={createCourse}>
-              <button
-                type="submit"
-                className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-colors inline-flex items-center gap-2"
-              >
+              <Button type="submit">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 Создать курс
-              </button>
+              </Button>
             </form>
           )}
         </div>

@@ -48,8 +48,12 @@ export async function setLessonPublished(lessonId: string, published: boolean): 
     .from('lessons')
     .update({
       is_published: published,
-      // Ручная публикация перекрывает расписание — снимаем его
-      publish_at: published ? null : undefined,
+      // Ручная публикация перекрывает расписание — снимаем его. При снятии тоже
+      // чистим publish_at: иначе старое расписание в прошлом снова опубликует
+      // урок планировщиком сразу после «Вернуть в черновик».
+      publish_at: null,
+      // Фактический момент публикации — для карточек «Мои уроки»
+      published_at: published ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', lessonId)
@@ -88,7 +92,8 @@ export async function setLessonPublishAt(lessonId: string, publishAt: string | n
     return { ok: false, error: 'Время публикации уже прошло — укажите будущее' }
   }
 
-  // Свой черновик (у опубликованного урока расписание не имеет смысла)
+  // Свой урок. Расписание работает и для опубликованных: установка = сразу
+  // снять с публикации, планировщик откроет урок в назначенное время (вариант А).
   const { data: lesson } = await supabase
     .from('lessons')
     .select('id, is_published')
@@ -97,9 +102,6 @@ export async function setLessonPublishAt(lessonId: string, publishAt: string | n
     .maybeSingle()
 
   if (!lesson) return { ok: false, error: 'Урок не найден или нет прав на изменение' }
-  if (lesson.is_published) {
-    return { ok: false, error: 'Урок уже опубликован — расписание не нужно' }
-  }
 
   // Ставить расписание на пустой урок нельзя — то же правило, что у публикации
   if (when) {
@@ -121,7 +123,14 @@ export async function setLessonPublishAt(lessonId: string, publishAt: string | n
 
   const { data, error: updateError } = await supabase
     .from('lessons')
-    .update({ publish_at: publishAt, updated_at: new Date().toISOString() })
+    .update({
+      publish_at: publishAt,
+      // Установка расписания на опубликованном уроке: сразу снимаем с публикации
+      // (published_at тоже сбрасываем — фактической публикации пока нет).
+      // Отмена расписания (publishAt = null) статус не меняет.
+      ...(lesson.is_published && publishAt ? { is_published: false, published_at: null } : {}),
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', lessonId)
     .eq('coach_id', coach.id)
     .select('id')
