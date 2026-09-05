@@ -11,6 +11,7 @@ import { deleteLesson } from '@/app/actions/deleteLesson'
 import { setLessonPublishAt } from '@/app/actions/updateLesson'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
 export default function MentorLessonsPage() {
@@ -378,9 +379,9 @@ export default function MentorLessonsPage() {
                 <div className="flex items-center justify-between pt-3 border-t border-purple-100">
                   <div className="flex items-center gap-2">
                     {lesson.is_free_preview ? (
-                      <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                      <Badge variant="greenFill">
                         Бесплатно
-                      </span>
+                      </Badge>
                     ) : (
                       <span className="text-sm font-bold text-purple-700">
                         {lesson.price} ₽
@@ -503,9 +504,9 @@ export default function MentorLessonsPage() {
                 <div className="flex items-center justify-between pt-3 border-t border-purple-100">
                   <div className="flex items-center gap-2">
                     {lesson.is_free_preview ? (
-                      <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                      <Badge variant="greenFill">
                         Бесплатно
-                      </span>
+                      </Badge>
                     ) : (
                       <span className="text-sm font-bold text-purple-700">
                         {lesson.price} ₽

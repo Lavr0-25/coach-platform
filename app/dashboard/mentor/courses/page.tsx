@@ -8,6 +8,7 @@ import Image from 'next/image'
 import { createCourse } from '@/app/actions/createCourse'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
 export default function MentorCoursesPage() {
@@ -213,13 +214,13 @@ export default function MentorCoursesPage() {
                 
                 <div className="flex items-center gap-2">
                   {course.is_published ? (
-                    <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                    <Badge variant="greenFill">
                       Опубликован
-                    </span>
+                    </Badge>
                   ) : (
-                    <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                    <Badge variant="grayFill">
                       Черновик
-                    </span>
+                    </Badge>
                   )}
                 </div>
               </div>

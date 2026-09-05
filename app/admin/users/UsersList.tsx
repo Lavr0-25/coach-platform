@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { banUser, unbanUser } from '@/app/admin/actions'
 import { useToast } from '@/components/Toast'
+import { Badge } from '@/components/ui/Badge'
 
 export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
   const toast = useToast()
@@ -120,18 +121,12 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
 
                       {/* Бейджи */}
                       <div className="flex flex-wrap gap-2 mb-3">
-                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                          user.role === 'admin' ? 'bg-red-100 text-red-700' :
-                          user.role === 'mentor' ? 'bg-green-100 text-green-700' :
-                          'bg-purple-100 text-purple-700'
-                        }`}>
+                        <Badge variant={user.role === 'admin' ? 'redFill' : user.role === 'mentor' ? 'greenFill' : 'purpleFill'}>
                           {user.role === 'admin' ? 'Админ' : user.role === 'mentor' ? 'Автор' : 'Студент'}
-                        </span>
+                        </Badge>
 
                         {isBanned && (
-                          <span className="bg-red-50 text-red-700 border border-red-200 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
-                            🚫 Заблокирован
-                          </span>
+                          <Badge variant="red">🚫 Заблокирован</Badge>
                         )}
                       </div>
 

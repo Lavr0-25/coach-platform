@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
 export default function AnalyticsPage() {
@@ -435,9 +436,9 @@ export default function AnalyticsPage() {
                   {/* Статус/Цена */}
                   <div className="col-span-2 flex items-center justify-center">
                     {lesson.is_free_preview ? (
-                      <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                      <Badge variant="greenFill">
                         Бесплатно
-                      </span>
+                      </Badge>
                     ) : (
                       <span className="text-sm font-bold text-purple-700">
                         {lesson.price} ₽

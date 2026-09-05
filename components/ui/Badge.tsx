@@ -1,13 +1,17 @@
-// Цветовые варианты бейджа — те же сочетания, что использовались
-// в chip-константах админки и статусах обращений
+// Цветовые варианты бейджа. Палитра «50 + рамка» — статусы обращений,
+// «плотная» (bg-*-100 без рамки) — роли, «Бесплатно», «Опубликовано»
 const COLORS = {
-  purple: 'bg-purple-50 border-purple-200 text-purple-700',
-  blue: 'bg-blue-50 border-blue-200 text-blue-700',
-  green: 'bg-green-50 border-green-200 text-green-700',
-  red: 'bg-red-50 border-red-200 text-red-700',
-  orange: 'bg-orange-50 border-orange-200 text-orange-700',
-  yellow: 'bg-yellow-50 border-yellow-200 text-yellow-700',
-  gray: 'bg-gray-50 border-gray-200 text-gray-600',
+  purple: 'border border-purple-200 bg-purple-50 text-purple-700',
+  blue: 'border border-blue-200 bg-blue-50 text-blue-700',
+  green: 'border border-green-200 bg-green-50 text-green-700',
+  red: 'border border-red-200 bg-red-50 text-red-700',
+  orange: 'border border-orange-200 bg-orange-50 text-orange-700',
+  yellow: 'border border-yellow-200 bg-yellow-50 text-yellow-700',
+  gray: 'border border-gray-200 bg-gray-50 text-gray-600',
+  purpleFill: 'bg-purple-100 text-purple-700',
+  greenFill: 'bg-green-100 text-green-700',
+  grayFill: 'bg-gray-100 text-gray-700',
+  redFill: 'bg-red-100 text-red-700',
 } as const
 
 export interface BadgeProps {
@@ -19,7 +23,7 @@ export interface BadgeProps {
 export function Badge({ variant = 'purple', children, className = '' }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${COLORS[variant]} ${className}`}
+      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${COLORS[variant]} ${className}`}
     >
       {children}
     </span>

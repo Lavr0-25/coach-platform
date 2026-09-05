@@ -7,6 +7,7 @@ import type { Metadata } from 'next'
 import { Lock } from 'lucide-react'
 import FavoriteButton from '@/components/FavoriteButton'
 import ProfileActions from '@/components/ProfileActions'
+import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
 // Публичная страница профиля: канонические страницы материалов автора — /mentor/[id],
@@ -265,7 +266,7 @@ export default async function ProfilePage({ params }: MentorPageProps) {
                   </h3>
                   <div className="flex items-center justify-between pt-3 border-t border-purple-100">
                     {lesson.is_free_preview ? (
-                      <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">Бесплатно</span>
+                      <Badge variant="greenFill">Бесплатно</Badge>
                     ) : (
                       <span className="text-sm font-bold text-purple-700">{lesson.price} ₽</span>
                     )}

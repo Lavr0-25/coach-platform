@@ -9,6 +9,7 @@ import FileUploader from '@/components/FileUploader'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { useToast } from '@/components/Toast'
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
 interface Course {
@@ -625,13 +626,13 @@ function EditCourseForm({ courseId }: { courseId: string }) {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Статус:</span>
                 {isPublished ? (
-                  <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                  <Badge variant="greenFill">
                     Опубликован
-                  </span>
+                  </Badge>
                 ) : (
-                  <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                  <Badge variant="grayFill">
                     Черновик
-                  </span>
+                  </Badge>
                 )}
               </div>
               

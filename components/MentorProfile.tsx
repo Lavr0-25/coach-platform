@@ -10,6 +10,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import FavoriteButton from '@/components/FavoriteButton'
 import ProfileActions from '@/components/ProfileActions'
+import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
 interface Course {
@@ -453,9 +454,9 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
                     <div className="flex items-center justify-between pt-3 border-t border-purple-100">
                       <div className="flex items-center gap-2">
                         {lesson.is_free_preview ? (
-                          <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                          <Badge variant="greenFill">
                             Бесплатно
-                          </span>
+                          </Badge>
                         ) : (
                           <span className="text-sm font-bold text-purple-700">
                             {lesson.price} ₽

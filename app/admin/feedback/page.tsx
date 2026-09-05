@@ -6,6 +6,7 @@ import { updateFeedbackStatus, bulkUpdateFeedbackStatus } from '@/app/admin/acti
 import Link from 'next/link'
 import Image from 'next/image'
 import { useToast } from '@/components/Toast'
+import { Badge, BadgeProps } from '@/components/ui/Badge'
 
 interface Feedback {
   id: string
@@ -170,14 +171,14 @@ export default function AdminFeedbackPage() {
     return map[status] || status
   }
 
-  const getStatusStyle = (status: string) => {
-    const map: Record<string, string> = {
-      new: 'bg-blue-50 text-blue-700 border-blue-200',
-      in_progress: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-      resolved: 'bg-green-50 text-green-700 border-green-200',
-      rejected: 'bg-red-50 text-red-700 border-red-200'
+  const getStatusVariant = (status: string): BadgeProps['variant'] => {
+    const map: Record<string, NonNullable<BadgeProps['variant']>> = {
+      new: 'blue',
+      in_progress: 'yellow',
+      resolved: 'green',
+      rejected: 'red'
     }
-    return map[status] || 'bg-gray-50 text-gray-700 border-gray-200'
+    return map[status] || 'gray'
   }
 
   const filteredFeedbacks = feedbacks
@@ -398,14 +399,10 @@ export default function AdminFeedbackPage() {
                           />
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                            feedback.type === 'bug' 
-                              ? 'bg-red-50 text-red-700 border border-red-200' 
-                              : 'bg-purple-50 text-purple-700 border border-purple-200'
-                          }`}>
+                          <Badge variant={feedback.type === 'bug' ? 'red' : 'purple'} className="gap-1.5">
                             {feedback.type === 'bug' ? '🐛' : '💡'}
                             {feedback.type === 'bug' ? 'Ошибка' : 'Идея'}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="px-6 py-4">
                           <div className="max-w-md">
@@ -435,9 +432,9 @@ export default function AdminFeedbackPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full border ${getStatusStyle(feedback.status)}`}>
+                          <Badge variant={getStatusVariant(feedback.status)}>
                             {getStatusText(feedback.status)}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
                           {formatDate(feedback.created_at)}
@@ -474,17 +471,13 @@ export default function AdminFeedbackPage() {
                         onChange={() => toggleSelect(feedback.id)}
                         className="w-4 h-4 accent-purple-600 cursor-pointer"
                       />
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        feedback.type === 'bug' 
-                          ? 'bg-red-50 text-red-700 border border-red-200' 
-                          : 'bg-purple-50 text-purple-700 border border-purple-200'
-                      }`}>
+                      <Badge variant={feedback.type === 'bug' ? 'red' : 'purple'}>
                         {feedback.type === 'bug' ? '🐛' : '💡'}
                         {feedback.type === 'bug' ? 'Ошибка' : 'Идея'}
-                      </span>
-                      <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full border ${getStatusStyle(feedback.status)}`}>
+                      </Badge>
+                      <Badge variant={getStatusVariant(feedback.status)}>
                         {getStatusText(feedback.status)}
-                      </span>
+                      </Badge>
                     </div>
                     <span className="text-xs text-gray-500 whitespace-nowrap">{formatDate(feedback.created_at)}</span>
                   </div>
@@ -560,17 +553,13 @@ export default function AdminFeedbackPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        viewingFeedback.type === 'bug' 
-                          ? 'bg-red-100 text-red-700' 
-                          : 'bg-purple-100 text-purple-700'
-                      }`}>
+                      <Badge variant={viewingFeedback.type === 'bug' ? 'redFill' : 'purpleFill'}>
                         {viewingFeedback.type === 'bug' ? '🐛' : '💡'}
                         {viewingFeedback.type === 'bug' ? 'Ошибка' : 'Идея'}
-                      </span>
-                      <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full border ${getStatusStyle(viewingFeedback.status)}`}>
+                      </Badge>
+                      <Badge variant={getStatusVariant(viewingFeedback.status)}>
                         {getStatusText(viewingFeedback.status)}
-                      </span>
+                      </Badge>
                     </div>
                     <h2 className="text-xl font-bold text-gray-900">{viewingFeedback.title}</h2>
                   </div>
