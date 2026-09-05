@@ -32,7 +32,7 @@ switch ($cli) {
     # claude: headless prompt with a narrow tool allowlist + turn cap
     'claude' {
         & claude -p $prompt `
-            --allowedTools "Bash(curl:*)" "Bash(cat:*)" "Bash(echo:*)" "Bash(ls:*)" "Bash(powershell:*)" "Read(*)" `
+            --allowedTools "Bash(curl:*)" "Bash(cat:*)" "Bash(echo:*)" "Bash(ls:*)" "Bash(mkdir:*)" "Bash(powershell:*)" "Read(*)" "Write(*)" `
             --max-turns 40 2>&1 | Add-Content $runLog
     }
     # codex (OpenAI): non-interactive exec mode
