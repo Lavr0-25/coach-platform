@@ -6,6 +6,8 @@ const FIELD_BASE =
 
 const SIZES = {
   md: '',
+  /** compact — плотные формы кабинета/админки (px-4 py-2.5) */
+  compact: 'px-4 py-2.5',
   sm: 'px-3 py-2 text-sm rounded-lg',
 } as const
 

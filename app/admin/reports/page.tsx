@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { deleteReport, upsertStopList } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
+import { Input, Textarea } from '@/components/ui/Input'
 
 interface Report {
   id: string
@@ -173,22 +174,20 @@ export default function ReportsPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Причина блокировки</label>
-                  <textarea 
+                  <Textarea size="compact" 
                     rows={3} 
                     value={banReason} 
                     onChange={(e) => setBanReason(e.target.value)} 
-                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400" 
                     placeholder="Опишите причину..." 
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Срок блокировки (дней)</label>
-                  <input 
+                  <Input size="compact" 
                     type="number" 
                     value={banDuration} 
                     onChange={(e) => setBanDuration(e.target.value)} 
-                    min="1"
-                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400" 
+                    min="1" 
                     placeholder="Например: 7" 
                   />
                 </div>

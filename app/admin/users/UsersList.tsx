@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { banUser, unbanUser } from '@/app/admin/actions'
 import { useToast } from '@/components/Toast'
 import { Badge } from '@/components/ui/Badge'
+import { Input, Textarea } from '@/components/ui/Input'
 
 export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
   const toast = useToast()
@@ -233,24 +234,22 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Причина блокировки <span className="text-red-500">*</span>
                 </label>
-                <textarea
+                <Textarea size="compact"
                   value={banReason}
                   onChange={(e) => setBanReason(e.target.value)}
                   required
                   rows={3}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Опишите причину блокировки..."
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Срок блокировки (дни)</label>
-                <input
+                <Input size="compact"
                   type="number"
                   value={banDuration}
                   onChange={(e) => setBanDuration(e.target.value)}
                   min="1"
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Оставьте пустым для бессрочной блокировки"
                 />
                 <p className="text-xs text-gray-500 mt-1.5">Оставьте пустым для бессрочной блокировки</p>

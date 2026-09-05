@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { checkBannedWords } from '@/lib/banned-words'
 import { useToast } from '@/components/Toast'
+import { Textarea } from '@/components/ui/Input'
 
 interface Review {
   id: string
@@ -447,12 +448,11 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
                 <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">
                   Комментарий
                 </label>
-                <textarea
+                <Textarea
                   id="comment"
                   rows={3}
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color] bg-white"
                   placeholder="Поделитесь впечатлениями..."
                 />
               </div>

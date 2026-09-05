@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { deleteLesson, updateLesson } from '@/app/admin/actions'
 import { useToast } from '@/components/Toast'
+import { Input, Textarea } from '@/components/ui/Input'
 
 // Статус-чипы — семантический цвет в рамке, как во всей админке
 const chip = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border'
@@ -178,12 +179,11 @@ export default function LessonsList({ initialLessons }: { initialLessons: any[] 
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Название урока *
                 </label>
-                <input
+                <Input size="compact"
                   type="text"
                   value={editData.title}
                   onChange={(e) => setEditData({ ...editData, title: e.target.value })}
                   required
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                 />
               </div>
 
@@ -191,11 +191,11 @@ export default function LessonsList({ initialLessons }: { initialLessons: any[] 
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Описание
                 </label>
-                <textarea
+                <Textarea size="compact"
                   value={editData.description}
                   onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                   rows={4}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color] resize-none"
+                  className="resize-none"
                 />
               </div>
 
@@ -204,12 +204,11 @@ export default function LessonsList({ initialLessons }: { initialLessons: any[] 
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Цена (₽)
                   </label>
-                  <input
+                  <Input size="compact"
                     type="number"
                     value={editData.price}
                     onChange={(e) => setEditData({ ...editData, price: parseInt(e.target.value) || 0 })}
                     min="0"
-                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
                   />
                 </div>
 

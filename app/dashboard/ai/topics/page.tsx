@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { ListPlus, Sparkles, Trash2 } from 'lucide-react'
 import { addTopic, deleteTopic } from './actions'
+import { Input, Textarea } from '@/components/ui/Input'
 
 // План тем для ИИ-агента: автор пополняет список, агент берёт следующую тему
 // через /api/agent/topics и публикует уроки через /api/agent/lessons.
@@ -125,22 +126,21 @@ export default function TopicsPage() {
         </h2>
         <form onSubmit={handleAdd} className="space-y-3">
           <div>
-            <input
+            <Input size="compact"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={300}
               placeholder="Тема урока (можно оставить пустой — агент предложит сам)"
-              className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color]"
             />
           </div>
           <div>
-            <textarea
+            <Textarea size="compact"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
               placeholder="Пожелания — необязательно: для кого, какой тон, что раскрыть"
-              className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color] resize-y"
+              className="resize-y"
             />
           </div>
           <Button type="submit" disabled={saving}>

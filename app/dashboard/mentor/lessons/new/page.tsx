@@ -7,6 +7,7 @@ import FileUploader from '@/components/FileUploader'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Input, Textarea } from '@/components/ui/Input'
 
 // На платформе только текстовые уроки: тип контента не выбирается,
 // текст пишется в WYSIWYG-редакторе на странице урока.
@@ -133,24 +134,23 @@ export default function NewLessonPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-1">Название урока *</label>
-              <input
+              <Input
                 id="title"
                 type="text"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                 placeholder="Например: Введение в профессию"
               />
             </div>
             <div>
               <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-1">Описание</label>
-              <textarea
+              <Textarea
                 id="description"
                 rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none transition-[box-shadow,border-color,background-color,color]"
+                className="resize-none"
                 placeholder="Краткое описание урока..."
               />
             </div>
@@ -176,14 +176,13 @@ export default function NewLessonPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="price" className="block text-sm font-semibold text-gray-700 mb-1">Цена урока, ₽</label>
-              <input
+              <Input
                 id="price"
                 type="number"
                 min="0"
                 step="100"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                 placeholder="0"
               />
             </div>

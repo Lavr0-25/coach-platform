@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useToast } from '@/components/Toast'
 import { Badge, BadgeProps } from '@/components/ui/Badge'
+import { Textarea } from '@/components/ui/Input'
 
 interface Feedback {
   id: string
@@ -648,12 +649,12 @@ export default function AdminFeedbackPage() {
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                       Ответ пользователю
                     </label>
-                    <textarea
+                    <Textarea size="compact"
                       value={modalReply}
                       onChange={(e) => setModalReply(e.target.value)}
                       rows={3}
                       placeholder="Например: «Решено 02.09, спасибо, что помогаете сделать платформу лучше» или «Недостаточно данных: уточните, пожалуйста, …» (тогда верните статус «Новое» — пользователь сможет дополнить обращение)"
-                      className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 bg-white text-sm"
+                      className="text-sm"
                     />
                   </div>
                   <div>

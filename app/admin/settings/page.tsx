@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { saveSystemSettings } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
+import { Input } from '@/components/ui/Input'
 
 export default function SettingsPage() {
   const toast = useToast()
@@ -119,7 +120,7 @@ export default function SettingsPage() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Количество жалоб для автобана
               </label>
-              <input
+              <Input
                 type="number"
                 min="1"
                 max="10"
@@ -128,7 +129,6 @@ export default function SettingsPage() {
                   ...settings,
                   autoBanThreshold: Math.max(1, Math.min(10, parseInt(e.target.value) || 1))
                 })}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color] bg-white"
               />
               <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,7 +143,7 @@ export default function SettingsPage() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Длительность блокировки (дней)
               </label>
-              <input
+              <Input
                 type="number"
                 min="1"
                 max="365"
@@ -152,7 +152,6 @@ export default function SettingsPage() {
                   ...settings,
                   autoBanDurationDays: Math.max(1, Math.min(365, parseInt(e.target.value) || 1))
                 })}
-                className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color] bg-white"
               />
               <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

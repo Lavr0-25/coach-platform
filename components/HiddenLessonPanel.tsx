@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { Input } from '@/components/ui/Input'
 import {
   setLessonHidden,
   setLessonLinkAccess,
@@ -385,12 +386,12 @@ export default function HiddenLessonPanel({
         <p className="font-semibold text-gray-900 text-sm">Пригласить человека</p>
         <p className="text-sm text-gray-500 mt-0.5">Начните вводить имя или email — выберите из списка (видны аватарка, имя и почта)</p>
         <div className="relative mt-2">
-          <input
+          <Input size="compact"
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Иван Петров или ivan@mail.ru"
-            className="w-full px-4 py-2.5 border border-purple-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400"
+            className="text-sm"
           />
           {searching && (
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">поиск…</span>

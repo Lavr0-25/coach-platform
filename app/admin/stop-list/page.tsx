@@ -6,6 +6,7 @@ import { upsertStopList, removeStopListEntry } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import { Input, Textarea } from '@/components/ui/Input'
 
 interface StopListEntry {
   id: string
@@ -294,14 +295,13 @@ export default function StopListPage() {
               <div className="space-y-4">
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Имя пользователя</label>
-                  <input 
+                  <Input size="compact" 
                     type="text" 
                     value={searchQuery} 
                     onChange={(e) => { 
                       setSearchQuery(e.target.value)
                       searchUser()
                     }} 
-                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400" 
                     placeholder="Введите имя..." 
                   />
                   {searchResults.length > 0 && (
@@ -324,21 +324,19 @@ export default function StopListPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Причина</label>
-                  <textarea 
+                  <Textarea size="compact" 
                     rows={3} 
                     value={newBan.reason} 
                     onChange={(e) => setNewBan({ ...newBan, reason: e.target.value })} 
-                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400" 
                     placeholder="Опишите причину..." 
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Заблокировать до</label>
-                  <input 
+                  <Input size="compact" 
                     type="datetime-local" 
                     value={newBan.banned_until} 
                     onChange={(e) => setNewBan({ ...newBan, banned_until: e.target.value })} 
-                    className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400" 
                   />
                 </div>
                 <div className="flex gap-3 pt-2">

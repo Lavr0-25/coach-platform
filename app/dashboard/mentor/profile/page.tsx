@@ -10,6 +10,7 @@ import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
+import { Input, Textarea } from '@/components/ui/Input'
 
 export default function MentorProfilePage() {
   const supabase = createClient()
@@ -618,13 +619,12 @@ export default function MentorProfilePage() {
                 <label htmlFor="displayName" className="block text-sm font-semibold text-gray-700 mb-2">
                   Имя для отображения *
                 </label>
-                <input
+                <Input size="compact"
                   id="displayName"
                   type="text"
                   required
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Иван Иванов"
                 />
               </div>
@@ -633,12 +633,11 @@ export default function MentorProfilePage() {
                 <label htmlFor="specialization" className="block text-sm font-semibold text-gray-700 mb-2">
                   Специализация
                 </label>
-                <input
+                <Input size="compact"
                   id="specialization"
                   type="text"
                   value={specialization}
                   onChange={(e) => setSpecialization(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Психолог, бизнес-коуч, преподаватель"
                 />
               </div>
@@ -647,12 +646,12 @@ export default function MentorProfilePage() {
                 <label htmlFor="bio" className="block text-sm font-semibold text-gray-700 mb-2">
                   О себе
                 </label>
-                <textarea
+                <Textarea size="compact"
                   id="bio"
                   rows={4}
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none transition-[box-shadow,border-color,background-color,color]"
+                  className="resize-none"
                   placeholder="Расскажите о себе, своём опыте и подходе..."
                 />
               </div>
@@ -715,13 +714,12 @@ export default function MentorProfilePage() {
                 <label htmlFor="newPassword" className="block text-sm font-semibold text-gray-700 mb-2">
                   Новый пароль *
                 </label>
-                <input
+                <Input size="compact"
                   id="newPassword"
                   type="password"
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Минимум 8 символов"
                 />
               </div>
@@ -730,13 +728,12 @@ export default function MentorProfilePage() {
                 <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-2">
                   Подтвердите пароль *
                 </label>
-                <input
+                <Input size="compact"
                   id="confirmPassword"
                   type="password"
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-[box-shadow,border-color,background-color,color]"
                   placeholder="Повторите пароль"
                 />
               </div>
