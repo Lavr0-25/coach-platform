@@ -474,6 +474,34 @@ html[data-theme="dark"][data-palette="b3"] { --paper: #131313; --card: #1d1d1f; 
   margin: 0;
 }
 
+/* Код-блок и инлайн-код в тексте урока: тёмная «консоль», не растягивает мобильный */
+.lesson-prose pre,
+.lesson-prose-editor pre {
+  background: #0d1117;
+  color: #c9d1d9;
+  border-radius: 0.75rem;
+  padding: 1em 1.2em;
+  overflow-x: auto;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+
+.lesson-prose pre code,
+.lesson-prose-editor pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.lesson-prose code,
+.lesson-prose-editor code {
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+  color: var(--ink);
+  border-radius: 0.35rem;
+  padding: 0.1em 0.4em;
+  font-size: 0.88em;
+}
+
 /* Картинка в тексте — скруглённая, на всю ширину колонки, с подписью из alt */
 .lesson-prose img,
 .lesson-prose-editor img {
