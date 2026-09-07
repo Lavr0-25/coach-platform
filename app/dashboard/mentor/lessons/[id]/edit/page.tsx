@@ -86,7 +86,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
       if (lessonError) throw lessonError
 
       if (!lesson) {
-        setError('Урок не найден — возможно, он был удалён. Откройте «Мои уроки» заново.')
+        setError('Урок не найден — возможно, он был удалён. Откройте «Мои материалы» заново.')
         return
       }
 

@@ -29,11 +29,22 @@ Add-Content $runLog "$stamp`tstart ($cli)"
 
 $prompt = Get-Content (Join-Path $dir 'prompt.md') -Raw
 switch ($cli) {
-    # claude: headless prompt with a narrow tool allowlist + turn cap
+    # claude: headless prompt with a narrow tool allowlist + turn cap.
+    # Missed-start catch-up can fire right after boot, before Wi-Fi is up:
+    # OAuth refresh fails and claude exits with "Not logged in". Retry with a
+    # delay so the token can refresh once the network is available.
     'claude' {
-        & claude -p $prompt `
-            --allowedTools "Bash(curl:*)" "Bash(cat:*)" "Bash(echo:*)" "Bash(ls:*)" "Bash(mkdir:*)" "Bash(powershell:*)" "Read(*)" "Write(*)" `
-            --max-turns 40 2>&1 | Add-Content $runLog
+        $maxAttempts = 3
+        for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            if ($attempt -gt 1) {
+                Add-Content $runLog "$stamp`tnot logged in, retry $attempt/$maxAttempts in 90s"
+                Start-Sleep -Seconds 90
+            }
+            & claude -p $prompt `
+                --allowedTools "Bash(curl:*)" "Bash(cat:*)" "Bash(echo:*)" "Bash(ls:*)" "Bash(mkdir:*)" "Bash(powershell:*)" "Read(*)" "Write(*)" `
+                --max-turns 40 2>&1 | Tee-Object -Variable lastOut | Add-Content $runLog
+            if (-not (($lastOut -join ' ') -match 'Not logged in')) { break }
+        }
     }
     # codex (OpenAI): non-interactive exec mode
     'codex' {

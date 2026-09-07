@@ -460,7 +460,7 @@ export default function HomeFeed({
                     : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
                 }`}
               >
-                Уроки
+                Материалы
               </button>
 
               <button

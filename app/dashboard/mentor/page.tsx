@@ -89,7 +89,7 @@ export default async function MentorDashboardPage() {
 
   // Плитки статистики — каждая ведёт в свой раздел
   const stats = [
-    { href: '/dashboard/mentor/lessons', value: lessonsCount, label: 'Мои уроки' },
+    { href: '/dashboard/mentor/lessons', value: lessonsCount, label: 'Мои материалы' },
     { href: '/dashboard/mentor/courses', value: coursesCount, label: 'Курсы' },
     { href: '/dashboard/mentor/subscribers', value: subscribersCount, label: 'Подписчики' },
     { href: '/favorites', value: favoritesCount, label: 'Избранное' },
@@ -108,7 +108,7 @@ export default async function MentorDashboardPage() {
           </h1>
         </div>
         <Button href="/dashboard/mentor/lessons/new">
-          <Plus className="w-4 h-4" /> Создать урок
+          <Plus className="w-4 h-4" /> Создать материал
         </Button>
       </div>
 

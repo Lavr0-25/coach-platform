@@ -34,7 +34,7 @@ export const SECTIONS: HelpSection[] = [
   },
   {
     id: "lessons",
-    title: "Мои уроки",
+    title: "Мои материалы",
     emoji: "📚",
     match: (p) => p.startsWith("/dashboard/mentor/lessons"),
     content: <LessonsHelp />,

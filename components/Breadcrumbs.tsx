@@ -26,7 +26,7 @@ export default function Breadcrumbs() {
       'settings': 'Настройки',
       'users': 'Пользователи',
       'coaches': 'Наставники',
-      'lessons': 'Уроки',
+      'lessons': 'Материалы',
       'api-keys': 'API-ключи агента',
     }
 

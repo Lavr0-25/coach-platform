@@ -103,7 +103,7 @@ export default function NewLessonPage() {
       {/* Навигация по разделам кабинета (заменяет кнопку «Назад») */}
       <MentorSectionNav className="mb-6" />
 
-      <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-8">Создание нового урока</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold gradient-text mb-8">Создание нового материала</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
@@ -222,7 +222,7 @@ export default function NewLessonPage() {
         {/* Кнопки */}
         <div className="flex flex-col sm:flex-row gap-4 pt-4">
           <Button type="submit" loading={loading} className="flex-1 sm:flex-none">
-            {loading ? 'Создание...' : 'Создать урок'}
+            {loading ? 'Создание...' : 'Создать материал'}
           </Button>
 
           <Button href="/dashboard/mentor/lessons" variant="outline" className="flex-1 sm:flex-none">

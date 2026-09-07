@@ -320,7 +320,7 @@ export default function FavoritesPage() {
         <div className="mb-10">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
             <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white"><FileText className="w-4 h-4" /></span>
-            Уроки {debouncedSearch && <span className="text-base text-gray-500">({filteredLessons.length})</span>}
+            Материалы {debouncedSearch && <span className="text-base text-gray-500">({filteredLessons.length})</span>}
           </h2>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

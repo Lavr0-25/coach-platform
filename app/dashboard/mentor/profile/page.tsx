@@ -501,7 +501,7 @@ export default function MentorProfilePage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                   <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📝</span>
-                  Мои уроки {debouncedSearch && <span className="text-base text-gray-500">({filteredLessons.length})</span>}
+                  Мои материалы {debouncedSearch && <span className="text-base text-gray-500">({filteredLessons.length})</span>}
                 </h2>
                 <Link href="/dashboard/mentor/lessons" className="text-purple-600 hover:text-purple-700 font-medium text-sm">
                   Все уроки →
@@ -574,7 +574,7 @@ export default function MentorProfilePage() {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Создать урок
+                    Создать материал
                   </Button>
                   <Button href="/dashboard/mentor/courses" variant="outline">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
