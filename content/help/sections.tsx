@@ -1,4 +1,19 @@
 import type { ReactNode } from "react";
+import {
+  BookText,
+  Bot,
+  GraduationCap,
+  Home,
+  IdCard,
+  Mail,
+  MessageCircle,
+  Palette,
+  Shield,
+  Users,
+  ChartColumn,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 import CabinetHelp from "./cabinet";
 import LessonsHelp from "./lessons";
 import CoursesHelp from "./courses";
@@ -19,7 +34,7 @@ import ThemeHelp from "./theme";
 export type HelpSection = {
   id: string;
   title: string;
-  emoji: string;
+  icon: LucideIcon;
   match: (path: string) => boolean;
   content: ReactNode;
 };
@@ -28,70 +43,70 @@ export const SECTIONS: HelpSection[] = [
   {
     id: "cabinet",
     title: "Кабинет автора",
-    emoji: "🏠",
+    icon: Home,
     match: (p) => p === "/dashboard/mentor",
     content: <CabinetHelp />,
   },
   {
     id: "lessons",
     title: "Мои материалы",
-    emoji: "📚",
+    icon: BookText,
     match: (p) => p.startsWith("/dashboard/mentor/lessons"),
     content: <LessonsHelp />,
   },
   {
     id: "courses",
     title: "Мои курсы",
-    emoji: "🎓",
+    icon: GraduationCap,
     match: (p) => p.startsWith("/dashboard/mentor/courses"),
     content: <CoursesHelp />,
   },
   {
     id: "subscribers",
     title: "Подписчики",
-    emoji: "👥",
+    icon: Users,
     match: (p) => p === "/dashboard/mentor/subscribers",
     content: <SubscribersHelp />,
   },
   {
     id: "analytics",
     title: "Аналитика",
-    emoji: "📊",
+    icon: ChartColumn,
     match: (p) => p.startsWith("/mentor/analytics"),
     content: <AnalyticsHelp />,
   },
   {
     id: "messages",
     title: "Личные сообщения",
-    emoji: "💬",
+    icon: MessageCircle,
     match: (p) => p === "/messages" || p.startsWith("/messages/"),
     content: <MessagesHelp />,
   },
   {
     id: "profile",
     title: "Профиль автора",
-    emoji: "🪪",
+    icon: IdCard,
     match: (p) => p === "/dashboard/mentor/profile",
     content: <ProfileHelp />,
   },
   {
     id: "ai",
     title: "Управление с ИИ",
-    emoji: "🤖",
+    icon: Bot,
     match: (p) => p.startsWith("/dashboard/ai"),
     content: <AiHelp />,
   },
   {
     id: "feedback",
     title: "Мои обращения",
-    emoji: "📮",
+    icon: Mail,
     match: (p) => p === "/feedback",
     content: <FeedbackHelp />,
   },
   {
     id: "admin",
     title: "Админ-панель",
-    emoji: "🛠️",
+    icon: Wrench,
     match: (p) =>
       ["/admin", "/admin/users", "/admin/lessons", "/admin/coaches"].includes(
         p,
@@ -101,7 +116,7 @@ export const SECTIONS: HelpSection[] = [
   {
     id: "moderation",
     title: "Модерация (админ)",
-    emoji: "🛡️",
+    icon: Shield,
     match: (p) =>
       [
         "/admin/feedback",
@@ -114,7 +129,7 @@ export const SECTIONS: HelpSection[] = [
   {
     id: "theme",
     title: "Настройки интерфейса",
-    emoji: "🎨",
+    icon: Palette,
     // Открывается только вручную: /help?раздел=theme
     match: () => false,
     content: <ThemeHelp />,

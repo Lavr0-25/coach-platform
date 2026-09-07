@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { BookOpen, FileText } from 'lucide-react'
+import { BookOpen, FileText, Heart, SearchX } from 'lucide-react'
 import RemoveFavoriteButton from '@/components/RemoveFavoriteButton'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
@@ -217,7 +217,7 @@ export default function FavoritesPage() {
       {/* Если пусто (и нет поиска) */}
       {favCourses.length === 0 && favLessons.length === 0 && (
         <Card variant="glow" padding="none" className="p-12 text-center">
-          <div className="text-6xl mb-4">💜</div>
+          <div className="mb-4 flex justify-center"><Heart className="w-16 h-16 text-purple-300" strokeWidth={1.5} /></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Список избранного пуст</h2>
           <p className="text-gray-600 mb-6 max-w-md mx-auto">
             Нажимайте на сердечко на карточках курсов и уроков, чтобы сохранять их здесь
@@ -234,7 +234,7 @@ export default function FavoritesPage() {
       {/* Если ничего не найдено по поиску */}
       {debouncedSearch && totalFavorites === 0 && (
         <Card variant="glow" padding="none" className="p-12 text-center">
-          <div className="text-6xl mb-4">🔍</div>
+          <div className="mb-4 flex justify-center"><SearchX className="w-16 h-16 text-gray-300" strokeWidth={1.5} /></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Ничего не найдено</h2>
           <p className="text-gray-600 max-w-md mx-auto">
             По запросу "{debouncedSearch}" в избранном материалов не найдено.

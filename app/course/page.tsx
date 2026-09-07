@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Card } from '@/components/ui/Card'
+import { BookOpen, GraduationCap } from 'lucide-react'
 
 export default async function CoursesCatalogPage() {
   const supabase = await createClient()
@@ -97,8 +98,8 @@ export default async function CoursesCatalogPage() {
                     className="w-full h-full object-cover transition-transform duration-500"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white text-6xl opacity-50">
-                    🎓
+                  <div className="w-full h-full flex items-center justify-center text-white opacity-50">
+                    <GraduationCap className="w-16 h-16" strokeWidth={1.5} />
                   </div>
                 )}
                 
@@ -173,7 +174,7 @@ export default async function CoursesCatalogPage() {
         </div>
       ) : (
         <Card variant="glow" padding="none" className="p-12 text-center">
-          <div className="text-6xl mb-4">📚</div>
+          <div className="mb-4 flex justify-center"><BookOpen className="w-16 h-16 text-gray-300" strokeWidth={1.5} /></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             Пока нет курсов
           </h2>

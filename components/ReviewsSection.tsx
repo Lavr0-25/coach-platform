@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { checkBannedWords } from '@/lib/banned-words'
 import { useToast } from '@/components/Toast'
 import { Textarea } from '@/components/ui/Input'
+import { MessageSquare } from 'lucide-react'
 
 interface Review {
   id: string
@@ -601,7 +602,7 @@ export default function ReviewsSection({ courseId, lessonId }: ReviewsSectionPro
         </div>
       ) : (
         <div className="text-center py-10">
-          <div className="text-5xl mb-3">💬</div>
+          <div className="mb-3 flex justify-center"><MessageSquare className="w-12 h-12 text-gray-300" strokeWidth={1.5} /></div>
           <p className="text-gray-600 font-medium">
             Пока нет отзывов. Будьте первым!
           </p>

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { addBannedWord, addBannedWordsBatch, deleteBannedWord, clearBannedWords } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
-import { ShieldAlert, Trash2 } from 'lucide-react'
+import { ShieldAlert, Trash2, CircleCheck } from 'lucide-react'
 
 interface BannedWord {
   id: string
@@ -390,7 +390,7 @@ export default function BannedWordsPage() {
           </>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-12 text-center">
-            <div className="text-5xl mb-3">✅</div>
+            <div className="mb-3 flex justify-center"><CircleCheck className="w-12 h-12 text-green-400" strokeWidth={1.5} /></div>
             <h2 className="text-xl font-semibold text-gray-900 mb-1">
               {searchQuery ? 'Ничего не найдено' : 'Список пуст'}
             </h2>

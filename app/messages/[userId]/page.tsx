@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { X } from 'lucide-react'
+import { Ban, X } from 'lucide-react'
 import EmojiPicker from '@/components/EmojiPicker'
 import { useMobileChat } from '@/components/MessagesLayoutShell'
 import { useToast } from '@/components/Toast'
@@ -337,7 +337,7 @@ export default function ChatPage() {
     return (
       <div className="flex flex-col h-full items-center justify-center bg-gray-50 p-8">
         <div className="text-center">
-          <div className="text-6xl mb-4">🚫</div>
+          <div className="mb-4 flex justify-center"><Ban className="w-16 h-16 text-red-300" strokeWidth={1.5} /></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {isBlocked ? `Вы заблокировали ${otherUser?.display_name || 'этого пользователя'}` : `${otherUser?.display_name || 'Этот пользователь'} заблокировал вас`}
           </h2>

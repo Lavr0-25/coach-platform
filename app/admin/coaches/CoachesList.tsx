@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { setCoachVerified } from '@/app/admin/actions'
 import { useToast } from '@/components/Toast'
+import { GraduationCap } from 'lucide-react'
 
 // Статус-чипы — семантический цвет в рамке, как во всей админке
 const chip = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border'
@@ -144,7 +145,7 @@ export default function CoachesList({ initialCoaches }: { initialCoaches: any[] 
         </div>
       ) : (
         <div className="p-12 text-center text-gray-500">
-          <div className="text-5xl mb-3">🎓</div>
+          <div className="mb-3 flex justify-center"><GraduationCap className="w-12 h-12 text-gray-300" strokeWidth={1.5} /></div>
           <p className="text-lg font-semibold text-gray-900">Ничего не найдено</p>
           <p className="text-sm mt-1">Попробуйте изменить поиск или фильтр</p>
         </div>

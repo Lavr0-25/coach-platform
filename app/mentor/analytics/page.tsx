@@ -8,6 +8,7 @@ import Image from 'next/image'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
+import { Inbox } from 'lucide-react'
 
 export default function AnalyticsPage() {
   const supabase = createClient()
@@ -389,7 +390,7 @@ export default function AnalyticsPage() {
           </div>
         ) : (
           <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-8 text-center">
-            <div className="text-6xl mb-4">📭</div>
+            <div className="mb-4 flex justify-center"><Inbox className="w-16 h-16 text-gray-300" strokeWidth={1.5} /></div>
             <p className="text-gray-600 mb-2">Пока нет данных об активности</p>
             <p className="text-sm text-gray-500">
               Когда подписчики начнут смотреть ваши уроки, здесь появится график
@@ -516,7 +517,7 @@ export default function AnalyticsPage() {
       {/* Если уроков нет */}
       {lessonsStats.length === 0 && (
         <Card variant="glow" padding="none" className="p-12 text-center mb-8">
-          <div className="text-6xl mb-4">📭</div>
+          <div className="mb-4 flex justify-center"><Inbox className="w-16 h-16 text-gray-300" strokeWidth={1.5} /></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Пока нет уроков</h2>
           <p className="text-gray-600 mb-6">
             Создайте свой первый урок, чтобы увидеть статистику

@@ -4,7 +4,7 @@ import { redirect, notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { Lock } from 'lucide-react'
+import { GraduationCap, Lock } from 'lucide-react'
 import FavoriteButton from '@/components/FavoriteButton'
 import ProfileActions from '@/components/ProfileActions'
 import { Badge } from '@/components/ui/Badge'
@@ -285,7 +285,7 @@ export default async function ProfilePage({ params }: MentorPageProps) {
       {/* Пока нет ничего */}
       {courses.length === 0 && lessons.length === 0 && (
         <Card variant="glow" padding="none" className="p-12 text-center">
-          <div className="text-6xl mb-4">🎓</div>
+          <div className="mb-4 flex justify-center"><GraduationCap className="w-16 h-16 text-gray-300" strokeWidth={1.5} /></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Пока нет пройденных курсов</h2>
           <p className="text-gray-600 max-w-md mx-auto">
             Здесь появятся курсы и уроки, которые пользователь прошёл или купил

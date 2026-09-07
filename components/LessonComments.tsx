@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { checkBannedWords } from '@/lib/banned-words'
-import { Flag, Pencil, Trash2 } from 'lucide-react'
+import { Flag, MessageSquare, Pencil, Trash2 } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import { Textarea } from '@/components/ui/Input'
 
@@ -533,7 +533,7 @@ export default function LessonComments({ lessonId, courseId }: LessonCommentsPro
       <div className="space-y-6">
         {filteredComments.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            <div className="text-4xl mb-2">💬</div>
+            <div className="mb-2 flex justify-center"><MessageSquare className="w-10 h-10 text-gray-300" strokeWidth={1.5} /></div>
             <p className="text-sm sm:text-base">{showReviewsOnly ? 'Пока нет отзывов с оценками' : 'Пока нет комментариев. Будьте первым!'}</p>
           </div>
         ) : (

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Trash2 } from 'lucide-react'
+import { SearchX, Trash2 } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import { deleteLesson } from '@/app/actions/deleteLesson'
 import { setLessonPublishAt } from '@/app/actions/updateLesson'
@@ -574,7 +574,7 @@ export default function MentorLessonsPage() {
       {/* Если уроков нет или ничего не найдено */}
       {filteredLessons.length === 0 && (
         <Card variant="glow" padding="none" className="p-12 text-center">
-          <div className="text-6xl mb-4">🔍</div>
+          <div className="mb-4 flex justify-center"><SearchX className="w-16 h-16 text-gray-300" strokeWidth={1.5} /></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {debouncedSearch ? 'Ничего не найдено' : 'Пока нет уроков'}
           </h2>

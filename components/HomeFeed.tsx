@@ -10,6 +10,7 @@ import FavoriteButton from '@/components/FavoriteButton'
 import { useSearch } from '@/components/SearchContext'
 import { useToast } from '@/components/Toast'
 import { Card } from '@/components/ui/Card'
+import { SearchX } from 'lucide-react'
 
 export interface HomeItem {
   id: string
@@ -551,7 +552,7 @@ export default function HomeFeed({
             {/* Сетка контента */}
             {displayedContent.length === 0 ? (
               <div className="text-center py-16">
-                <div className="text-6xl mb-4">🔍</div>
+                <div className="mb-4 flex justify-center"><SearchX className="w-16 h-16 text-gray-300" strokeWidth={1.5} /></div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   {activeFilter === 'subscriptions'
                     ? 'Нет контента от ваших подписок'

@@ -10,6 +10,7 @@ import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
+import { SearchX } from 'lucide-react'
 import { Input, Textarea } from '@/components/ui/Input'
 
 export default function MentorProfilePage() {
@@ -558,7 +559,7 @@ export default function MentorProfilePage() {
           {/* Если ничего не найдено */}
           {filteredCourses.length === 0 && filteredLessons.length === 0 && (
             <Card variant="glow" padding="none" className="p-12 text-center">
-              <div className="text-6xl mb-4">🔍</div>
+              <div className="mb-4 flex justify-center"><SearchX className="w-16 h-16 text-gray-300" strokeWidth={1.5} /></div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 {debouncedSearch ? 'Ничего не найдено' : 'Пока нет материалов'}
               </h2>

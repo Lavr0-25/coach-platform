@@ -6,7 +6,7 @@ import { deleteReport, upsertStopList } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
 import { Input, Textarea } from '@/components/ui/Input'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, CircleCheck } from 'lucide-react'
 
 interface Report {
   id: string
@@ -166,7 +166,7 @@ export default function ReportsPage() {
               ))
             ) : (
               <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-12 text-center">
-                <div className="text-5xl mb-3">✅</div>
+                <div className="mb-3 flex justify-center"><CircleCheck className="w-12 h-12 text-green-400" strokeWidth={1.5} /></div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-1">Жалоб нет</h2>
                 <p className="text-gray-600 text-sm">В этой категории пока нет жалоб</p>
               </div>

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { SearchX } from 'lucide-react'
 
 interface MentorsClientProps {
   initialCoaches: any[]
@@ -161,7 +162,7 @@ export default function MentorsClient({ initialCoaches }: MentorsClientProps) {
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border p-12 text-center">
-          <div className="text-6xl mb-4">🔍</div>
+          <div className="mb-4 flex justify-center"><SearchX className="w-16 h-16 text-gray-300" strokeWidth={1.5} /></div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">
             Ничего не найдено
           </h2>

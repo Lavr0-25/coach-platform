@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import { Users } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 
 interface Subscriber {
@@ -244,7 +245,7 @@ export default function SubscribersPage() {
         </div>
       ) : subscribers.length === 0 ? (
         <Card variant="glow" padding="none" className="p-12 text-center">
-          <div className="text-6xl mb-4">👥</div>
+          <div className="mb-4 flex justify-center"><Users className="w-16 h-16 text-gray-300" strokeWidth={1.5} /></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {debouncedSearch ? 'Ничего не найдено' : 'Пока нет подписчиков'}
           </h2>

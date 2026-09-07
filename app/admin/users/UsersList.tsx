@@ -6,6 +6,7 @@ import { banUser, unbanUser } from '@/app/admin/actions'
 import { useToast } from '@/components/Toast'
 import { Badge } from '@/components/ui/Badge'
 import { Input, Textarea } from '@/components/ui/Input'
+import { Users } from 'lucide-react'
 
 export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
   const toast = useToast()
@@ -205,7 +206,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
           </div>
         ) : (
           <div className="p-12 text-center text-gray-500">
-            <div className="text-5xl mb-3">👥</div>
+            <div className="mb-3 flex justify-center"><Users className="w-12 h-12 text-gray-300" strokeWidth={1.5} /></div>
             <p className="text-lg font-medium">Ничего не найдено</p>
             <p className="text-sm text-gray-400 mt-1">Попробуйте изменить параметры поиска</p>
           </div>

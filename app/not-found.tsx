@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Compass } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 
 // Кастомная 404 (dogfood #7): посетитель не «выпадает» из продукта —
@@ -7,7 +8,7 @@ export default function NotFound() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4 pt-24 pb-16">
       <Card variant="glow" padding="none" className="p-8 sm:p-12 text-center max-w-lg w-full">
-        <div className="text-6xl mb-4">🧭</div>
+        <div className="mb-4 flex justify-center"><Compass className="w-16 h-16 text-purple-400" strokeWidth={1.5} /></div>
         <h1 className="text-4xl sm:text-5xl font-bold gradient-text mb-3">404</h1>
         <h2 className="text-xl font-bold text-gray-900 mb-2">Страница не найдена</h2>
         <p className="text-gray-600 mb-8">
