@@ -6,6 +6,7 @@ import { deleteReport, upsertStopList } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
 import { Input, Textarea } from '@/components/ui/Input'
+import { AlertTriangle } from 'lucide-react'
 
 interface Report {
   id: string
@@ -23,7 +24,14 @@ export default function ReportsPage() {
   const [commentReports, setCommentReports] = useState<Report[]>([])
   const [reviewReports, setReviewReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
+  // Таб можно открыть сразу через адрес: /admin/reports?tab=reviews
   const [tab, setTab] = useState<'comments' | 'reviews'>('comments')
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('tab') === 'reviews') {
+      setTab('reviews')
+    }
+  }, [])
   const [showBanModal, setShowBanModal] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState('')
   const [banReason, setBanReason] = useState('')
@@ -103,7 +111,7 @@ export default function ReportsPage() {
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold gradient-text">⚠️ Жалобы</h1>
+            <h1 className="text-2xl md:text-3xl font-bold gradient-text flex items-center gap-3"><AlertTriangle className="w-7 h-7 md:w-8 md:h-8 flex-shrink-0" />Жалобы</h1>
             <p className="text-gray-600 text-sm mt-1">Просмотр и модерация жалоб на контент</p>
           </div>
           <Link href="/admin" className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm">← Назад</Link>

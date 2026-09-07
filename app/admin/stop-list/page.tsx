@@ -6,6 +6,7 @@ import { upsertStopList, removeStopListEntry } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import { Ban } from 'lucide-react'
 import { Input, Textarea } from '@/components/ui/Input'
 
 interface StopListEntry {
@@ -157,7 +158,7 @@ export default function StopListPage() {
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold gradient-text">🚫 Стоп-лист</h1>
+            <h1 className="text-2xl md:text-3xl font-bold gradient-text flex items-center gap-3"><Ban className="w-7 h-7 md:w-8 md:h-8 flex-shrink-0" />Стоп-лист</h1>
             <p className="text-gray-600 text-sm mt-1">Управление заблокированными пользователями</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">

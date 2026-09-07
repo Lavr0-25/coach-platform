@@ -6,6 +6,7 @@ import { saveSystemSettings } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
 import { Input } from '@/components/ui/Input'
+import { Settings } from 'lucide-react'
 
 export default function SettingsPage() {
   const toast = useToast()
@@ -80,7 +81,7 @@ export default function SettingsPage() {
         {/* Заголовок */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold gradient-text">⚙️ Настройки системы</h1>
+            <h1 className="text-2xl md:text-3xl font-bold gradient-text flex items-center gap-3"><Settings className="w-7 h-7 md:w-8 md:h-8 flex-shrink-0" />Настройки системы</h1>
             <p className="text-gray-600 text-sm mt-1">Управление параметрами автоматической модерации</p>
           </div>
           <Link

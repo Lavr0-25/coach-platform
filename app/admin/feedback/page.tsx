@@ -6,6 +6,7 @@ import { updateFeedbackStatus, bulkUpdateFeedbackStatus } from '@/app/admin/acti
 import Link from 'next/link'
 import Image from 'next/image'
 import { useToast } from '@/components/Toast'
+import { ClipboardList } from 'lucide-react'
 import { Badge, BadgeProps } from '@/components/ui/Badge'
 import { Textarea } from '@/components/ui/Input'
 
@@ -225,7 +226,7 @@ export default function AdminFeedbackPage() {
         {/* Заголовок */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold gradient-text">📋 Обратная связь</h1>
+            <h1 className="text-2xl md:text-3xl font-bold gradient-text flex items-center gap-3"><ClipboardList className="w-7 h-7 md:w-8 md:h-8 flex-shrink-0" />Обратная связь</h1>
             <p className="text-gray-600 text-sm mt-1">Баги и предложения пользователей</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import UsersList from './UsersList'
 import Breadcrumbs from '@/components/Breadcrumbs'
+import { Users } from 'lucide-react'
 
 export default async function AdminUsersPage({
   searchParams,
@@ -137,8 +138,9 @@ export default async function AdminUsersPage({
         <Breadcrumbs />
 
         <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold gradient-text mb-2">
-            👥 Управление пользователями
+          <h1 className="text-2xl md:text-3xl font-bold gradient-text mb-2 flex items-center gap-3">
+            <Users className="w-7 h-7 md:w-8 md:h-8 flex-shrink-0" />
+            Управление пользователями
           </h1>
           <p className="text-gray-600 text-sm">
             Просмотр, поиск и управление учетными записями платформы

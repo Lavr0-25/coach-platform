@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import LessonsList from './LessonsList'
+import { BookOpen } from 'lucide-react'
 
 export default async function AdminLessonsPage({
   searchParams,
@@ -62,8 +63,8 @@ export default async function AdminLessonsPage({
         {/* Заголовок */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold gradient-text">📚 Уроки</h1>
-            <p className="text-gray-600 text-sm mt-1">Просмотр и управление уроками платформы</p>
+            <h1 className="text-2xl md:text-3xl font-bold gradient-text flex items-center gap-3"><BookOpen className="w-7 h-7 md:w-8 md:h-8 flex-shrink-0" />Материалы</h1>
+            <p className="text-gray-600 text-sm mt-1">Просмотр и управление материалами платформы</p>
           </div>
           <Link href="/admin" className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-colors text-sm">
             ← Назад

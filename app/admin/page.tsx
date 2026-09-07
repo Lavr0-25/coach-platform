@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { LayoutDashboard } from 'lucide-react'
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -45,8 +46,9 @@ export default async function AdminPage() {
         
         {/* Заголовок */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold gradient-text mb-2">
-            ️ Админ-панель
+          <h1 className="text-3xl md:text-4xl font-bold gradient-text mb-2 flex items-center gap-3">
+            <LayoutDashboard className="w-8 h-8 md:w-9 md:h-9 flex-shrink-0" />
+            Админ-панель
           </h1>
           <p className="text-gray-600">
             Добро пожаловать, <span className="font-semibold text-purple-700">{coach.display_name || 'Администратор'}</span>!
@@ -92,24 +94,28 @@ export default async function AdminPage() {
             value={lessonsCount || 0}
             icon={<BookIcon />}
             textColor="text-indigo-700"
+            href="/admin/lessons"
           />
           <MiniStatCard
             title="Жалоб на комментарии"
             value={commentReportsCount || 0}
             icon={<CommentIcon />}
             textColor="text-orange-700"
+            href="/admin/reports?tab=comments"
           />
           <MiniStatCard
             title="Жалоб на отзывы"
             value={reviewReportsCount || 0}
             icon={<StarIcon />}
             textColor="text-pink-700"
+            href="/admin/reports?tab=reviews"
           />
           <MiniStatCard
             title="Новых обращений"
             value={newFeedbackCount || 0}
             icon={<FeedbackIcon />}
             textColor="text-blue-700"
+            href="/admin/feedback"
           />
         </div>
 
@@ -205,10 +211,11 @@ function StatCard({ title, value, icon, color, href }: any) {
   )
 }
 
-// Маленькая карточка статистики — в том же белом стиле
-function MiniStatCard({ title, value, icon, textColor }: any) {
-  return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-4">
+// Маленькая карточка статистики — в том же белом стиле.
+// С href — кликабельная ссылка на раздел (как StatCard), без — просто карточка.
+function MiniStatCard({ title, value, icon, textColor, href }: any) {
+  const inner = (
+    <div className="bg-white border border-gray-100 rounded-2xl p-4 group-hover:shadow-lg group-hover:border-purple-200 transition-[box-shadow,border-color] duration-200">
       <div className="flex items-center gap-3">
         <div className="text-2xl">{icon}</div>
         <div>
@@ -217,6 +224,14 @@ function MiniStatCard({ title, value, icon, textColor }: any) {
         </div>
       </div>
     </div>
+  )
+
+  if (!href) return inner
+
+  return (
+    <Link href={href} className="block group">
+      {inner}
+    </Link>
   )
 }
 

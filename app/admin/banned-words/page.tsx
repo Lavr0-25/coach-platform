@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { addBannedWord, addBannedWordsBatch, deleteBannedWord, clearBannedWords } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
+import { ShieldAlert, Trash2 } from 'lucide-react'
 
 interface BannedWord {
   id: string
@@ -184,7 +185,7 @@ export default function BannedWordsPage() {
         {/* Заголовок */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold gradient-text"> Запрещённые слова</h1>
+            <h1 className="text-2xl md:text-3xl font-bold gradient-text flex items-center gap-3"><ShieldAlert className="w-7 h-7 md:w-8 md:h-8 flex-shrink-0" />Запрещённые слова</h1>
             <p className="text-gray-600 text-sm mt-1">
               Управление списком запрещённых слов для комментариев и отзывов
             </p>
@@ -246,7 +247,7 @@ export default function BannedWordsPage() {
                 onClick={() => setShowClearModal(true)}
                 className="px-4 py-2.5 bg-white border border-red-200 text-red-700 rounded-xl font-medium hover:bg-red-50 transition-colors text-sm"
               >
-                🗑️ Очистить всё
+                <Trash2 className="w-4 h-4 inline-block mr-1 -mt-0.5" />Очистить всё
               </button>
             )}
           </div>
