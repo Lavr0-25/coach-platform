@@ -6,7 +6,7 @@ import { saveSystemSettings } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
 import { Input } from '@/components/ui/Input'
-import { Settings } from 'lucide-react'
+import { Info, Settings } from 'lucide-react'
 
 export default function SettingsPage() {
   const toast = useToast()
@@ -54,7 +54,7 @@ export default function SettingsPage() {
       const result = await saveSystemSettings(settings.autoBanThreshold, settings.autoBanDurationDays)
       if (!result.ok) throw new Error(result.error)
 
-      setSuccessMessage('✅ Настройки успешно сохранены!')
+      setSuccessMessage('Настройки успешно сохранены!')
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (error: any) {
       console.error('Error saving settings:', error)
@@ -188,7 +188,7 @@ export default function SettingsPage() {
         {/* Информационный блок */}
         <div className="bg-white border border-purple-100 rounded-2xl p-5">
           <p className="text-sm font-semibold text-purple-900 mb-3 flex items-center gap-2">
-            <span className="text-lg">ℹ️</span> Алгоритм работы автобана:
+            <Info className="w-4 h-4" strokeWidth={1.5} /> Алгоритм работы автобана:
           </p>
           <ul className="text-sm text-purple-800 space-y-2.5 list-none">
             <li className="flex items-start gap-2">

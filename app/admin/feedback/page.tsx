@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { updateFeedbackStatus, bulkUpdateFeedbackStatus } from '@/app/admin/actions'
+import { updateFeedbackStatus, updateVerificationFeedback, bulkUpdateFeedbackStatus } from '@/app/admin/actions'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useToast } from '@/components/Toast'
-import { ClipboardList } from 'lucide-react'
+import { BadgeCheck, Bug, ClipboardList, Lightbulb, Paperclip } from 'lucide-react'
 import { Badge, BadgeProps } from '@/components/ui/Badge'
 import { Textarea } from '@/components/ui/Input'
 
@@ -14,7 +14,7 @@ interface Feedback {
   id: string
   user_id: string
   user_name: string
-  type: 'bug' | 'feature'
+  type: 'bug' | 'feature' | 'verification'
   title: string
   description: string
   status: 'new' | 'in_progress' | 'resolved' | 'rejected'
@@ -73,11 +73,18 @@ export default function AdminFeedbackPage() {
     }
   }
 
-  const updateStatus = async (id: string, status: Feedback['status'], reply?: string) => {
+  // Смена статуса. Заявки на верификацию идут через отдельное действие:
+  // статус «Решено» там же ставит автору is_verified=true (значок «Проверенный автор»)
+  const updateStatus = async (id: string, status: Feedback['status'], reply?: string, type?: Feedback['type']) => {
     setUpdatingId(id)
     try {
-      const result = await updateFeedbackStatus(id, status, reply)
+      const result = type === 'verification'
+        ? await updateVerificationFeedback(id, status, reply)
+        : await updateFeedbackStatus(id, status, reply)
       if (!result.ok) throw new Error(result.error)
+      if (type === 'verification' && status === 'resolved') {
+        toast.showToast('Автор получил значок «Проверенный автор»', 'success')
+      }
       await loadFeedbacks()
     } catch (err) {
       console.error('Error updating feedback:', err)
@@ -144,7 +151,7 @@ export default function AdminFeedbackPage() {
     const rows = filteredFeedbacks.map(f => [
       f.id,
       f.user_name,
-      f.type === 'bug' ? 'Ошибка' : 'Идея',
+      f.type === 'bug' ? 'Ошибка' : f.type === 'verification' ? 'Заявка на верификацию' : 'Идея',
       f.title,
       f.description,
       getStatusText(f.status),
@@ -182,6 +189,14 @@ export default function AdminFeedbackPage() {
     }
     return map[status] || 'gray'
   }
+
+  // Типы обращений: бейдж в таблице/списке (variant) и в модалке (fillVariant)
+  const TYPE_BADGE_META: Record<string, { label: string; icon: React.ReactNode; variant: NonNullable<BadgeProps['variant']>; fillVariant: NonNullable<BadgeProps['variant']> }> = {
+    bug: { label: 'Ошибка', icon: <Bug className="w-3.5 h-3.5" strokeWidth={1.5} />, variant: 'red', fillVariant: 'redFill' },
+    feature: { label: 'Идея', icon: <Lightbulb className="w-3.5 h-3.5" strokeWidth={1.5} />, variant: 'purple', fillVariant: 'purpleFill' },
+    verification: { label: 'Заявка', icon: <BadgeCheck className="w-3.5 h-3.5" strokeWidth={1.5} />, variant: 'green', fillVariant: 'greenFill' },
+  }
+  const getTypeMeta = (t: string) => TYPE_BADGE_META[t] || TYPE_BADGE_META.feature
 
   const filteredFeedbacks = feedbacks
     .filter(f => filter === 'all' || f.status === filter)
@@ -401,9 +416,9 @@ export default function AdminFeedbackPage() {
                           />
                         </td>
                         <td className="px-6 py-4">
-                          <Badge variant={feedback.type === 'bug' ? 'red' : 'purple'} className="gap-1.5">
-                            {feedback.type === 'bug' ? '🐛' : '💡'}
-                            {feedback.type === 'bug' ? 'Ошибка' : 'Идея'}
+                          <Badge variant={getTypeMeta(feedback.type).variant} className="gap-1.5">
+                            {getTypeMeta(feedback.type).icon}
+                            {getTypeMeta(feedback.type).label}
                           </Badge>
                         </td>
                         <td className="px-6 py-4">
@@ -420,7 +435,7 @@ export default function AdminFeedbackPage() {
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
-                                <span>📎 {feedback.images!.length} файл(ов)</span>
+                                <span className="flex items-center gap-1"><Paperclip className="w-3.5 h-3.5" strokeWidth={1.5} /> {feedback.images!.length} файл(ов)</span>
                               </div>
                             )}
                           </div>
@@ -444,7 +459,7 @@ export default function AdminFeedbackPage() {
                         <td className="px-6 py-4">
                           <select
                             value={feedback.status}
-                            onChange={(e) => updateStatus(feedback.id, e.target.value as Feedback['status'])}
+                            onChange={(e) => updateStatus(feedback.id, e.target.value as Feedback['status'], undefined, feedback.type)}
                             disabled={updatingId === feedback.id}
                             className="px-3 py-1.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 bg-white disabled:opacity-50"
                           >
@@ -473,9 +488,9 @@ export default function AdminFeedbackPage() {
                         onChange={() => toggleSelect(feedback.id)}
                         className="w-4 h-4 accent-purple-600 cursor-pointer"
                       />
-                      <Badge variant={feedback.type === 'bug' ? 'red' : 'purple'}>
-                        {feedback.type === 'bug' ? '🐛' : '💡'}
-                        {feedback.type === 'bug' ? 'Ошибка' : 'Идея'}
+                      <Badge variant={getTypeMeta(feedback.type).variant}>
+                        {getTypeMeta(feedback.type).icon}
+                        {getTypeMeta(feedback.type).label}
                       </Badge>
                       <Badge variant={getStatusVariant(feedback.status)}>
                         {getStatusText(feedback.status)}
@@ -497,7 +512,7 @@ export default function AdminFeedbackPage() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span>📎 {feedback.images!.length} файл(ов)</span>
+                      <span className="flex items-center gap-1"><Paperclip className="w-3.5 h-3.5" strokeWidth={1.5} /> {feedback.images!.length} файл(ов)</span>
                     </div>
                   )}
 
@@ -510,7 +525,7 @@ export default function AdminFeedbackPage() {
                     </div>
                     <select
                       value={feedback.status}
-                      onChange={(e) => updateStatus(feedback.id, e.target.value as Feedback['status'])}
+                      onChange={(e) => updateStatus(feedback.id, e.target.value as Feedback['status'], undefined, feedback.type)}
                       disabled={updatingId === feedback.id}
                       className="px-3 py-1.5 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 bg-white disabled:opacity-50"
                     >
@@ -555,9 +570,9 @@ export default function AdminFeedbackPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <Badge variant={viewingFeedback.type === 'bug' ? 'redFill' : 'purpleFill'}>
-                        {viewingFeedback.type === 'bug' ? '🐛' : '💡'}
-                        {viewingFeedback.type === 'bug' ? 'Ошибка' : 'Идея'}
+                      <Badge variant={getTypeMeta(viewingFeedback.type).fillVariant}>
+                        {getTypeMeta(viewingFeedback.type).icon}
+                        {getTypeMeta(viewingFeedback.type).label}
                       </Badge>
                       <Badge variant={getStatusVariant(viewingFeedback.status)}>
                         {getStatusText(viewingFeedback.status)}
@@ -670,13 +685,19 @@ export default function AdminFeedbackPage() {
                       <option value="resolved">Решено</option>
                       <option value="rejected">Отклонено</option>
                     </select>
+                    {viewingFeedback.type === 'verification' && (
+                      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
+                        Это заявка на верификацию: статус «Решено» выдаст автору значок «Проверенный автор»,
+                        «Отклонено» — отклонит заявку. Пояснение в поле ответа увидит автор в «Мои обращения».
+                      </p>
+                    )}
                   </div>
                   <button
                     type="button"
                     disabled={savingModal || updatingId === viewingFeedback.id}
                     onClick={async () => {
                       setSavingModal(true)
-                      await updateStatus(viewingFeedback.id, modalStatus, modalReply.trim())
+                      await updateStatus(viewingFeedback.id, modalStatus, modalReply.trim(), viewingFeedback.type)
                       // Показываем сохранённое в модалке и в списке
                       setViewingFeedback({
                         ...viewingFeedback,

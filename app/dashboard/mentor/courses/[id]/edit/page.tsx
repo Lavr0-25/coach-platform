@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { Input, Textarea } from '@/components/ui/Input'
+import { CircleCheck, Clock, Lightbulb } from 'lucide-react'
 
 interface Course {
   id: string
@@ -193,7 +194,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
       console.error('Error updating course:', result.error)
       setError(result.error)
     } else {
-      setSuccess('✅ Курс успешно обновлён!')
+      setSuccess('Курс успешно обновлён!')
       setTimeout(() => setSuccess(''), 3000)
     }
     setSaving(false)
@@ -207,7 +208,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
     } else {
       const nowPublished = !isPublished
       setIsPublished(nowPublished)
-      setSuccess(nowPublished ? '✅ Курс опубликован — теперь его видят студенты' : 'Курс снят с публикации — студенты его больше не видят')
+      setSuccess(nowPublished ? 'Курс опубликован — теперь его видят студенты' : 'Курс снят с публикации — студенты его больше не видят')
       setTimeout(() => setSuccess(''), 3000)
     }
     setPublishing(false)
@@ -310,7 +311,11 @@ function EditCourseForm({ courseId }: { courseId: string }) {
       {/* Статус публикации: всегда виден, меняется отдельной кнопкой (не через «Сохранить») */}
       <div className={`rounded-xl border p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isPublished ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
         <div className="flex items-start gap-3">
-          <span className="text-xl leading-none mt-0.5">{isPublished ? '🟢' : '🟡'}</span>
+          {isPublished ? (
+            <CircleCheck className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" strokeWidth={1.5} />
+          ) : (
+            <Clock className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" strokeWidth={1.5} />
+          )}
           <div>
             <p className="font-semibold text-gray-900 text-sm">
               {isPublished ? 'Курс опубликован' : 'Курс — черновик'}
@@ -646,7 +651,7 @@ function EditCourseForm({ courseId }: { courseId: string }) {
 
           <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-5">
             <div className="flex items-start gap-3">
-              <div className="text-2xl">💡</div>
+              <Lightbulb className="w-6 h-6 text-blue-600 mt-0.5 flex-shrink-0" strokeWidth={1.5} />
               <div>
                 <h4 className="font-semibold text-gray-900 mb-1">Совет</h4>
                 <p className="text-sm text-gray-600 leading-relaxed">

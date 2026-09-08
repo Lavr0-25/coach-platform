@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input, Textarea, Label } from '@/components/ui/Input'
 import type { BadgeProps } from '@/components/ui/Badge'
-import { Bug, Lightbulb, Pencil, Trash2 } from 'lucide-react'
+import { BadgeCheck, Bug, Lightbulb, Pencil, Trash2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 
 // Статусы и подписи — как в админке (/admin/feedback), чтобы пользователь
@@ -25,10 +25,11 @@ const STATUS_META: Record<string, { label: string; variant: NonNullable<BadgePro
 const TYPE_META: Record<string, { icon: React.ReactNode; label: string }> = {
   bug: { icon: <Bug className="w-4 h-4" />, label: 'Ошибка' },
   feature: { icon: <Lightbulb className="w-4 h-4" />, label: 'Идея' },
+  verification: { icon: <BadgeCheck className="w-4 h-4" />, label: 'Заявка на верификацию' },
 }
 
 export default function FeedbackPage() {
-  const [type, setType] = useState<'bug' | 'feature'>('feature')
+  const [type, setType] = useState<'bug' | 'feature' | 'verification'>('feature')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [images, setImages] = useState<string[]>([])
@@ -64,6 +65,13 @@ export default function FeedbackPage() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+
+      // Предвыбор типа из ссылки вида /feedback?type=verification
+      // (кнопка «Подать заявку» из кабинета автора ведёт сюда)
+      const typeParam = new URLSearchParams(window.location.search).get('type')
+      if (typeParam === 'bug' || typeParam === 'feature' || typeParam === 'verification') {
+        setType(typeParam)
+      }
 
       if (!user) {
         router.push('/login')
@@ -188,7 +196,11 @@ export default function FeedbackPage() {
 
       if (error) throw error
 
-      setSuccessText('Ваше обращение успешно отправлено.')
+      setSuccessText(
+        type === 'verification'
+          ? 'Заявка на верификацию отправлена. Ответ появится здесь и в кабинете автора.'
+          : 'Ваше обращение успешно отправлено.'
+      )
       setSuccess(true)
       setTitle('')
       setDescription('')
@@ -266,7 +278,7 @@ export default function FeedbackPage() {
           Обратная связь
         </h1>
         <p className="text-gray-600">
-          Помогите нам стать лучше — расскажите о проблеме или предложите новую идею
+          Помогите нам стать лучше — сообщите об ошибке, предложите идею или подайте заявку на верификацию автора
         </p>
       </div>
 
@@ -286,7 +298,7 @@ export default function FeedbackPage() {
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Тип обращения
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <button
                 type="button"
                 onClick={() => setType('feature')}
@@ -311,6 +323,18 @@ export default function FeedbackPage() {
                 <Bug className="w-6 h-6" />
                 <span>Сообщить об ошибке</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setType('verification')}
+                className={`px-4 py-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-3 font-medium ${
+                  type === 'verification'
+                    ? 'border-green-500 bg-green-50 text-green-700 shadow-sm'
+                    : 'border-gray-200 text-gray-600 hover:border-green-300 hover:bg-green-50/50'
+                }`}
+              >
+                <BadgeCheck className="w-6 h-6" />
+                <span>Заявка на верификацию</span>
+              </button>
             </div>
           </div>
 
@@ -329,7 +353,13 @@ export default function FeedbackPage() {
               }}
               required
               maxLength={200}
-              placeholder={type === 'bug' ? 'Краткое описание ошибки' : 'Название вашей идеи'}
+              placeholder={
+                type === 'bug'
+                  ? 'Краткое описание ошибки'
+                  : type === 'verification'
+                    ? 'О себе в двух словах (имя, чем занимаетесь)'
+                    : 'Название вашей идеи'
+              }
             />
           </div>
 
@@ -348,7 +378,9 @@ export default function FeedbackPage() {
               placeholder={
                 type === 'bug'
                   ? 'Опишите, что произошло, шаги для воспроизведения и ожидаемый результат...'
-                  : 'Опишите вашу идею подробно: что это, зачем нужно и как это поможет платформе...'
+                  : type === 'verification'
+                    ? 'Расскажите о себе: опыт, чем занимаетесь, почему обучаете. Приложите ссылки на ваши страницы (сайт, соцсети, портфолио) — по ним админ проверит заявку. Можно прикрепить скриншоты...'
+                    : 'Опишите вашу идею подробно: что это, зачем нужно и как это поможет платформе...'
               }
               className="resize-none"
             />
@@ -357,7 +389,7 @@ export default function FeedbackPage() {
           {/* Загрузка изображений */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Скриншоты и изображения {images.length > 0 && <span className="text-gray-400 font-normal">({images.length})</span>}
+              {type === 'verification' ? 'Скриншоты и подтверждения' : 'Скриншоты и изображения'} {images.length > 0 && <span className="text-gray-400 font-normal">({images.length})</span>}
             </label>
             
             {/* Превью загруженных изображений */}

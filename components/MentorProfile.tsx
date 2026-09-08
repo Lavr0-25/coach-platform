@@ -12,6 +12,7 @@ import FavoriteButton from '@/components/FavoriteButton'
 import ProfileActions from '@/components/ProfileActions'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
+import { BadgeCheck, Briefcase, BookOpen, UserRound } from 'lucide-react'
 
 interface Course {
   id: string
@@ -41,6 +42,7 @@ interface Coach {
   avatar_url: string | null
   bio: string | null
   specialization: string | null
+  is_verified?: boolean
   created_at: string
 }
 
@@ -69,7 +71,7 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
       // Получаем данные автора
       const { data: coachData } = await supabase
         .from('coaches')
-        .select('id, user_id, display_name, avatar_url, bio, specialization, created_at')
+        .select('id, user_id, display_name, avatar_url, bio, specialization, is_verified, created_at')
         .eq('id', coachId)
         .maybeSingle()
 
@@ -235,8 +237,13 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
             {/* Имя и специализация */}
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-                  {coach.display_name || 'Автор'}
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 flex items-center flex-wrap gap-2">
+                  <span>{coach.display_name || 'Автор'}</span>
+                  {coach.is_verified && (
+                    <span title="Проверенный автор — профиль подтверждён администрацией">
+                      <BadgeCheck className="w-7 h-7 sm:w-8 sm:h-8 text-blue-500" strokeWidth={1.5} />
+                    </span>
+                  )}
                 </h1>
                 {coach.specialization && (
                   <p className="text-lg text-purple-600 font-medium">{coach.specialization}</p>
@@ -280,7 +287,9 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
       {coach.bio && (
         <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm"></span>
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
+              <UserRound className="w-4 h-4" strokeWidth={1.5} />
+            </span>
             Об авторе
           </h2>
           <div className="prose prose-purple max-w-none">
@@ -289,8 +298,8 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
           
           {experienceYears > 0 && (
             <div className="mt-6 flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl">
-              <div className="w-12 h-12 gradient-icon rounded-lg flex items-center justify-center text-white text-2xl">
-                
+              <div className="w-12 h-12 gradient-icon rounded-lg flex items-center justify-center text-white">
+                <Briefcase className="w-5 h-5" strokeWidth={1.5} />
               </div>
               <div>
                 <div className="font-semibold text-gray-900">Опыт работы на платформе</div>

@@ -10,7 +10,7 @@ import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
-import { SearchX } from 'lucide-react'
+import { BookOpen, SearchX } from 'lucide-react'
 
 export default function MentorCoursesPage() {
   const [courses, setCourses] = useState<any[]>([])
@@ -189,7 +189,7 @@ export default function MentorCoursesPage() {
                     className="w-full h-full object-cover transition-transform duration-300"
                   />
                 ) : (
-                  <span className="opacity-50">📚</span>
+                  <BookOpen className="w-12 h-12 opacity-50" strokeWidth={1.5} />
                 )}
               </div>
 

@@ -90,7 +90,7 @@ export default async function AdminCoachesPage({
             <input
               type="text"
               name="search"
-              placeholder="🔍 Поиск по имени, специализации..."
+              placeholder="Поиск по имени, специализации..."
               defaultValue={searchQuery}
               className="flex-1 px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
             />
@@ -100,8 +100,8 @@ export default async function AdminCoachesPage({
               className="px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 bg-white transition-[box-shadow,border-color,background-color,color]"
             >
               <option value="all">Все</option>
-              <option value="pending">⏳ Ожидают проверки</option>
-              <option value="verified">✓ Проверенные</option>
+              <option value="pending">Ожидают проверки</option>
+              <option value="verified">Проверенные</option>
             </select>
             <button
               type="submit"

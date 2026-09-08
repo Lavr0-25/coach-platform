@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { Card } from '@/components/ui/Card'
-import { SearchX } from 'lucide-react'
+import { BadgeCheck, SearchX } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Наставники',
@@ -29,6 +29,7 @@ export default async function MentorsPage({ searchParams }: MentorsPageProps) {
       avatar_url,
       specialization,
       bio,
+      is_verified,
       user_id
     `)
     .eq('role', 'mentor')
@@ -174,8 +175,13 @@ export default async function MentorsPage({ searchParams }: MentorsPageProps) {
                 )}
                 
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-gray-900 group-hover:text-purple-600 transition-colors truncate">
-                    {coach.display_name || 'Автор'}
+                  <h3 className="font-bold text-gray-900 group-hover:text-purple-600 transition-colors truncate flex items-center gap-1.5">
+                    <span className="truncate">{coach.display_name || 'Автор'}</span>
+                    {coach.is_verified && (
+                      <span title="Проверенный автор — профиль подтверждён администрацией">
+                        <BadgeCheck className="w-4.5 h-4.5 text-blue-500 flex-shrink-0" strokeWidth={1.5} />
+                      </span>
+                    )}
                   </h3>
                   {coach.specialization && (
                     <p className="text-sm text-gray-500 mt-0.5 truncate">

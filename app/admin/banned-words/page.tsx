@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { addBannedWord, addBannedWordsBatch, deleteBannedWord, clearBannedWords } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
-import { ShieldAlert, Trash2, CircleCheck } from 'lucide-react'
+import { AlertTriangle, CircleCheck, Info, Plus, ShieldAlert, Trash2, X } from 'lucide-react'
 
 interface BannedWord {
   id: string
@@ -256,18 +256,18 @@ export default function BannedWordsPage() {
           {uploadResult && (
             <div className="mt-4 p-4 bg-white rounded-xl border border-purple-200 shadow-sm">
               <p className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                <span className="text-green-600">✅</span> Загрузка завершена:
+                <CircleCheck className="w-5 h-5 text-green-600" strokeWidth={1.5} /> Загрузка завершена:
               </p>
               <div className="flex flex-wrap gap-4 text-sm">
                 <span className="text-green-700 bg-green-50 px-3 py-1 rounded-full font-medium">
-                  ➕ Добавлено: <strong>{uploadResult.added}</strong>
+                  <Plus className="w-3.5 h-3.5 inline-block -mt-0.5" strokeWidth={1.5} /> Добавлено: <strong>{uploadResult.added}</strong>
                 </span>
                 <span className="text-yellow-700 bg-yellow-50 px-3 py-1 rounded-full font-medium">
-                  ⚠️ Уже было: <strong>{uploadResult.exists}</strong>
+                  <AlertTriangle className="w-3.5 h-3.5 inline-block -mt-0.5" strokeWidth={1.5} /> Уже было: <strong>{uploadResult.exists}</strong>
                 </span>
                 {uploadResult.errors > 0 && (
                   <span className="text-red-700 bg-red-50 px-3 py-1 rounded-full font-medium">
-                    ❌ Ошибок: <strong>{uploadResult.errors}</strong>
+                    <X className="w-3.5 h-3.5 inline-block -mt-0.5" strokeWidth={1.5} /> Ошибок: <strong>{uploadResult.errors}</strong>
                   </span>
                 )}
               </div>
@@ -290,7 +290,7 @@ export default function BannedWordsPage() {
         {/* Форма добавления одного слова */}
         <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-5 md:p-6 mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <span className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white text-sm">➕</span>
+            <span className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white text-sm"><Plus className="w-4 h-4" strokeWidth={1.5} /></span>
             Добавить одно слово
           </h2>
           
@@ -361,7 +361,7 @@ export default function BannedWordsPage() {
                     disabled={deletingId === item.id}
                     className="w-full sm:w-auto px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl font-medium hover:bg-red-100 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {deletingId === item.id ? '⏳...' : '🗑️ Удалить'}
+                    {deletingId === item.id ? '...' : <><Trash2 className="w-4 h-4 inline-block -mt-0.5" strokeWidth={1.5} /> Удалить</>}
                   </button>
                 </div>
               ))}
@@ -405,7 +405,7 @@ export default function BannedWordsPage() {
         {/* Информация */}
         <div className="mt-6 bg-white border border-purple-100 rounded-2xl p-5">
           <p className="text-sm font-semibold text-purple-900 mb-2 flex items-center gap-2">
-            <span className="text-lg">ℹ️</span> Как это работает:
+            <Info className="w-4 h-4" strokeWidth={1.5} /> Как это работает:
           </p>
           <p className="text-sm text-purple-800 leading-relaxed">
             Когда пользователь пытается оставить комментарий или отзыв, система проверяет текст на наличие запрещённых слов. 

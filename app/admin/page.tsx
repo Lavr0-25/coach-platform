@@ -26,7 +26,8 @@ export default async function AdminPage() {
     { count: lessonsCount },
     { count: commentReportsCount },
     { count: reviewReportsCount },
-    { count: newFeedbackCount }
+    { count: newFeedbackCount },
+    { count: pendingVerificationCount }
   ] = await Promise.all([
     supabase.from('stop_list').select('*', { count: 'exact', head: true }).gte('banned_until', new Date().toISOString()),
     supabase.from('reports').select('*', { count: 'exact', head: true }).gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
@@ -35,7 +36,8 @@ export default async function AdminPage() {
     supabase.from('lessons').select('*', { count: 'exact', head: true }),
     supabase.from('reports').select('*', { count: 'exact', head: true }),
     supabase.from('review_reports').select('*', { count: 'exact', head: true }),
-    supabase.from('feedback').select('*', { count: 'exact', head: true }).eq('status', 'new')
+    supabase.from('feedback').select('*', { count: 'exact', head: true }).eq('status', 'new'),
+    supabase.from('feedback').select('*', { count: 'exact', head: true }).eq('type', 'verification').in('status', ['new', 'in_progress'])
   ])
 
   const totalNewReports = (commentReportsCount || 0) + (reviewReportsCount || 0)
@@ -166,10 +168,19 @@ export default async function AdminPage() {
               desc="Параметры автоматической модерации" 
               icon={<SettingsIcon />}
             />
-            <AdminLink 
-              href="/admin/users" 
-              title="Пользователи" 
-              desc="Управление пользователями платформы" 
+            <AdminLink
+              href="/admin/coaches"
+              title="Наставники"
+              desc="Модерация авторов: подтверждение и снятие проверки"
+              icon={<MentorIcon />}
+              badge={pendingVerificationCount}
+              badgeColor="bg-amber-100 text-amber-700"
+              badgeText="заявок на проверку"
+            />
+            <AdminLink
+              href="/admin/users"
+              title="Пользователи"
+              desc="Управление пользователями платформы"
               icon={<UsersIcon />}
             />
           </div>
@@ -278,6 +289,14 @@ function UsersIcon() {
   return (
     <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
+  )
+}
+
+function MentorIcon() {
+  return (
+    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m-4.5-3.5c0 1.38 2.015 2.5 4.5 2.5s4.5-1.12 4.5-2.5" />
     </svg>
   )
 }

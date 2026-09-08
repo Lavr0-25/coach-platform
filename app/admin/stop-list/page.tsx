@@ -6,7 +6,7 @@ import { upsertStopList, removeStopListEntry } from '@/app/admin/actions'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
 import Breadcrumbs from '@/components/Breadcrumbs'
-import { Ban, CircleCheck } from 'lucide-react'
+import { Ban, CircleCheck, Timer } from 'lucide-react'
 import { Input, Textarea } from '@/components/ui/Input'
 
 interface StopListEntry {
@@ -240,7 +240,7 @@ export default function StopListPage() {
                     <div className="text-sm text-gray-600 space-y-1 ml-13">
                       <p><strong className="text-gray-700">Причина:</strong> {entry.reason}</p>
                       <p className="text-xs text-gray-500">Заблокирован: {formatDate(entry.created_at)}</p>
-                      <p className="text-xs text-gray-500">До: {formatShortDate(entry.banned_until)} {!expired && <span className="text-orange-600 font-medium ml-2">⏱️ Осталось: {getRemainingTime(entry.banned_until)}</span>}</p>
+                      <p className="text-xs text-gray-500">До: {formatShortDate(entry.banned_until)} {!expired && <span className="text-orange-600 font-medium ml-2"><Timer className="w-3 h-3 inline-block -mt-0.5" strokeWidth={1.5} /> Осталось: {getRemainingTime(entry.banned_until)}</span>}</p>
                     </div>
                   </div>
                   

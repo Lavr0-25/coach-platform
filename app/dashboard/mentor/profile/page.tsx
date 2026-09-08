@@ -10,7 +10,7 @@ import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
-import { SearchX } from 'lucide-react'
+import { BadgeCheck, BookOpen, Clock, PenLine, SearchX, XCircle } from 'lucide-react'
 import { Input, Textarea } from '@/components/ui/Input'
 
 export default function MentorProfilePage() {
@@ -33,6 +33,10 @@ export default function MentorProfilePage() {
   const [specialization, setSpecialization] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [isPublic, setIsPublic] = useState(true)
+  const [isVerified, setIsVerified] = useState(false)
+  // Последняя заявка на верификацию (feedback type='verification') — по ней
+  // показываем статус блока: на проверке / отклонена (с ответом админа)
+  const [verification, setVerification] = useState<any>(null)
   const [coachId, setCoachId] = useState<string>('')
   const [coachUserId, setCoachUserId] = useState<string>('')
   const [currentUserId, setCurrentUserId] = useState<string>('')
@@ -83,7 +87,7 @@ export default function MentorProfilePage() {
 
       const { data: coach, error: coachError } = await supabase
         .from('coaches')
-        .select('id, user_id, display_name, bio, specialization, avatar_url, profiles(is_public)')
+        .select('id, user_id, display_name, bio, specialization, avatar_url, is_verified, profiles(is_public)')
         .eq('user_id', user.id)
         .maybeSingle()
 
@@ -101,7 +105,18 @@ export default function MentorProfilePage() {
         setSpecialization(coach.specialization || '')
         setAvatarUrl(coach.avatar_url || '')
         setIsPublic((coach as any).profiles?.is_public ?? true)
+        setIsVerified(!!coach.is_verified)
         setIsOwner(user.id === coach.user_id)
+
+        // Последняя заявка на верификацию — её статус показываем в блоке «Верификация»
+        const { data: verifs } = await supabase
+          .from('feedback')
+          .select('id, status, admin_reply, replied_at, created_at')
+          .eq('user_id', user.id)
+          .eq('type', 'verification')
+          .order('created_at', { ascending: false })
+          .limit(1)
+        setVerification(verifs?.[0] || null)
 
         // 🔥 Передаём и coach.id, и coach.user_id
         await loadContent(coach.id, coach.user_id)
@@ -400,6 +415,76 @@ export default function MentorProfilePage() {
             </div>
           </Card>
 
+          {/* Верификация автора: статус + заявка */}
+          <Card variant="glow" padding="none" className="p-6">
+            {isVerified ? (
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
+                  <BadgeCheck className="w-6 h-6" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900 flex items-center gap-2">
+                    Проверенный автор
+                    <Badge variant="greenFill">Верифицирован</Badge>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-0.5">
+                    Профиль подтверждён администрацией. Значок виден на вашей публичной странице и в каталоге авторов.
+                  </p>
+                </div>
+              </div>
+            ) : verification && (verification.status === 'new' || verification.status === 'in_progress') ? (
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-6 h-6" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900">Заявка на верификацию отправлена</div>
+                  <p className="text-sm text-gray-600 mt-0.5">
+                    Админ проверит заявку и ответит в разделе «Обратная связь» — там же можно дополнить её, пока она «Новое».
+                  </p>
+                </div>
+              </div>
+            ) : verification && verification.status === 'rejected' ? (
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0">
+                  <XCircle className="w-6 h-6" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900">Заявка на верификацию отклонена</div>
+                  {verification.admin_reply && (
+                    <p className="text-sm text-gray-600 mt-0.5 whitespace-pre-line break-words">
+                      Причина: {verification.admin_reply}
+                    </p>
+                  )}
+                  <Link
+                    href="/feedback?type=verification"
+                    className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl hover:bg-purple-100 transition-colors text-sm font-medium"
+                  >
+                    <BadgeCheck className="w-4 h-4" strokeWidth={1.5} />
+                    Подать заявку снова
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex-1">
+                  <div className="font-semibold text-gray-900 mb-1">Верификация автора</div>
+                  <p className="text-sm text-gray-600">
+                    Подтверждённые авторы получают значок «Проверенный автор» на публичной странице и в каталоге —
+                    студенты видят, что администрация платформы проверила автора.
+                  </p>
+                </div>
+                <Link
+                  href="/feedback?type=verification"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl hover:bg-purple-100 transition-colors text-sm font-medium flex-shrink-0"
+                >
+                  <BadgeCheck className="w-4 h-4" strokeWidth={1.5} />
+                  Подать заявку
+                </Link>
+              </div>
+            )}
+          </Card>
+
           {/* Поиск по контенту */}
           <div>
             <div className="relative">
@@ -450,7 +535,9 @@ export default function MentorProfilePage() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm"></span>
+                  <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">
+                    <BookOpen className="w-5 h-5" strokeWidth={1.5} />
+                  </span>
                   Мои курсы {debouncedSearch && <span className="text-base text-gray-500">({filteredCourses.length})</span>}
                 </h2>
                 <Link href="/dashboard/mentor/courses" className="text-purple-600 hover:text-purple-700 font-medium text-sm">
@@ -469,7 +556,7 @@ export default function MentorProfilePage() {
                       {course.cover_image ? (
                         <Image src={course.cover_image} alt={course.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="w-full h-full object-cover transition-transform duration-300" />
                       ) : (
-                        <span className="opacity-50">📚</span>
+                        <BookOpen className="w-12 h-12 opacity-50" strokeWidth={1.5} />
                       )}
                     </div>
                     
@@ -501,7 +588,9 @@ export default function MentorProfilePage() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">📝</span>
+                  <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">
+                    <PenLine className="w-5 h-5" strokeWidth={1.5} />
+                  </span>
                   Мои материалы {debouncedSearch && <span className="text-base text-gray-500">({filteredLessons.length})</span>}
                 </h2>
                 <Link href="/dashboard/mentor/lessons" className="text-purple-600 hover:text-purple-700 font-medium text-sm">
@@ -517,7 +606,7 @@ export default function MentorProfilePage() {
                     className="style-card p-5 hover:shadow-lg transition-colors group border border-purple-100"
                   >
                     <div className="aspect-video bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl mb-4 flex items-center justify-center text-white text-4xl overflow-hidden">
-                      <span className="opacity-50">📝</span>
+                      <PenLine className="w-12 h-12 opacity-50" strokeWidth={1.5} />
                     </div>
                     
                     <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-purple-600 transition-colors">

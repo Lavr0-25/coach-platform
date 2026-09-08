@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { setCoachVerified } from '@/app/admin/actions'
 import { useToast } from '@/components/Toast'
-import { GraduationCap } from 'lucide-react'
+import { BookOpen, Calendar, Check, Clock, Eye, GraduationCap, Target } from 'lucide-react'
 
 // Статус-чипы — семантический цвет в рамке, как во всей админке
 const chip = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border'
@@ -62,7 +62,7 @@ export default function CoachesList({ initialCoaches }: { initialCoaches: any[] 
     <div className="bg-white rounded-2xl shadow-sm border border-purple-100 overflow-hidden">
       <div className="p-5 md:p-6 border-b border-purple-100 bg-gray-50">
         <h2 className="text-lg md:text-xl font-bold text-gray-900">
-          🎓 Все наставники
+          <GraduationCap className="w-5 h-5" strokeWidth={1.5} /> Все наставники
         </h2>
       </div>
 
@@ -85,18 +85,18 @@ export default function CoachesList({ initialCoaches }: { initialCoaches: any[] 
                       </h3>
                       {coach.is_verified ? (
                         <span className={`${chip} bg-green-50 text-green-700 border-green-200`}>
-                          ✓ Проверен
+                          <Check className="w-3.5 h-3.5 inline-block -mt-0.5" strokeWidth={1.5} /> Проверен
                         </span>
                       ) : (
                         <span className={`${chip} bg-orange-50 text-orange-700 border-orange-200`}>
-                          ⏳ Ожидает проверки
+                          <Clock className="w-3.5 h-3.5 inline-block -mt-0.5" strokeWidth={1.5} /> Ожидает проверки
                         </span>
                       )}
                     </div>
 
                     {coach.specialization && (
                       <p className="text-gray-600 text-sm mb-2">
-                        🎯 {coach.specialization}
+                        <Target className="w-3.5 h-3.5 inline-block -mt-0.5 text-purple-500" strokeWidth={1.5} /> {coach.specialization}
                       </p>
                     )}
 
@@ -107,8 +107,8 @@ export default function CoachesList({ initialCoaches }: { initialCoaches: any[] 
                     )}
 
                     <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span>📚 {lessonsCount} уроков</span>
-                      <span>📅 {new Date(coach.created_at).toLocaleDateString('ru-RU')}</span>
+                      <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" strokeWidth={1.5} /> {lessonsCount} уроков</span>
+                      <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" strokeWidth={1.5} /> {new Date(coach.created_at).toLocaleDateString('ru-RU')}</span>
                     </div>
                   </div>
 
@@ -119,7 +119,7 @@ export default function CoachesList({ initialCoaches }: { initialCoaches: any[] 
                         disabled={isLoading}
                         className="px-4 py-2 bg-green-50 text-green-700 border border-green-200 rounded-xl text-sm font-medium hover:bg-green-100 transition-colors disabled:opacity-50"
                       >
-                        {isLoading ? '⏳ Одобрение...' : '✓ Одобрить'}
+                        {isLoading ? 'Одобрение...' : <><Check className="w-4 h-4 inline-block -mt-0.5" strokeWidth={1.5} /> Одобрить</>}
                       </button>
                     ) : (
                       <button
@@ -127,7 +127,7 @@ export default function CoachesList({ initialCoaches }: { initialCoaches: any[] 
                         disabled={isLoading}
                         className="px-4 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-xl text-sm font-medium hover:bg-orange-100 transition-colors disabled:opacity-50"
                       >
-                        {isLoading ? '⏳ Отмена...' : '⏳ Отменить проверку'}
+                        {isLoading ? 'Отмена...' : 'Отменить проверку'}
                       </button>
                     )}
 
@@ -135,7 +135,7 @@ export default function CoachesList({ initialCoaches }: { initialCoaches: any[] 
                       href={`/mentor/${coach.id}`}
                       className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl text-sm font-medium hover:bg-purple-50 transition-colors"
                     >
-                      👁️ Просмотр
+                      <Eye className="w-4 h-4 inline-block -mt-0.5" strokeWidth={1.5} /> Просмотр
                     </Link>
                   </div>
                 </div>

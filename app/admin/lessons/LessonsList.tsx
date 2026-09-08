@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { deleteLesson, updateLesson } from '@/app/admin/actions'
 import { useToast } from '@/components/Toast'
 import { Input, Textarea } from '@/components/ui/Input'
-import { BookOpen } from 'lucide-react'
+import { Banknote, BookOpen, Calendar, Eye, FileText, Gift, Pencil, Trash2, User } from 'lucide-react'
 
 // Статус-чипы — семантический цвет в рамке, как во всей админке
 const chip = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border'
@@ -81,7 +81,7 @@ export default function LessonsList({ initialLessons }: { initialLessons: any[] 
       <div className="bg-white rounded-2xl shadow-sm border border-purple-100 overflow-hidden">
         <div className="p-5 md:p-6 border-b border-purple-100 bg-gray-50">
           <h2 className="text-lg md:text-xl font-bold text-gray-900">
-            📄 Все уроки
+            <FileText className="w-5 h-5" strokeWidth={1.5} /> Все уроки
           </h2>
         </div>
 
@@ -102,16 +102,16 @@ export default function LessonsList({ initialLessons }: { initialLessons: any[] 
                         </h3>
                         {isFree ? (
                           <span className={`${chip} bg-green-50 text-green-700 border-green-200`}>
-                            🆓 Бесплатно
+                            <Gift className="w-3.5 h-3.5" strokeWidth={1.5} /> Бесплатно
                           </span>
                         ) : (
                           <span className={`${chip} bg-purple-50 text-purple-700 border-purple-200`}>
-                            💰 {lesson.price} ₽
+                            <Banknote className="w-3.5 h-3.5" strokeWidth={1.5} /> {lesson.price} ₽
                           </span>
                         )}
                         {lesson.is_free_preview && (
                           <span className={`${chip} bg-blue-50 text-blue-700 border-blue-200`}>
-                            🎁 Превью
+                            <Eye className="w-3.5 h-3.5" strokeWidth={1.5} /> Превью
                           </span>
                         )}
                       </div>
@@ -123,10 +123,10 @@ export default function LessonsList({ initialLessons }: { initialLessons: any[] 
                       )}
 
                       <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span>👨‍🏫 {coach?.display_name || 'Неизвестно'}</span>
-                        <span>📅 {new Date(lesson.created_at).toLocaleDateString('ru-RU')}</span>
+                        <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" strokeWidth={1.5} /> {coach?.display_name || 'Неизвестно'}</span>
+                        <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" strokeWidth={1.5} /> {new Date(lesson.created_at).toLocaleDateString('ru-RU')}</span>
                         {content && (
-                          <span>📄 {content.content_type}</span>
+                          <span className="flex items-center gap-1"><FileText className="w-3.5 h-3.5" strokeWidth={1.5} /> {content.content_type}</span>
                         )}
                       </div>
                     </div>
@@ -136,21 +136,21 @@ export default function LessonsList({ initialLessons }: { initialLessons: any[] 
                         href={`/lesson/${lesson.id}`}
                         className="px-4 py-2 bg-white border border-purple-200 text-purple-700 rounded-xl text-sm font-medium hover:bg-purple-50 transition-colors"
                       >
-                        👁️ Просмотр
+                        <Eye className="w-4 h-4 inline-block -mt-0.5" strokeWidth={1.5} /> Просмотр
                       </Link>
                       <button
                         onClick={() => handleEdit(lesson)}
                         disabled={loading === lesson.id}
                         className="gradient-btn text-white px-4 py-2 rounded-xl text-sm font-medium shadow-md shadow-purple-500/30 disabled:opacity-50 transition-opacity"
                       >
-                        {loading === lesson.id ? '⏳...' : '✏️ Редактировать'}
+                        {loading === lesson.id ? '...' : <><Pencil className="w-4 h-4 inline-block -mt-0.5" strokeWidth={1.5} /> Редактировать</>}
                       </button>
                       <button
                         onClick={() => handleDelete(lesson.id, lesson.title)}
                         disabled={loading === lesson.id}
                         className="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors disabled:opacity-50"
                       >
-                        {loading === lesson.id ? '⏳...' : '🗑️ Удалить'}
+                        {loading === lesson.id ? '...' : <><Trash2 className="w-4 h-4 inline-block -mt-0.5" strokeWidth={1.5} /> Удалить</>}
                       </button>
                     </div>
                   </div>

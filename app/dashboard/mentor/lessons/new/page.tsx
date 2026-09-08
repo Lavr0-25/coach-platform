@@ -8,6 +8,7 @@ import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input, Textarea } from '@/components/ui/Input'
+import { Banknote, CircleCheck, PenLine } from 'lucide-react'
 
 // На платформе только текстовые уроки: тип контента не выбирается,
 // текст пишется в WYSIWYG-редакторе на странице урока.
@@ -161,7 +162,7 @@ export default function NewLessonPage() {
         <Card variant="glow" padding="none" className="p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Контент урока</h2>
           <div className="flex items-start gap-3 bg-purple-50/50 border border-purple-100 rounded-xl p-4">
-            <span className="text-xl leading-none mt-0.5">📝</span>
+            <PenLine className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" strokeWidth={1.5} />
             <p className="text-sm text-gray-600">
               Урок — это статья в визуальном редакторе. Сразу после создания урока
               откроется страница редактирования, где вы напишете текст: заголовки,
@@ -190,7 +191,7 @@ export default function NewLessonPage() {
             {parseFloat(price) > 0 ? (
               <>
                 <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-4 text-sm">
-                  <p className="font-semibold text-gray-900">💰 Платный урок — {price} ₽</p>
+                  <p className="font-semibold text-gray-900 flex items-center gap-1.5"><Banknote className="w-4 h-4" strokeWidth={1.5} /> Платный урок — {price} ₽</p>
                   <p className="text-gray-500 mt-0.5">Студент покупает урок, чтобы смотреть. Поставьте 0 — урок станет бесплатным.</p>
                 </div>
 
@@ -212,7 +213,7 @@ export default function NewLessonPage() {
               </>
             ) : (
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm">
-                <p className="font-semibold text-green-800">🟢 Бесплатный урок — открыт всем</p>
+                <p className="font-semibold text-green-800 flex items-center gap-1.5"><CircleCheck className="w-4 h-4" strokeWidth={1.5} /> Бесплатный урок — открыт всем</p>
                 <p className="text-green-700 mt-0.5">Укажите цену выше, чтобы сделать урок платным.</p>
               </div>
             )}

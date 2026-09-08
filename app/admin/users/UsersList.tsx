@@ -6,7 +6,7 @@ import { banUser, unbanUser } from '@/app/admin/actions'
 import { useToast } from '@/components/Toast'
 import { Badge } from '@/components/ui/Badge'
 import { Input, Textarea } from '@/components/ui/Input'
-import { Users } from 'lucide-react'
+import { AlertTriangle, Ban, Calendar, Check, Eye, Mail, Users } from 'lucide-react'
 
 export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
   const toast = useToast()
@@ -82,7 +82,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
       <div className="bg-white rounded-2xl shadow-sm border border-purple-100 overflow-hidden">
         <div className="p-5 md:p-6 border-b border-purple-100 bg-gray-50">
           <h2 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
-            👥 Все пользователи
+            <Users className="w-5 h-5" strokeWidth={1.5} /> Все пользователи
           </h2>
         </div>
 
@@ -117,7 +117,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                           <h3 className="text-base md:text-lg font-semibold text-gray-900 truncate">
                             {displayName}
                           </h3>
-                          <p className="text-sm text-gray-500 truncate">📧 {user.email}</p>
+                          <p className="text-sm text-gray-500 truncate flex items-center gap-1"><Mail className="w-3.5 h-3.5 flex-shrink-0" strokeWidth={1.5} /> {user.email}</p>
                         </div>
                       </div>
 
@@ -128,18 +128,18 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                         </Badge>
 
                         {isBanned && (
-                          <Badge variant="red">🚫 Заблокирован</Badge>
+                          <Badge variant="red"><Ban className="w-3 h-3 inline-block -mt-0.5" strokeWidth={1.5} /> Заблокирован</Badge>
                         )}
                       </div>
 
                       {isBanned && (
                         <p className="text-sm text-red-600 mb-2 bg-red-50/50 p-2.5 rounded-xl border border-red-100">
-                          ⚠️ <strong>Причина:</strong> {activeBan.reason}
+                          <AlertTriangle className="w-4 h-4 inline-block -mt-0.5" strokeWidth={1.5} /> <strong>Причина:</strong> {activeBan.reason}
                         </p>
                       )}
 
                       <p className="text-xs text-gray-400">
-                        📅 Регистрация: {new Date(user.created_at).toLocaleDateString('ru-RU')}
+                        <Calendar className="w-3.5 h-3.5 inline-block -mt-0.5" strokeWidth={1.5} /> Регистрация: {new Date(user.created_at).toLocaleDateString('ru-RU')}
                       </p>
                     </div>
 
@@ -174,7 +174,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                           href={coachInfo ? `/mentor/${coachInfo.id}` : `/profile/${user.id}`}
                           className="w-full sm:w-auto text-center px-4 py-2.5 bg-white border border-purple-200 text-purple-700 rounded-xl text-sm font-medium hover:bg-purple-50 transition-colors"
                         >
-                          👁️ Профиль
+                          <Eye className="w-4 h-4 inline-block -mt-0.5" strokeWidth={1.5} /> Профиль
                         </Link>
                       )}
                       
@@ -185,7 +185,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                             disabled={loading === user.id}
                             className="w-full sm:w-auto px-4 py-2.5 bg-green-50 text-green-700 border border-green-200 rounded-xl text-sm font-medium hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {loading === user.id ? '...' : '✓ Разблокировать'}
+                            {loading === user.id ? '...' : <><Check className="w-4 h-4 inline-block -mt-0.5" strokeWidth={1.5} /> Разблокировать</>}
                           </button>
                         ) : (
                           <button
@@ -193,7 +193,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                             disabled={loading === user.id}
                             className="w-full sm:w-auto px-4 py-2.5 bg-red-50 text-red-700 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {loading === user.id ? '⏳...' : '🚫 Заблокировать'}
+                            {loading === user.id ? '...' : <><Ban className="w-4 h-4 inline-block -mt-0.5" strokeWidth={1.5} /> Заблокировать</>}
                           </button>
                         )
                       )}
@@ -269,7 +269,7 @@ export default function UsersList({ initialUsers }: { initialUsers: any[] }) {
                   disabled={!banReason.trim() || loading === selectedUser?.id}
                   className="flex-1 gradient-btn text-white py-2.5 rounded-xl font-medium shadow-lg shadow-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                 >
-                  {loading === selectedUser?.id ? '⏳ Блокировка...' : '🚫 Заблокировать'}
+                  {loading === selectedUser?.id ? 'Блокировка...' : 'Заблокировать'}
                 </button>
               </div>
             </form>

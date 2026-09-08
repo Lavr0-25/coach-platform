@@ -13,6 +13,7 @@ import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input, Textarea } from '@/components/ui/Input'
+import { Banknote, CalendarClock, CircleCheck, Clock, Lock } from 'lucide-react'
 
 // На платформе только текстовые уроки: тип контента фиксирован ('text'),
 // содержимое правится в WYSIWYG-редакторе. Старые не-текстовые записи в БД
@@ -194,7 +195,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
         setPublishedAt(null)
         setPublishAt(null)
       }
-      setSuccess(nowPublished ? '✅ Урок опубликован — теперь его видят студенты' : 'Урок снят с публикации — студенты его больше не видят')
+      setSuccess(nowPublished ? 'Урок опубликован — теперь его видят студенты' : 'Урок снят с публикации — студенты его больше не видят')
       setTimeout(() => setSuccess(''), 3000)
     }
     setPublishing(false)
@@ -306,7 +307,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
       {isHidden ? (
         <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-start gap-3">
-            <span className="text-xl leading-none mt-0.5">🔒</span>
+            <Lock className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" strokeWidth={1.5} />
             <div>
               <p className="font-semibold text-gray-900 text-sm">Урок скрыт</p>
               <p className="text-sm text-gray-600">
@@ -318,7 +319,13 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
       ) : (
       <div className={`rounded-xl border p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isPublished ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
         <div className="flex items-start gap-3">
-          <span className="text-xl leading-none mt-0.5">{isPublished ? '🟢' : publishAt ? '🗓' : '🟡'}</span>
+          {isPublished ? (
+            <CircleCheck className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" strokeWidth={1.5} />
+          ) : publishAt ? (
+            <CalendarClock className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" strokeWidth={1.5} />
+          ) : (
+            <Clock className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" strokeWidth={1.5} />
+          )}
           <div>
             <p className="font-semibold text-gray-900 text-sm">
               {isPublished
@@ -377,7 +384,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                 title={!hasSavedContent ? 'Сначала заполните и сохраните контент урока' : 'Опубликовать автоматически в выбранное время'}
                 className="bg-white text-gray-700 border border-gray-300 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
-                🗓 По расписанию
+                <CalendarClock className="w-4 h-4 inline-block -mt-0.5" strokeWidth={1.5} /> По расписанию
               </button>
             )}
             {/* Пока открыта панель расписания — «Опубликовать сейчас» скрываем:
@@ -433,7 +440,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                 title="Урок снимется с публикации сейчас и откроется сам в выбранное время"
                 className="bg-white text-gray-700 border border-gray-300 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors whitespace-nowrap"
               >
-                🗓 По расписанию
+                <CalendarClock className="w-4 h-4 inline-block -mt-0.5" strokeWidth={1.5} /> По расписанию
               </button>
             )}
             {/* Пока открыта панель расписания — «Вернуть в черновик» скрываем:
@@ -541,7 +548,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
             {parseFloat(price) > 0 ? (
               <>
                 <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-4 text-sm">
-                  <p className="font-semibold text-gray-900">💰 Платный урок — {price} ₽</p>
+                  <p className="font-semibold text-gray-900 flex items-center gap-1.5"><Banknote className="w-4 h-4" strokeWidth={1.5} /> Платный урок — {price} ₽</p>
                   <p className="text-gray-500 mt-0.5">Студент покупает урок, чтобы смотреть. Поставьте 0 — урок станет бесплатным.</p>
                 </div>
 
@@ -563,7 +570,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
               </>
             ) : (
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm">
-                <p className="font-semibold text-green-800">🟢 Бесплатный урок — открыт всем</p>
+                <p className="font-semibold text-green-800 flex items-center gap-1.5"><CircleCheck className="w-4 h-4" strokeWidth={1.5} /> Бесплатный урок — открыт всем</p>
                 <p className="text-green-700 mt-0.5">Укажите цену выше, чтобы сделать урок платным.</p>
               </div>
             )}

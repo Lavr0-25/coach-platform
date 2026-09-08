@@ -185,6 +185,41 @@ export async function updateFeedbackStatus(
   return error ? { ok: false, error: 'Ошибка при обновлении статуса' } : { ok: true }
 }
 
+// Статус заявки на верификацию (тип verification в feedback).
+// Отличие от updateFeedbackStatus: статус «Решено» одновременно ставит
+// автору is_verified=true в coaches (значок «Проверенный автор»),
+// «Отклонено»/прочее — снимает галочку, если она стояла.
+export async function updateVerificationFeedback(
+  id: string,
+  status: FeedbackStatus,
+  reply?: string
+): Promise<ActionResult> {
+  const supabase = await getAdminClient()
+  if (!supabase) return { ok: false, error: 'Доступ запрещён' }
+
+  // user_id автора берём из самой заявки — админ может не знать его id
+  const { data: row } = await supabase.from('feedback').select('user_id').eq('id', id).maybeSingle()
+  if (!row?.user_id) return { ok: false, error: 'Заявка не найдена' }
+
+  const verified = status === 'resolved'
+  const { error: coachError } = await supabase
+    .from('coaches')
+    .update({ is_verified: verified })
+    .eq('user_id', row.user_id)
+    .eq('role', 'mentor')
+
+  if (coachError) return { ok: false, error: 'Не удалось обновить проверку автора' }
+
+  const payload: Record<string, unknown> = { status, updated_at: new Date().toISOString() }
+  if (reply !== undefined) {
+    payload.admin_reply = reply || null
+    payload.replied_at = reply ? new Date().toISOString() : null
+  }
+
+  const { error } = await supabase.from('feedback').update(payload).eq('id', id)
+  return error ? { ok: false, error: 'Ошибка при обновлении статуса' } : { ok: true }
+}
+
 export async function bulkUpdateFeedbackStatus(
   ids: string[],
   status: FeedbackStatus

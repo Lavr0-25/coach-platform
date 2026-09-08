@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { SearchX, Trash2 } from 'lucide-react'
+import { Calendar, CalendarClock, FileText, Film, SearchX, Trash2 } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import { deleteLesson } from '@/app/actions/deleteLesson'
 import { setLessonPublishAt } from '@/app/actions/updateLesson'
@@ -326,7 +326,7 @@ export default function MentorLessonsPage() {
                       className="w-full h-full object-cover transition-transform duration-300"
                     />
                   ) : (
-                    <span className="opacity-50">🎥</span>
+                    <Film className="w-12 h-12 opacity-50" strokeWidth={1.5} />
                   )}
                 </div>
 
@@ -357,7 +357,7 @@ export default function MentorLessonsPage() {
                 {lesson.is_published && lesson.published_at && (
                   <div className="mb-3">
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
-                      📅 {formatPublishedDate(lesson.published_at)}
+                      <Calendar className="w-3.5 h-3.5" strokeWidth={1.5} /> {formatPublishedDate(lesson.published_at)}
                     </span>
                   </div>
                 )}
@@ -366,7 +366,7 @@ export default function MentorLessonsPage() {
                 {!lesson.is_published && lesson.publish_at && (
                   <div className="flex items-center gap-2 mb-3">
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
-                      🗓 {formatSchedule(lesson.publish_at)}
+                      <CalendarClock className="w-3.5 h-3.5" strokeWidth={1.5} /> {formatSchedule(lesson.publish_at)}
                     </span>
                     {confirmingScheduleId === lesson.id ? (
                       <button
@@ -479,7 +479,7 @@ export default function MentorLessonsPage() {
                       className="w-full h-full object-cover transition-transform duration-300"
                     />
                   ) : (
-                    <span className="opacity-50">📄</span>
+                    <FileText className="w-12 h-12 opacity-50" strokeWidth={1.5} />
                   )}
                 </div>
 
@@ -498,7 +498,7 @@ export default function MentorLessonsPage() {
                 {lesson.is_published && lesson.published_at && (
                   <div className="mb-3">
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
-                      📅 {formatPublishedDate(lesson.published_at)}
+                      <Calendar className="w-3.5 h-3.5" strokeWidth={1.5} /> {formatPublishedDate(lesson.published_at)}
                     </span>
                   </div>
                 )}
@@ -507,7 +507,7 @@ export default function MentorLessonsPage() {
                 {!lesson.is_published && lesson.publish_at && (
                   <div className="flex items-center gap-2 mb-3">
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
-                      🗓 {formatSchedule(lesson.publish_at)}
+                      <CalendarClock className="w-3.5 h-3.5" strokeWidth={1.5} /> {formatSchedule(lesson.publish_at)}
                     </span>
                     {confirmingScheduleId === lesson.id ? (
                       <button

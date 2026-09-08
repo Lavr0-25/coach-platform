@@ -15,7 +15,7 @@ type ActionResult = { ok: true } | { ok: false; error: string }
 export async function updateMyFeedback(
   id: string,
   fields: {
-    type: 'bug' | 'feature'
+    type: 'bug' | 'feature' | 'verification'
     title: string
     description: string
     images: string[] | null

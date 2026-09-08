@@ -93,7 +93,7 @@ export default async function AdminLessonsPage({
             <input
               type="text"
               name="search"
-              placeholder="🔍 Поиск по названию или описанию..."
+              placeholder="Поиск по названию или описанию..."
               defaultValue={searchQuery}
               className="flex-1 px-4 py-2.5 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-[box-shadow,border-color,background-color,color]"
             />
