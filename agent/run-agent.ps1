@@ -11,6 +11,19 @@ $runLog = Join-Path $logDir 'runs.log'
 # CLI agents install via npm into %APPDATA%\npm - may be missing in scheduler PATH
 $env:Path += ";$env:APPDATA\npm"
 
+# Once-per-day guard: the task fires at logon (was nightly 03:17, but the
+# laptop sleeps at night and the run got skipped). Skip if already started
+# today, so re-logons and catch-up starts do not rerun the agent.
+$today = (Get-Date).ToString('yyyy-MM-dd')
+if (Test-Path $runLog) {
+    $lastStart = Select-String -Path $runLog -Pattern "`tstart" |
+        Select-Object -Last 1
+    if ($lastStart -and $lastStart.Line.StartsWith($today)) {
+        Add-Content $runLog "$stamp`tskip: already started today"
+        exit 0
+    }
+}
+
 if (-not (Test-Path (Join-Path $dir 'config.json'))) {
     Add-Content $runLog "$stamp`tERROR: config.json missing"
     exit 1
