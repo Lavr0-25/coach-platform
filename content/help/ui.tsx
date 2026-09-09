@@ -54,13 +54,44 @@ export function List({ items }: { items: ReactNode[] }) {
   );
 }
 
-// Пошаговый сценарий («Как создать урок»): нумерованные шаги.
-export function Steps({ items }: { items: ReactNode[] }) {
+// Элемент пошагового сценария: текст шага + опциональный скриншот к нему.
+export type StepItem = {
+  text: ReactNode;
+  /** id скриншота public/help/help-<shot>.png — снимок того, что видно на шаге */
+  shot?: string;
+  shotCaption?: string;
+};
+
+// Пошаговый сценарий («Как создать урок»): нумерованные шаги, у шага может
+// быть свой скриншот — чтобы сценарий читался «как для ребёнка»: нажали кнопку
+// на шаге → на картинке видно, что должно получиться.
+export function Steps({
+  items,
+}: {
+  items: (ReactNode | StepItem)[];
+}) {
   return (
-    <ol className="space-y-1.5 text-sm text-gray-600 dark:text-gray-300 list-decimal pl-5">
-      {items.map((item, i) => (
-        <li key={i}>{item}</li>
-      ))}
+    <ol className="space-y-3 text-sm text-gray-600 dark:text-gray-300 list-decimal pl-5">
+      {items.map((item, i) => {
+        const step =
+          item && typeof item === "object" && "text" in (item as StepItem)
+            ? (item as StepItem)
+            : null;
+        return (
+          <li key={i} className="space-y-2">
+            {step ? step.text : item}
+            {step?.shot ? (
+              <Shot
+                id={step.shot}
+                caption={
+                  step.shotCaption ??
+                  "Так должно выглядеть после этого шага"
+                }
+              />
+            ) : null}
+          </li>
+        );
+      })}
     </ol>
   );
 }
