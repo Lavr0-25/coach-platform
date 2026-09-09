@@ -41,7 +41,7 @@ Gemini CLI — выбирается в `config.json`, поле `cli`) без и�
 Расписание (одна команда от администратора):
 
 ```
-schtasks /create /tn "RightWay Daily Digest" /sc logon /tr "\"<полный путь>\agent\run-digest.cmd\""
+schtasks /create /tn "RightWay Daily Digest" /sc onlogon /tr "\"<полный путь>\agent\run-digest.cmd\""
 ```
 
 Базовый URL платформы: `https://coach-platform-pi.vercel.app` (переопределить
@@ -74,8 +74,8 @@ schtasks /create /tn "RightWay Daily Digest" /sc logon /tr "\"<полный пу
    гвард «раз в день» внутри скриптов не даёт гонять их при каждом входе):
 
 ```
-schtasks /create /tn "RightWay AI Agent" /sc logon /tr "\"D:\Projects\coach-platform\agent\run-agent.cmd\""
-schtasks /create /tn "RightWay Daily Digest" /sc logon /tr "\"D:\Projects\coach-platform\agent\run-digest.cmd\""
+schtasks /create /tn "RightWay AI Agent" /sc onlogon /tr "\"D:\Projects\coach-platform\agent\run-agent.cmd\""
+schtasks /create /tn "RightWay Daily Digest" /sc onlogon /tr "\"D:\Projects\coach-platform\agent\run-digest.cmd\""
 ```
 
 Проверка гвардов: повторный запуск за день пишет `skip` в
@@ -100,7 +100,7 @@ schtasks /create /tn "RightWay Daily Digest" /sc logon /tr "\"D:\Projects\coach-
    2026-09-08 триггер — вход в Windows, ночные запуски пропускались из-за сна):
 
 ```
-schtasks /create /tn "RightWay AI Agent" /sc logon /tr "\"<полный путь>\agent\run-agent.cmd\""
+schtasks /create /tn "RightWay AI Agent" /sc onlogon /tr "\"<полный путь>\agent\run-agent.cmd\""
 ```
 
 ## Границы (заложены в платформу, не в агента)
