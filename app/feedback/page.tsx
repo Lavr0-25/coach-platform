@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Input, Textarea, Label } from '@/components/ui/Input'
 import type { BadgeProps } from '@/components/ui/Badge'
-import { BadgeCheck, Bug, Lightbulb, Pencil, Trash2 } from 'lucide-react'
+import { BadgeCheck, Bug, HelpCircle, Lightbulb, Pencil, Trash2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 
 // Статусы и подписи — как в админке (/admin/feedback), чтобы пользователь
@@ -26,10 +26,11 @@ const TYPE_META: Record<string, { icon: React.ReactNode; label: string }> = {
   bug: { icon: <Bug className="w-4 h-4" />, label: 'Ошибка' },
   feature: { icon: <Lightbulb className="w-4 h-4" />, label: 'Идея' },
   verification: { icon: <BadgeCheck className="w-4 h-4" />, label: 'Заявка на верификацию' },
+  question: { icon: <HelpCircle className="w-4 h-4" />, label: 'Вопрос' },
 }
 
 export default function FeedbackPage() {
-  const [type, setType] = useState<'bug' | 'feature' | 'verification'>('feature')
+  const [type, setType] = useState<'bug' | 'feature' | 'verification' | 'question'>('feature')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [images, setImages] = useState<string[]>([])
@@ -69,7 +70,7 @@ export default function FeedbackPage() {
       // Предвыбор типа из ссылки вида /feedback?type=verification
       // (кнопка «Подать заявку» из кабинета автора ведёт сюда)
       const typeParam = new URLSearchParams(window.location.search).get('type')
-      if (typeParam === 'bug' || typeParam === 'feature' || typeParam === 'verification') {
+      if (typeParam === 'bug' || typeParam === 'feature' || typeParam === 'verification' || typeParam === 'question') {
         setType(typeParam)
       }
 
@@ -278,7 +279,7 @@ export default function FeedbackPage() {
           Обратная связь
         </h1>
         <p className="text-gray-600">
-          Помогите нам стать лучше — сообщите об ошибке, предложите идею или подайте заявку на верификацию автора
+          Помогите нам стать лучше — задайте вопрос, сообщите об ошибке, предложите идею или подайте заявку на верификацию автора
         </p>
       </div>
 
@@ -298,7 +299,19 @@ export default function FeedbackPage() {
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Тип обращения
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <button
+                type="button"
+                onClick={() => setType('question')}
+                className={`px-4 py-4 rounded-xl border-2 transition-colors flex items-center justify-center gap-3 font-medium ${
+                  type === 'question'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                    : 'border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50/50'
+                }`}
+              >
+                <HelpCircle className="w-6 h-6" />
+                <span>Задать вопрос</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setType('feature')}
@@ -358,7 +371,9 @@ export default function FeedbackPage() {
                   ? 'Краткое описание ошибки'
                   : type === 'verification'
                     ? 'О себе в двух словах (имя, чем занимаетесь)'
-                    : 'Название вашей идеи'
+                    : type === 'question'
+                      ? 'О чём вопрос'
+                      : 'Название вашей идеи'
               }
             />
           </div>
@@ -380,7 +395,9 @@ export default function FeedbackPage() {
                   ? 'Опишите, что произошло, шаги для воспроизведения и ожидаемый результат...'
                   : type === 'verification'
                     ? 'Расскажите о себе: опыт, чем занимаетесь, почему обучаете. Приложите ссылки на ваши страницы (сайт, соцсети, портфолио) — по ним админ проверит заявку. Можно прикрепить скриншоты...'
-                    : 'Опишите вашу идею подробно: что это, зачем нужно и как это поможет платформе...'
+                    : type === 'question'
+                      ? 'Задайте вопрос подробно: что хотите сделать, что уже пробовали. Скриншот можно прикрепить ниже...'
+                      : 'Опишите вашу идею подробно: что это, зачем нужно и как это поможет платформе...'
               }
               className="resize-none"
             />

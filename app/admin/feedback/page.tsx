@@ -6,7 +6,7 @@ import { updateFeedbackStatus, updateVerificationFeedback, bulkUpdateFeedbackSta
 import Link from 'next/link'
 import Image from 'next/image'
 import { useToast } from '@/components/Toast'
-import { BadgeCheck, Bug, ClipboardList, Lightbulb, Paperclip } from 'lucide-react'
+import { BadgeCheck, Bug, ClipboardList, HelpCircle, Lightbulb, Paperclip } from 'lucide-react'
 import { Badge, BadgeProps } from '@/components/ui/Badge'
 import { Textarea } from '@/components/ui/Input'
 
@@ -151,7 +151,7 @@ export default function AdminFeedbackPage() {
     const rows = filteredFeedbacks.map(f => [
       f.id,
       f.user_name,
-      f.type === 'bug' ? 'Ошибка' : f.type === 'verification' ? 'Заявка на верификацию' : 'Идея',
+      f.type === 'bug' ? 'Ошибка' : f.type === 'verification' ? 'Заявка на верификацию' : f.type === 'question' ? 'Вопрос' : 'Идея',
       f.title,
       f.description,
       getStatusText(f.status),
@@ -195,6 +195,7 @@ export default function AdminFeedbackPage() {
     bug: { label: 'Ошибка', icon: <Bug className="w-3.5 h-3.5" strokeWidth={1.5} />, variant: 'red', fillVariant: 'redFill' },
     feature: { label: 'Идея', icon: <Lightbulb className="w-3.5 h-3.5" strokeWidth={1.5} />, variant: 'purple', fillVariant: 'purpleFill' },
     verification: { label: 'Заявка', icon: <BadgeCheck className="w-3.5 h-3.5" strokeWidth={1.5} />, variant: 'green', fillVariant: 'greenFill' },
+    question: { label: 'Вопрос', icon: <HelpCircle className="w-3.5 h-3.5" strokeWidth={1.5} />, variant: 'blue', fillVariant: 'blueFill' },
   }
   const getTypeMeta = (t: string) => TYPE_BADGE_META[t] || TYPE_BADGE_META.feature
 

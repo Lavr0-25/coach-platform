@@ -1,12 +1,12 @@
 # Спека: Обратная связь и верификация авторов (`/feedback`)
 
-> Статус: `stable` · обновлено 2026-09-08 · ответственный: Анатолий + Claude Code
+> Статус: `stable` · обновлено 2026-09-09 · ответственный: Анатолий + Claude Code
 
 ## Задача
 
-Пользователь пишет в поддержку (баг / идея), автор подаёт заявку на верификацию,
-админ разбирает обращения и решает судьбу заявок. Один механизм — таблица
-`feedback` — обслуживает оба сценария (решение Анатолия, 2026-09-08: без
+Пользователь пишет в поддержку (вопрос / баг / идея), автор подаёт заявку на
+верификацию, админ разбирает обращения и решает судьбу заявок. Один механизм —
+таблица `feedback` — обслуживает оба сценария (решение Анатолия, 2026-09-08: без
 отдельной таблицы заявок).
 
 ## Модель данных
@@ -15,8 +15,11 @@
 `images` (массив публичных ссылок на скриншоты в бакете `uploads`, путь
 `feedback/`), `status`, `admin_reply`, `replied_at`, `created_at`, `updated_at`.
 
-- `type`: `bug` | `feature` | `verification` — закреплено CHECK-констрейнтом
-  `feedback_type_check` (миграция `docs/migrations/2026-09-08-verification-via-feedback.sql`).
+- `type`: `question` | `bug` | `feature` | `verification` — закреплено
+  CHECK-констрейнтом `feedback_type_check` (миграции
+  `docs/migrations/2026-09-08-verification-via-feedback.sql`,
+  `docs/migrations/2026-09-09-feedback-question-type.sql` — тип `question`
+  добавлен 2026-09-09: «просто вопрос» не помещался ни в один из трёх типов).
 - `status`: `new` → `in_progress` → `resolved` | `rejected`.
 
 ## Права и защита
@@ -57,10 +60,12 @@
 `/admin/coaches`, кнопка «Отменить проверку» (счётчик заявок на дэшборде
 `/admin` считается по `feedback` type=verification в `new`/`in_progress`).
 
-## Обращения (bug / feature)
+## Обращения (question / bug / feature)
 
-Форма `/feedback`: тип, тема, описание, до 5 скриншотов (image/*, ≤5MB, бакет
-`uploads`/`feedback/`). Админ: список с фильтром статуса/поиском, модалка
+Форма `/feedback`: тип (4 кнопки; тип предвыбран из ссылки `?type=`), тема,
+описание, до 5 скриншотов (image/*, ≤5MB, бакет `uploads`/`feedback/`).
+Ссылка из Справочника `/help` («Не нашли ответ?») ведёт на
+`/feedback?type=question`. Админ: список с фильтром статуса/поиском, модалка
 с ответом, статусы из select (таблица/карточки/модалка), массовые статусы,
 JSON- и CSV-выгрузка. Ответ админа виден автору плашкой «Ответ поддержки».
 
@@ -72,6 +77,7 @@ JSON- и CSV-выгрузка. Ответ админа виден автору �
 - Админка: `app/admin/feedback/page.tsx`, дэшборд-счётчик: `app/admin/page.tsx`
 - Кабинет автора: `app/dashboard/mentor/profile/page.tsx`
 - Значок: `app/mentors/page.tsx`, `components/MentorProfile.tsx`
-- Миграция: `docs/migrations/2026-09-08-verification-via-feedback.sql`
+- Миграции: `docs/migrations/2026-09-08-verification-via-feedback.sql`,
+  `docs/migrations/2026-09-09-feedback-question-type.sql`
 - Справочник (правило техписателя): `content/help/feedback.tsx`,
-  `content/help/profile.tsx`, скрин `public/help/help-feedback.png`
+  `content/help/profile.tsx`, скрин `public/help/help-feedback-form.png`

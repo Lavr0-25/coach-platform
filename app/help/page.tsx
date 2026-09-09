@@ -99,14 +99,14 @@ export default async function HelpPage({
       </article>
 
       <p className="mt-6 text-xs text-gray-400 text-center">
-        Не нашли ответ? Напишите нам через{" "}
+        Не нашли ответ? Задайте вопрос через{" "}
         <Link
-          href="/feedback"
+          href="/feedback?type=question"
           className="text-purple-600 dark:text-purple-300 hover:underline"
         >
           форму обращений
-        </Link>
-        .
+        </Link>{" "}
+        — тип «Вопрос» будет выбран сразу.
       </p>
     </div>
   );
