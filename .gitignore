@@ -57,3 +57,4 @@ next-env.d.ts
 /agent/config.json
 /agent/logs/
 /agent/tmp/
+/agent/digest/
