@@ -1,9 +1,26 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { statSync } from "node:fs";
+import { join } from "node:path";
 
 // Общий оформительский каркас разделов Справочника («Как здесь работать?»).
 // Разделы в content/help/*.tsx собираются из этих деталей — так все разделы
 // выглядят одинаково, и правится вид в одном месте.
+
+// Адрес скриншота с версией по дате изменения файла (?v=…): после переснятия
+// скрина URL меняется, и браузер не показывает старый кэш. Если файл не
+// найден (или fs недоступен) — возвращаем адрес без версии.
+function shotSrc(id: string): string {
+  const base = `/help/help-${id}.png`;
+  try {
+    const mtimeMs = statSync(
+      join(process.cwd(), "public", "help", `help-${id}.png`),
+    ).mtimeMs;
+    return `${base}?v=${Math.round(mtimeMs)}`;
+  } catch {
+    return base;
+  }
+}
 
 // Скриншот страницы: файл public/help/<id>.png, ширина 1280.
 // Рамка-подложка, чтобы светлый скрин аккуратно смотрелся в тёмной теме.
@@ -18,7 +35,7 @@ export function Shot({
     <figure className="my-5">
       <div className="rounded-xl border border-purple-100 bg-white p-1.5 dark:border-white/10">
         <Image
-          src={`/help/help-${id}.png`}
+          src={shotSrc(id)}
           alt={caption ?? "Скриншот страницы"}
           width={1280}
           height={800}
