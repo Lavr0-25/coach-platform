@@ -5,6 +5,7 @@ import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import type { Metadata } from 'next'
 import FavoriteButton from '@/components/FavoriteButton'
+import PurchaseButton from '@/components/PurchaseButton'
 import { Card } from '@/components/ui/Card'
 
 const ReviewsSection = dynamic(
@@ -287,20 +288,8 @@ export default async function CoursePage({ params }: CoursePageProps) {
                 {isPurchased ? 'Продолжить обучение' : 'Начать обучение'}
               </Link>
             ) : (
-              // Платежи ещё не подключены: нейтральная кнопка вместо битой ссылки на /checkout
-              <div>
-                <button
-                  disabled
-                  title="Оплата появится скоро"
-                  className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 opacity-60 cursor-not-allowed inline-flex items-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                  Купить курс
-                </button>
-                <p className="text-sm text-gray-500 mt-2">Онлайн-оплата появится скоро</p>
-              </div>
+              // Ф2: оплата через Robokassa (test-режим)
+              <PurchaseButton itemType="course" itemId={id} label={`Купить курс — ${course.price} ₽`} />
             )}
           </div>
         )}
