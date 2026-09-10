@@ -7,5 +7,19 @@
     "vk_group_id": "ID_СООБЩЕСТВА_ВК",
     "tg_bot_token": "ВСТАВЬ_СЮДА_ТОКЕН_БОТА_ОТ_BOTFATHER",
     "tg_channel": "@ник_канала"
+  },
+  "gigachat": {
+    "auth_key": "ВСТАВЬ_СЮДА_AUTHORIZATION_KEY_GIGACHAT"
+  },
+  "social_style": {
+    "project_name": "Название канала/платформы",
+    "theme": "тематика проекта",
+    "tone": "описание тона постов",
+    "emoji_rule": "1-2 максимум на пост, только в заголовке или для акцента",
+    "hashtags": "не использовать",
+    "image_style": "стиль картинок (флэт-иллюстрация / фотореализм / мемы / обложка)",
+    "footer_variants": ["вариант 1", "вариант 2", "вариант 3"],
+    "sources": "platform_news | mentor_material | tip | industry_news",
+    "platforms": ["telegram"]
   }
 }
