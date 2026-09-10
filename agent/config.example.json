@@ -1,5 +1,11 @@
 {
   "api_key": "ВСТАВЬ_СЮДА_КЛЮЧ_ИЗ_/dashboard/ai/keys",
   "base_url": "https://coach-platform-pi.vercel.app",
-  "cli": "claude"
+  "cli": "claude",
+  "autopost": {
+    "vk_access_token": "ВСТАВЬ_СЮДА_КЛЮЧ_VK_API",
+    "vk_group_id": "ID_СООБЩЕСТВА_ВК",
+    "tg_bot_token": "ВСТАВЬ_СЮДА_ТОКЕН_БОТА_ОТ_BOTFATHER",
+    "tg_channel": "@ник_канала"
+  }
 }
