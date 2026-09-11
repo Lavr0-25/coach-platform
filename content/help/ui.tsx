@@ -96,7 +96,8 @@ export function Steps({
             : null;
         return (
           <li key={i} className="space-y-2">
-            {step ? step.text : item}
+            {/* объект без text сюда не попадает (отсеян проверкой выше) — item это строка/элемент */}
+            {step ? step.text : (item as ReactNode)}
             {step?.shot ? (
               <Shot
                 id={step.shot}

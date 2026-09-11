@@ -14,7 +14,7 @@ interface Feedback {
   id: string
   user_id: string
   user_name: string
-  type: 'bug' | 'feature' | 'verification'
+  type: 'bug' | 'feature' | 'verification' | 'question'
   title: string
   description: string
   status: 'new' | 'in_progress' | 'resolved' | 'rejected'
