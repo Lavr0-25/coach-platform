@@ -882,12 +882,12 @@ export default function MentorProfilePage() {
                         </p>
                       ) : (
                         <p className="text-sm text-gray-600 mt-1">
-                          Платные уроки, курсы и подписка на вас <b>пока недоступны</b>. Чтобы продавать
-                          материалы, нужно подписать договор с площадкой: напишите нам через{' '}
-                          <Link href="/feedback" className="text-purple-700 underline underline-offset-2 hover:text-purple-800">
-                            «Обратную связь»
-                          </Link>{' '}
-                          — пришлём документ. После подписания администратор включит продажи.
+                          Платные уроки, курсы и подписка на вас <b>пока недоступны</b>. Как подключить —
+                          в разделе{' '}
+                          <Link href="/dashboard/mentor/partner" className="text-purple-700 underline underline-offset-2 hover:text-purple-800">
+                            «Партнёрская программа»
+                          </Link>
+                          : принимаете договор-оферту, подаёте заявку — администратор включит продажи.
                         </p>
                       )}
                     </div>

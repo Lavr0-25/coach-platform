@@ -3,6 +3,15 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { LayoutDashboard } from 'lucide-react'
 
+// Русское склонение после числа: plural(1, ['заявка','заявки','заявок']) → 'заявка'
+function plural(n: number, forms: [string, string, string]) {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return forms[0]
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return forms[1]
+  return forms[2]
+}
+
 export default async function AdminPage() {
   const supabase = await createClient()
   
@@ -27,7 +36,8 @@ export default async function AdminPage() {
     { count: commentReportsCount },
     { count: reviewReportsCount },
     { count: newFeedbackCount },
-    { count: pendingVerificationCount }
+    { count: pendingVerificationCount },
+    { count: paidRequestsCount }
   ] = await Promise.all([
     supabase.from('stop_list').select('*', { count: 'exact', head: true }).gte('banned_until', new Date().toISOString()),
     supabase.from('reports').select('*', { count: 'exact', head: true }).gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
@@ -37,7 +47,8 @@ export default async function AdminPage() {
     supabase.from('reports').select('*', { count: 'exact', head: true }),
     supabase.from('review_reports').select('*', { count: 'exact', head: true }),
     supabase.from('feedback').select('*', { count: 'exact', head: true }).eq('status', 'new'),
-    supabase.from('feedback').select('*', { count: 'exact', head: true }).eq('type', 'verification').in('status', ['new', 'in_progress'])
+    supabase.from('feedback').select('*', { count: 'exact', head: true }).eq('type', 'verification').in('status', ['new', 'in_progress']),
+    supabase.from('paid_access_requests').select('*', { count: 'exact', head: true }).eq('status', 'submitted')
   ])
 
   const totalNewReports = (commentReportsCount || 0) + (reviewReportsCount || 0)
@@ -160,7 +171,7 @@ export default async function AdminPage() {
               icon={<FeedbackIcon />} 
               badge={newFeedbackCount}
               badgeColor="bg-blue-100 text-blue-700"
-              badgeText="новых"
+              badgeText={`${plural(newFeedbackCount || 0, ['новое', 'новых', 'новых'])}`}
             />
             <AdminLink 
               href="/admin/settings" 
@@ -175,7 +186,16 @@ export default async function AdminPage() {
               icon={<MentorIcon />}
               badge={pendingVerificationCount}
               badgeColor="bg-amber-100 text-amber-700"
-              badgeText="заявок на проверку"
+              badgeText={`${plural(pendingVerificationCount || 0, ['заявка', 'заявки', 'заявок'])} на проверку`}
+            />
+            <AdminLink
+              href="/admin/partner"
+              title="Партнёрство"
+              desc="Заявки на платный контент: договоры, одобрения, продажи"
+              icon={<HandshakeIcon />}
+              badge={paidRequestsCount}
+              badgeColor="bg-purple-100 text-purple-700"
+              badgeText={`${plural(paidRequestsCount || 0, ['заявка', 'заявки', 'заявок'])} на проверке`}
             />
             <AdminLink
               href="/admin/users"
@@ -297,6 +317,15 @@ function MentorIcon() {
   return (
     <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0v6m-4.5-3.5c0 1.38 2.015 2.5 4.5 2.5s4.5-1.12 4.5-2.5" />
+    </svg>
+  )
+}
+
+// Рукопожатие — раздел «Партнёрство» (заявки на платный контент)
+function HandshakeIcon() {
+  return (
+    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 016 0zM7 10a2 2 0 11-6 0 2 2 0 016 0z" />
     </svg>
   )
 }

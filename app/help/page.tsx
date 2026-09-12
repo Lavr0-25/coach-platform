@@ -39,7 +39,7 @@ export default async function HelpPage({
   }
   const visibleSections = isAdmin
     ? SECTIONS
-    : SECTIONS.filter((s) => s.id !== "admin" && s.id !== "moderation");
+    : SECTIONS.filter((s) => !s.adminOnly);
 
   const active =
     (wanted ? visibleSections.find((s) => s.id === wanted) : undefined) ??

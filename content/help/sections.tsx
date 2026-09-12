@@ -3,6 +3,7 @@ import {
   BookText,
   Bot,
   GraduationCap,
+  Handshake,
   Home,
   IdCard,
   Mail,
@@ -28,6 +29,8 @@ import FeedbackHelp from "./feedback";
 import AdminHelp from "./admin";
 import ModerationHelp from "./moderation";
 import ThemeHelp from "./theme";
+import PartnerHelp from "./partner";
+import PartnerAdminHelp from "./partner-admin";
 
 // Реестр разделов Справочника. Новый раздел = новый файл-компонент в
 // content/help/ + строка здесь. pages — адреса, с которых иконка «Как здесь
@@ -38,6 +41,8 @@ export type HelpSection = {
   title: string;
   icon: LucideIcon;
   match: (path: string) => boolean;
+  /** Раздел виден только админам (контент админ-панели) — скрывается от остальных */
+  adminOnly?: boolean;
   content: ReactNode;
 };
 
@@ -89,6 +94,13 @@ export const SECTIONS: HelpSection[] = [
     content: <SubscriptionsHelp />,
   },
   {
+    id: "partner",
+    title: "Партнёрская программа",
+    icon: Handshake,
+    match: (p) => p === "/dashboard/mentor/partner",
+    content: <PartnerHelp />,
+  },
+  {
     id: "messages",
     title: "Личные сообщения",
     icon: MessageCircle,
@@ -124,6 +136,7 @@ export const SECTIONS: HelpSection[] = [
       ["/admin", "/admin/users", "/admin/lessons", "/admin/coaches"].includes(
         p,
       ),
+    adminOnly: true,
     content: <AdminHelp />,
   },
   {
@@ -137,7 +150,16 @@ export const SECTIONS: HelpSection[] = [
         "/admin/stop-list",
         "/admin/banned-words",
       ].includes(p),
+    adminOnly: true,
     content: <ModerationHelp />,
+  },
+  {
+    id: "partner-admin",
+    title: "Партнёрство (админ)",
+    icon: Handshake,
+    match: (p) => p === "/admin/partner",
+    adminOnly: true,
+    content: <PartnerAdminHelp />,
   },
   {
     id: "theme",

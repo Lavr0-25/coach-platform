@@ -10,6 +10,7 @@ const SECTION_LINKS = [
   { href: '/dashboard/mentor/lessons', label: 'Мои материалы' },
   { href: '/dashboard/mentor/courses', label: 'Мои курсы' },
   { href: '/dashboard/mentor/subscribers', label: 'Подписчики' },
+  { href: '/dashboard/mentor/partner', label: 'Партнёрство' },
   { href: '/dashboard/ai', label: 'Управление с ИИ' },
   { href: '/mentor/analytics', label: 'Аналитика' },
   { href: '/dashboard/mentor/profile', label: 'Профиль' },
