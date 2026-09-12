@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { validatePassword } from '@/lib/password'
 
 export default function ResetPasswordPage() {
   const supabase = createClient()
@@ -33,8 +34,9 @@ export default function ResetPasswordPage() {
       return
     }
 
-    if (password.length < 8) {
-      setError('Пароль должен быть не менее 8 символов')
+    const pwCheck = validatePassword(password)
+    if (!pwCheck.ok) {
+      setError(pwCheck.message!)
       return
     }
 

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { BadgeCheck, BookOpen, Check, Clock, Lock, PenLine, SearchX, XCircle } from 'lucide-react'
 import { Input, Textarea } from '@/components/ui/Input'
+import { validatePassword } from '@/lib/password'
 
 export default function MentorProfilePage() {
   const supabase = createClient()
@@ -316,8 +317,9 @@ export default function MentorProfilePage() {
     setError('')
     setSuccess('')
 
-    if (newPassword.length < 8) {
-      setError('Новый пароль должен содержать минимум 8 символов')
+    const pwCheck = validatePassword(newPassword)
+    if (!pwCheck.ok) {
+      setError(pwCheck.message!)
       return
     }
 

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { validatePassword } from '@/lib/password'
 
 export default function RegisterPage() {
   const supabase = createClient()
@@ -34,8 +35,9 @@ export default function RegisterPage() {
       return
     }
 
-    if (password.length < 6) {
-      setError('Пароль должен содержать минимум 6 символов')
+    const pwCheck = validatePassword(password)
+    if (!pwCheck.ok) {
+      setError(pwCheck.message!)
       setLoading(false)
       return
     }
@@ -57,7 +59,7 @@ export default function RegisterPage() {
         } else if (signUpError.message.includes('Invalid email')) {
           setError('Некорректный email адрес')
         } else if (signUpError.message.includes('Weak password')) {
-          setError('Слишком простой пароль. Используйте минимум 6 символов')
+          setError('Слишком простой пароль. Используйте минимум 8 символов')
         } else {
           setError(signUpError.message)
         }
@@ -160,7 +162,7 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-12"
-                  placeholder="Минимум 6 символов"
+                  placeholder="Минимум 8 символов"
                   disabled={loading || success}
                 />
                 <button
@@ -182,7 +184,7 @@ export default function RegisterPage() {
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Минимум 6 символов
+                Минимум 8 символов
               </p>
             </div>
 
