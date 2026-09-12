@@ -10,6 +10,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import FavoriteButton from '@/components/FavoriteButton'
 import ProfileActions from '@/components/ProfileActions'
+import SubscriptionButton from '@/components/SubscriptionButton'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { BadgeCheck, Briefcase, BookOpen, UserRound } from 'lucide-react'
@@ -44,6 +45,9 @@ interface Coach {
   specialization: string | null
   is_verified?: boolean
   created_at: string
+  // Ф3: платная подписка — цена за месяц и право продавать (рубильник админа)
+  subscription_price?: number | null
+  paid_publishing_allowed?: boolean
 }
 
 export default function MentorProfile({ coachId }: { coachId: string }) {
@@ -71,7 +75,7 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
       // Получаем данные автора
       const { data: coachData } = await supabase
         .from('coaches')
-        .select('id, user_id, display_name, avatar_url, bio, specialization, is_verified, created_at')
+        .select('id, user_id, display_name, avatar_url, bio, specialization, is_verified, created_at, subscription_price, paid_publishing_allowed')
         .eq('id', coachId)
         .maybeSingle()
 
@@ -279,6 +283,17 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
                 <div className="text-sm text-gray-600">лет на платформе</div>
               </div>
             </div>
+
+            {/* Ф3: платная подписка на автора — для гостей (не владелец профиля),
+                когда рубильник включён и цена задана */}
+            {currentUserId && currentUserId !== coach.user_id && !!coach.paid_publishing_allowed && Number(coach.subscription_price) > 0 && (
+              <div className="mb-6">
+                <SubscriptionButton
+                  coachUserId={coach.user_id}
+                  monthlyPrice={Number(coach.subscription_price)}
+                />
+              </div>
+            )}
           </div>
         </div>
       </Card>

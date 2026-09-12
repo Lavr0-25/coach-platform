@@ -10,6 +10,7 @@ import {
   Palette,
   Shield,
   Users,
+  Wallet,
   ChartColumn,
   Wrench,
   type LucideIcon,
@@ -18,6 +19,7 @@ import CabinetHelp from "./cabinet";
 import LessonsHelp from "./lessons";
 import CoursesHelp from "./courses";
 import SubscribersHelp from "./subscribers";
+import SubscriptionsHelp from "./subscriptions";
 import MessagesHelp from "./messages";
 import AnalyticsHelp from "./analytics";
 import ProfileHelp from "./profile";
@@ -74,6 +76,17 @@ export const SECTIONS: HelpSection[] = [
     icon: ChartColumn,
     match: (p) => p.startsWith("/mentor/analytics"),
     content: <AnalyticsHelp />,
+  },
+  {
+    id: "subscriptions",
+    title: "Платные подписки",
+    icon: Wallet,
+    // Профиль автора (кроме аналитики), уроки и курсы — там кнопка подписки
+    match: (p) =>
+      (p.startsWith("/mentor/") && !p.startsWith("/mentor/analytics")) ||
+      p.startsWith("/lesson/") ||
+      p.startsWith("/course/"),
+    content: <SubscriptionsHelp />,
   },
   {
     id: "messages",

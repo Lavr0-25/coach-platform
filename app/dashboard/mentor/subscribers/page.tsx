@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
-import { Users } from 'lucide-react'
+import { ChevronRight, Users } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 
 interface Subscriber {
@@ -15,6 +15,19 @@ interface Subscriber {
   display_name: string | null
   avatar_url: string | null
   subscribed_at: string
+}
+
+// Ф3: платный подписчик — из paid_subscriptions (журнал платных подписок).
+// По паре (user_id, coach_user_id) может быть несколько строк (история продлений):
+// оставляем одну на пользователя — с самой поздней датой окончания периода.
+interface PaidSubscriber {
+  user_id: string
+  email: string
+  display_name: string | null
+  avatar_url: string | null
+  status: string
+  period_end: string
+  created_at: string
 }
 
 const ITEMS_PER_PAGE = 10
@@ -26,6 +39,8 @@ export default function SubscribersPage() {
   const [loading, setLoading] = useState(true)
   const [subscribers, setSubscribers] = useState<Subscriber[]>([])
   const [totalSubscribers, setTotalSubscribers] = useState(0)
+  const [paidSubscribers, setPaidSubscribers] = useState<PaidSubscriber[]>([])
+  const [totalPaid, setTotalPaid] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -102,14 +117,29 @@ export default function SubscribersPage() {
 
       if (subsError) throw subsError
 
-      if (!subsData || subsData.length === 0) {
+      // Ф3: платные подписки на этого ментора (только его строки — см. RLS)
+      const { data: paidData, error: paidError } = await supabase
+        .from('paid_subscriptions')
+        .select('user_id, status, period_end, created_at')
+        .eq('coach_user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (paidError) throw paidError
+
+      if ((!subsData || subsData.length === 0) && (!paidData || paidData.length === 0)) {
         setSubscribers([])
         setTotalSubscribers(0)
+        setPaidSubscribers([])
+        setTotalPaid(0)
         setLoading(false)
         return
       }
 
-      const userIds = Array.from(new Set(subsData.map(s => s.user_id)))
+      // Профили подписчиков (бесплатных и платных) — одним запросом
+      const userIds = Array.from(new Set([
+        ...(subsData || []).map(s => s.user_id),
+        ...(paidData || []).map(s => s.user_id),
+      ]))
 
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
@@ -120,14 +150,47 @@ export default function SubscribersPage() {
 
       const profilesMap = new Map(profilesData?.map((p: any) => [p.id, p]) || [])
 
-      const allSubscribers: Subscriber[] = subsData.map(s => {
+      // Админы платформы в списке подписчиков лишние — отсеиваем их
+      const { data: coachRoles } = await supabase
+        .from('coaches')
+        .select('user_id, role')
+        .in('user_id', userIds)
+      const adminIds = new Set(
+        (coachRoles || []).filter((c: any) => c.role === 'admin').map((c: any) => c.user_id)
+      )
+
+      const allSubscribers: Subscriber[] = (subsData || [])
+        .filter(s => !adminIds.has(s.user_id))
+        .map(s => {
+          const profile = profilesMap.get(s.user_id)
+          return {
+            user_id: s.user_id,
+            email: profile?.email || '',
+            display_name: profile?.full_name || profile?.email || 'Пользователь',
+            avatar_url: profile?.avatar_url,
+            subscribed_at: s.subscribed_at,
+          }
+        })
+
+      // Дедупликация: на пользователя оставляем строку с поздним period_end
+      const paidByUser = new Map<string, any>()
+      for (const s of paidData || []) {
+        const existing = paidByUser.get(s.user_id)
+        if (!existing || new Date(s.period_end) > new Date(existing.period_end)) {
+          paidByUser.set(s.user_id, s)
+        }
+      }
+
+      const allPaid: PaidSubscriber[] = Array.from(paidByUser.values()).map(s => {
         const profile = profilesMap.get(s.user_id)
         return {
           user_id: s.user_id,
           email: profile?.email || '',
           display_name: profile?.full_name || profile?.email || 'Пользователь',
           avatar_url: profile?.avatar_url,
-          subscribed_at: s.subscribed_at,
+          status: s.status,
+          period_end: s.period_end,
+          created_at: s.created_at,
         }
       })
 
@@ -148,6 +211,18 @@ export default function SubscribersPage() {
       const paginated = filtered.slice(from, to)
 
       setSubscribers(paginated)
+
+      // Платные: тот же поиск, без пагинации (платных обычно на порядки меньше)
+      let filteredPaid = allPaid
+      if (debouncedSearch) {
+        const query = debouncedSearch.toLowerCase()
+        filteredPaid = filteredPaid.filter(s =>
+          s.email.toLowerCase().includes(query) ||
+          (s.display_name && s.display_name.toLowerCase().includes(query))
+        )
+      }
+      setPaidSubscribers(filteredPaid)
+      setTotalPaid(filteredPaid.length)
     } catch (error) {
       console.error('Error loading subscribers:', error)
     } finally {
@@ -167,6 +242,23 @@ export default function SubscribersPage() {
       month: 'long',
       year: 'numeric'
     })
+  }
+
+  // Ф3: человеческий статус платной подписки + цвет бейджа.
+  // cancelled = «Отменена», но доступ у ученика сохраняется до конца периода.
+  const getSubscriptionStatus = (status: string) => {
+    switch (status) {
+      case 'active':
+        return { label: 'Активна', className: 'bg-green-100 text-green-700' }
+      case 'cancelled':
+        return { label: 'Отменена', className: 'bg-amber-100 text-amber-700' }
+      case 'expired':
+        return { label: 'Истекла', className: 'bg-gray-200 text-gray-500' }
+      case 'pending':
+        return { label: 'Ожидает оплаты', className: 'bg-gray-200 text-gray-500' }
+      default:
+        return { label: status, className: 'bg-gray-200 text-gray-500' }
+    }
   }
 
   const totalPages = Math.ceil(totalSubscribers / ITEMS_PER_PAGE)
@@ -243,7 +335,7 @@ export default function SubscribersPage() {
             </Card>
           ))}
         </div>
-      ) : subscribers.length === 0 ? (
+      ) : subscribers.length === 0 && paidSubscribers.length === 0 ? (
         <Card variant="glow" padding="none" className="p-12 text-center">
           <div className="mb-4 flex justify-center"><Users className="w-16 h-16 text-gray-300" strokeWidth={1.5} /></div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -267,44 +359,43 @@ export default function SubscribersPage() {
         <>
           <div className="space-y-3">
             {subscribers.map((subscriber) => (
-              <Card key={subscriber.user_id} variant="glow" padding="none" className="p-4 hover:shadow-md transition-colors group">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
-                      {subscriber.avatar_url ? (
-                        <Image
-                          src={subscriber.avatar_url}
-                          alt={subscriber.display_name || ''}
-                          width={56}
-                          height={56}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        getInitials(subscriber.display_name)
-                      )}
+              // Карточка целиком — ссылка на публичный профиль ученика
+              <Link
+                key={subscriber.user_id}
+                href={`/mentor/${subscriber.user_id}`}
+                className="block group"
+              >
+                <Card variant="glow" padding="none" className="p-4 hover:shadow-md transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                        {subscriber.avatar_url ? (
+                          <Image
+                            src={subscriber.avatar_url}
+                            alt={subscriber.display_name || ''}
+                            width={56}
+                            height={56}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          getInitials(subscriber.display_name)
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg font-semibold text-gray-900 group-hover:text-purple-600 transition-colors truncate">
+                          {subscriber.display_name || 'Пользователь'}
+                        </h3>
+                        <p className="text-sm text-gray-500 truncate">{subscriber.email}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Подписан {formatDate(subscriber.subscribed_at)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-purple-600 transition-colors truncate">
-                        {subscriber.display_name || 'Пользователь'}
-                      </h3>
-                      <p className="text-sm text-gray-500 truncate">{subscriber.email}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Подписан {formatDate(subscriber.subscribed_at)}
-                      </p>
-                    </div>
+
+                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-600 group-hover:translate-x-1 transition-[transform,color] flex-shrink-0 ml-4" strokeWidth={1.5} />
                   </div>
-                  
-                  <Link
-                    href={`/mentor/${subscriber.user_id}`}
-                    className="ml-4 px-5 py-2.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl text-sm font-medium hover:bg-purple-100 transition-colors flex items-center gap-2"
-                  >
-                    Профиль
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
-                </div>
-              </Card>
+                </Card>
+              </Link>
             ))}
           </div>
 
@@ -351,6 +442,96 @@ export default function SubscribersPage() {
           </p>
         </>
       )}
+
+      {/* Ф3: Платные подписчики — из paid_subscriptions (подписка на автора) */}
+      <div className="mt-10">
+        <h2 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+          <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">
+            <Users className="w-5 h-5" strokeWidth={1.5} />
+          </span>
+          Платные подписчики
+          {totalPaid > 0 && <span className="text-base text-gray-500 font-semibold">({totalPaid})</span>}
+        </h2>
+        <p className="text-gray-600 text-sm mb-4">
+          Ученики с платной подпиской на ваши материалы. Отменённая подписка даёт доступ до конца оплаченного периода.
+        </p>
+
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} variant="glow" padding="none" className="p-4 animate-pulse">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : paidSubscribers.length === 0 ? (
+          <Card variant="glow" padding="none" className="p-8 text-center">
+            <p className="text-gray-600">Пока нет платных подписчиков</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Задайте цену подписки в разделе «Профиль → Настройки» — ученики смогут оформлять её на вашей странице
+            </p>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {paidSubscribers.map((subscriber) => {
+              const badge = getSubscriptionStatus(subscriber.status)
+              return (
+                // Карточка целиком — ссылка на публичный профиль ученика
+                <Link
+                  key={subscriber.user_id}
+                  href={`/mentor/${subscriber.user_id}`}
+                  className="block group"
+                >
+                  <Card variant="glow" padding="none" className="p-4 hover:shadow-md transition-colors">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                          {subscriber.avatar_url ? (
+                            <Image
+                              src={subscriber.avatar_url}
+                              alt={subscriber.display_name || ''}
+                              width={48}
+                              height={48}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            getInitials(subscriber.display_name)
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base font-semibold text-gray-900 group-hover:text-purple-600 transition-colors truncate">
+                            {subscriber.display_name || 'Пользователь'}
+                          </h3>
+                          <p className="text-sm text-gray-500 truncate">{subscriber.email}</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Подписка с {formatDate(subscriber.created_at)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                        <span className="text-sm text-gray-700 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-full">
+                          Оплачено до {formatDate(subscriber.period_end)}
+                        </span>
+                        <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-600 group-hover:translate-x-1 transition-[transform,color] flex-shrink-0" strokeWidth={1.5} />
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </main>
   )
 }

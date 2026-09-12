@@ -10,7 +10,7 @@ import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
-import { BadgeCheck, BookOpen, Clock, PenLine, SearchX, XCircle } from 'lucide-react'
+import { BadgeCheck, BookOpen, Check, Clock, Lock, PenLine, SearchX, XCircle } from 'lucide-react'
 import { Input, Textarea } from '@/components/ui/Input'
 
 export default function MentorProfilePage() {
@@ -34,6 +34,18 @@ export default function MentorProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState('')
   const [isPublic, setIsPublic] = useState(true)
   const [isVerified, setIsVerified] = useState(false)
+  // Ф3: цена платной подписки ₽/мес (пустая строка = не настроена) и
+  // read-only статус рубильника paid_publishing_allowed (меняет только админ)
+  const [subscriptionPrice, setSubscriptionPrice] = useState('')
+  const [paidPublishingAllowed, setPaidPublishingAllowed] = useState(false)
+  // Цена, реально лежащая в БД (обновляется после успешного сохранения) —
+  // по ней показываем «Текущая цена», чтобы сохранение было видимым
+  const [savedPrice, setSavedPrice] = useState<string>('')
+  const [priceSaved, setPriceSaved] = useState(false)
+  // У каждой формы свой флаг сохранения — общий заставлял бы все кнопки
+  // показывать «загрузку» одновременно
+  const [priceSaving, setPriceSaving] = useState(false)
+  const [passwordSaving, setPasswordSaving] = useState(false)
   // Последняя заявка на верификацию (feedback type='verification') — по ней
   // показываем статус блока: на проверке / отклонена (с ответом админа)
   const [verification, setVerification] = useState<any>(null)
@@ -87,7 +99,7 @@ export default function MentorProfilePage() {
 
       const { data: coach, error: coachError } = await supabase
         .from('coaches')
-        .select('id, user_id, display_name, bio, specialization, avatar_url, is_verified, profiles(is_public)')
+        .select('id, user_id, display_name, bio, specialization, avatar_url, is_verified, subscription_price, paid_publishing_allowed, profiles(is_public)')
         .eq('user_id', user.id)
         .maybeSingle()
 
@@ -107,6 +119,13 @@ export default function MentorProfilePage() {
         setIsPublic((coach as any).profiles?.is_public ?? true)
         setIsVerified(!!coach.is_verified)
         setIsOwner(user.id === coach.user_id)
+        setSubscriptionPrice(
+          coach.subscription_price != null ? String(coach.subscription_price) : ''
+        )
+        setSavedPrice(
+          coach.subscription_price != null ? String(coach.subscription_price) : ''
+        )
+        setPaidPublishingAllowed(!!(coach as any).paid_publishing_allowed)
 
         // Последняя заявка на верификацию — её статус показываем в блоке «Верификация»
         const { data: verifs } = await supabase
@@ -251,6 +270,47 @@ export default function MentorProfilePage() {
     }
   }
 
+  // Ф3: цена подписки — отдельная форма (не мешает сохранению профиля).
+  // Пусто = подписка не настроена; иначе вилка 99–9990 ₽ (DB CHECK страхует,
+  // но ошибку лучше показать сразу, до сохранения).
+  const handleSavePrice = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+
+    let priceValue: number | null = null
+    if (subscriptionPrice.trim() !== '') {
+      priceValue = Number(subscriptionPrice)
+      if (!Number.isFinite(priceValue) || priceValue < 99 || priceValue > 9990) {
+        setError('Цена подписки должна быть от 99 до 9990 ₽ в месяц')
+        return
+      }
+    }
+
+    if (!paidPublishingAllowed) {
+      setError('Продажи пока не включены — см. пояснение в блоке «Продажа платного контента»')
+      return
+    }
+
+    setPriceSaving(true)
+    try {
+      const { error } = await supabase
+        .from('coaches')
+        .update({ subscription_price: priceValue })
+        .eq('id', coachId)
+
+      if (error) throw error
+
+      setSavedPrice(subscriptionPrice.trim())
+      setPriceSaved(true)
+      setTimeout(() => setPriceSaved(false), 4000)
+    } catch (error: any) {
+      setError(error.message || 'Ошибка при сохранении цены')
+    } finally {
+      setPriceSaving(false)
+    }
+  }
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -266,7 +326,7 @@ export default function MentorProfilePage() {
       return
     }
 
-    setSaving(true)
+    setPasswordSaving(true)
 
     try {
       const { error } = await supabase.auth.updateUser({
@@ -281,7 +341,7 @@ export default function MentorProfilePage() {
     } catch (error: any) {
       setError(error.message || 'Ошибка при смене пароля')
     } finally {
-      setSaving(false)
+      setPasswordSaving(false)
     }
   }
 
@@ -788,6 +848,117 @@ export default function MentorProfilePage() {
             </div>
           </form>
 
+          {/* Ф3: платная подписка — отдельная форма. Пока админ не включил
+              продажи (рубильник), цена и кнопка неактивны: ментор должен видеть,
+              ЧТО закрыто и КАК это открыть (договор с площадкой). */}
+          <form onSubmit={handleSavePrice} className="style-card p-6 sm:p-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
+                <Lock className="w-5 h-5" strokeWidth={1.5} />
+              </span>
+              Платная подписка
+            </h2>
+
+            <div className="space-y-5">
+              <div
+                className={`rounded-xl p-4 border ${
+                  paidPublishingAllowed
+                    ? 'bg-purple-50/50 border-purple-100'
+                    : 'bg-amber-50 border-amber-200'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    {!paidPublishingAllowed && (
+                      <Lock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-gray-700">Продажа платного контента</div>
+                      {paidPublishingAllowed ? (
+                        <p className="text-sm text-gray-500 mt-1">
+                          Включено администратором. Ваши платные материалы можно открывать по подписке.
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-600 mt-1">
+                          Платные уроки, курсы и подписка на вас <b>пока недоступны</b>. Чтобы продавать
+                          материалы, нужно подписать договор с площадкой: напишите нам через{' '}
+                          <Link href="/feedback" className="text-purple-700 underline underline-offset-2 hover:text-purple-800">
+                            «Обратную связь»
+                          </Link>{' '}
+                          — пришлём документ. После подписания администратор включит продажи.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <span
+                    className={`flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-full ${
+                      paidPublishingAllowed
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-white text-gray-600 border border-gray-300'
+                    }`}
+                  >
+                    {paidPublishingAllowed ? 'Включено' : 'Выключено'}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label htmlFor="subscriptionPrice" className="block text-sm font-semibold text-gray-700">
+                    Цена подписки на вас, ₽/мес
+                  </label>
+                  {savedPrice !== '' && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+                      <Check className="w-3.5 h-3.5" strokeWidth={2} />
+                      Текущая цена: {savedPrice} ₽/мес
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  Ученики смогут оформлять подписку на 1, 6 или 12 месяцев по этой цене за месяц.
+                  Оставьте пустым, если подписку предлагать не хотите.
+                </p>
+                <div className="mt-2 max-w-48 relative">
+                  <Input
+                    id="subscriptionPrice"
+                    type="number"
+                    size="compact"
+                    min={99}
+                    max={9990}
+                    step={1}
+                    disabled={!paidPublishingAllowed}
+                    value={subscriptionPrice}
+                    onChange={(e) => setSubscriptionPrice(e.target.value)}
+                    placeholder="например, 499"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">₽</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-6 border-t border-purple-100">
+              <Button
+                type="submit"
+                loading={priceSaving}
+                disabled={!paidPublishingAllowed}
+                size="lg"
+              >
+                Сохранить цену
+              </Button>
+              {!paidPublishingAllowed && (
+                <span className="text-sm text-gray-500">
+                  Сохранение недоступно, пока продажи не включены
+                </span>
+              )}
+              {paidPublishingAllowed && priceSaved && (
+                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-700">
+                  <Check className="w-4 h-4" strokeWidth={2} />
+                  Сохранено
+                </span>
+              )}
+            </div>
+          </form>
+
           {/* Смена пароля */}
           <form onSubmit={handleChangePassword} className="style-card p-6 sm:p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -832,10 +1003,10 @@ export default function MentorProfilePage() {
             <div className="flex gap-3 pt-6 border-t border-purple-100">
               <button
                 type="submit"
-                disabled={saving}
+                disabled={passwordSaving}
                 className="bg-gray-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {saving ? 'Изменение...' : 'Изменить пароль'}
+                {passwordSaving ? 'Изменение...' : 'Изменить пароль'}
               </button>
             </div>
           </form>

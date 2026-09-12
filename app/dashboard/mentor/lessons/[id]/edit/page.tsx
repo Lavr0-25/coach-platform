@@ -63,6 +63,8 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
   const [hasSavedContent, setHasSavedContent] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  // Рубильник платных продаж (Ф1): false → цену менять нельзя, показываем заглушку
+  const [paidPublishingAllowed, setPaidPublishingAllowed] = useState<boolean | null>(null)
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -74,6 +76,21 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
 
   useEffect(() => {
     loadLesson()
+  }, [])
+
+  // Статус рубильника платных продаж текущего ментора (отдельно от урока:
+  // заглушка должна работать, даже если урок не загрузился)
+  useEffect(() => {
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: coach } = await supabase
+        .from('coaches')
+        .select('paid_publishing_allowed')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      setPaidPublishingAllowed(!!coach?.paid_publishing_allowed)
+    })()
   }, [])
 
   const loadLesson = async () => {
@@ -532,6 +549,22 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
         <Card variant="glow" padding="none" className="p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Цена и доступ</h2>
           <div className="space-y-4">
+            {/* Ф3: продажи ментора выключены (договор с площадкой не подписан) —
+                цена зафиксирована и показываем заглушку с путём активации */}
+            {paidPublishingAllowed === false && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+                <p className="font-semibold text-amber-800 flex items-center gap-1.5">
+                  <Lock className="w-4 h-4" strokeWidth={1.5} /> Продажи пока не включены
+                </p>
+                <p className="text-amber-700 mt-1">
+                  Платные уроки, курсы и подписка на вас пока недоступны. Чтобы продавать материалы, нужно
+                  подписать договор с площадкой: напишите нам через{' '}
+                  <Link href="/feedback" className="underline underline-offset-2 font-medium hover:text-amber-900">«Обратную связь»</Link>{' '}
+                  — пришлём документ. После подписания администратор включит продажи.
+                </p>
+              </div>
+            )}
+
             <div>
               <label htmlFor="price" className="block text-sm font-semibold text-gray-700 mb-1">Цена урока, ₽</label>
               <Input
@@ -542,7 +575,12 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="0"
+                disabled={paidPublishingAllowed === false}
+                className={paidPublishingAllowed === false ? 'opacity-60 cursor-not-allowed' : ''}
               />
+              {paidPublishingAllowed === false && (
+                <p className="text-xs text-gray-500 mt-1">Изменение цены недоступно, пока продажи не включены</p>
+              )}
             </div>
 
             {parseFloat(price) > 0 ? (

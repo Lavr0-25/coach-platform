@@ -50,9 +50,9 @@ function InlineScript({ html }: { html: string }) {
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.rightway.su"),
   title: {
-    default: "RightWay — Правильный путь",
+    default: "Верный путь — платформа менторов",
     // Вложенные страницы подставляют своё название через generateMetadata
-    template: "%s | RightWay",
+    template: "%s | Верный путь",
   },
   description: "Платформа для создания и прохождения уроков от лучших наставников",
 };

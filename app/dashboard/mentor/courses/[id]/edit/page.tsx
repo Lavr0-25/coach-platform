@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { Input, Textarea } from '@/components/ui/Input'
-import { CircleCheck, Clock, Lightbulb } from 'lucide-react'
+import { CircleCheck, Clock, Lightbulb, Lock } from 'lucide-react'
 
 interface Course {
   id: string
@@ -65,6 +65,8 @@ function EditCourseForm({ courseId }: { courseId: string }) {
   const [saving, setSaving] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState('')
+  // Рубильник платных продаж (Ф1): false → цену менять нельзя, показываем заглушку
+  const [paidPublishingAllowed, setPaidPublishingAllowed] = useState<boolean | null>(null)
   const [success, setSuccess] = useState('')
   
   // Данные курса
@@ -109,9 +111,11 @@ function EditCourseForm({ courseId }: { courseId: string }) {
       // Получаем coach_id (maybeSingle: 0 строк → null без ошибки 406)
       const { data: coach } = await supabase
         .from('coaches')
-        .select('id')
+        .select('id, paid_publishing_allowed')
         .eq('user_id', user.id)
         .maybeSingle()
+
+      setPaidPublishingAllowed(!!coach?.paid_publishing_allowed)
 
       if (!coach) throw new Error('Coach не найден')
 
@@ -420,9 +424,29 @@ function EditCourseForm({ courseId }: { courseId: string }) {
                     step="100"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
+                    disabled={paidPublishingAllowed === false}
                   />
+                  {paidPublishingAllowed === false && (
+                    <p className="text-xs text-gray-500 mt-1">Изменение цены недоступно, пока продажи не включены</p>
+                  )}
                 </div>
               </div>
+
+              {/* Ф3: продажи ментора выключены (договор с площадкой не подписан) —
+                  заглушка с путём активации */}
+              {paidPublishingAllowed === false && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+                  <p className="font-semibold text-amber-800 flex items-center gap-1.5">
+                    <Lock className="w-4 h-4" strokeWidth={1.5} /> Продажи пока не включены
+                  </p>
+                  <p className="text-amber-700 mt-1">
+                    Платные уроки, курсы и подписка на вас пока недоступны. Чтобы продавать материалы, нужно
+                    подписать договор с площадкой: напишите нам через{' '}
+                    <Link href="/feedback" className="underline underline-offset-2 font-medium hover:text-amber-900">«Обратную связь»</Link>{' '}
+                    — пришлём документ. После подписания администратор включит продажи.
+                  </p>
+                </div>
+              )}
 
               <Button type="submit" loading={saving} size="lg">
                 {saving ? 'Сохранение...' : 'Сохранить изменения'}

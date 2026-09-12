@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import FileUploader from '@/components/FileUploader'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Input, Textarea } from '@/components/ui/Input'
-import { Banknote, CircleCheck, PenLine } from 'lucide-react'
+import { Banknote, CircleCheck, Lock, PenLine } from 'lucide-react'
 
 // На платформе только текстовые уроки: тип контента не выбирается,
 // текст пишется в WYSIWYG-редакторе на странице урока.
@@ -20,6 +21,8 @@ export default function NewLessonPage() {
   const [coachId, setCoachId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  // Рубильник платных продаж (Ф1): false → цену задаём нельзя, показываем заглушку
+  const [paidPublishingAllowed, setPaidPublishingAllowed] = useState<boolean | null>(null)
   
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -37,9 +40,11 @@ export default function NewLessonPage() {
 
       const { data: coach } = await supabase
         .from('coaches')
-        .select('id')
+        .select('id, paid_publishing_allowed')
         .eq('user_id', user.id)
         .maybeSingle()
+
+      setPaidPublishingAllowed(!!coach?.paid_publishing_allowed)
 
       if (coach) {
         setCoachId(coach.id)
@@ -175,6 +180,22 @@ export default function NewLessonPage() {
         <Card variant="glow" padding="none" className="p-6 sm:p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Цена и доступ</h2>
           <div className="space-y-4">
+            {/* Ф3: продажи ментора выключены (договор с площадкой не подписан) —
+                цену задаём нельзя, показываем заглушку с путём активации */}
+            {paidPublishingAllowed === false && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+                <p className="font-semibold text-amber-800 flex items-center gap-1.5">
+                  <Lock className="w-4 h-4" strokeWidth={1.5} /> Продажи пока не включены
+                </p>
+                <p className="text-amber-700 mt-1">
+                  Платные уроки, курсы и подписка на вас пока недоступны. Чтобы продавать материалы, нужно
+                  подписать договор с площадкой: напишите нам через{' '}
+                  <Link href="/feedback" className="underline underline-offset-2 font-medium hover:text-amber-900">«Обратную связь»</Link>{' '}
+                  — пришлём документ. После подписания администратор включит продажи.
+                </p>
+              </div>
+            )}
+
             <div>
               <label htmlFor="price" className="block text-sm font-semibold text-gray-700 mb-1">Цена урока, ₽</label>
               <Input
@@ -185,7 +206,11 @@ export default function NewLessonPage() {
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="0"
+                disabled={paidPublishingAllowed === false}
               />
+              {paidPublishingAllowed === false && (
+                <p className="text-xs text-gray-500 mt-1">Изменение цены недоступно, пока продажи не включены</p>
+              )}
             </div>
 
             {parseFloat(price) > 0 ? (

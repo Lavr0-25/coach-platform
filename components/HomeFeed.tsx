@@ -252,15 +252,6 @@ export default function HomeFeed({
                 </svg>
               </div>
             </div>
-
-            {!user && (
-              <Link
-                href="/login"
-                className="gradient-btn px-6 py-2.5 text-white text-sm font-medium rounded-full"
-              >
-                Войти
-              </Link>
-            )}
           </div>
         </div>
       </div>

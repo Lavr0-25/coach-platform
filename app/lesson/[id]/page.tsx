@@ -9,9 +9,11 @@ import dynamic from 'next/dynamic'
 import type { Metadata } from 'next'
 import FavoriteButton from '@/components/FavoriteButton'
 import PurchaseButton from '@/components/PurchaseButton'
+import SubscriptionButton from '@/components/SubscriptionButton'
 import LikeButton from '@/components/LikeButton'
 import LessonProgress from '@/components/LessonProgress'
 import { Card } from '@/components/ui/Card'
+import { getPaidSubscription } from '@/lib/access'
 
 const LessonComments = dynamic(
   () => import('@/components/LessonComments'),
@@ -145,7 +147,8 @@ export default async function LessonPage({ params }: LessonPageProps) {
         user_id,
         display_name,
         specialization,
-        avatar_url
+        avatar_url,
+        subscription_price
       ),
       lesson_content (
         id,
@@ -202,6 +205,14 @@ export default async function LessonPage({ params }: LessonPageProps) {
       .maybeSingle()
     isPurchased = !!purchase
   }
+
+  // Ф3: доступ по платной подписке на автора — для материалов с флагом
+  // in_subscription. Отменённая подписка тоже даёт доступ (до конца периода).
+  let subscription: Awaited<ReturnType<typeof getPaidSubscription>> = null
+  if (user && !isOwner && !isFree && lesson.in_subscription && coach?.user_id) {
+    subscription = await getPaidSubscription(supabase, user.id, coach.user_id)
+  }
+  const hasSubscription = !!subscription
 
   // Лайки: счётчик читается всеми (RLS «Anyone can view likes»), свой лайк — по user_id
   const [{ count: likeCount }, likeRes] = await Promise.all([
@@ -382,6 +393,13 @@ export default async function LessonPage({ params }: LessonPageProps) {
               {lesson.price} ₽
             </span>
           )}
+
+          {/* Ф3: материал открыт по подписке на автора */}
+          {hasSubscription && (
+            <span className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-md shadow-teal-500/20">
+              По подписке
+            </span>
+          )}
           
           <span className="text-sm text-gray-500 flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -412,17 +430,27 @@ export default async function LessonPage({ params }: LessonPageProps) {
           )}
         </div>
 
-        {/* Кнопки действий */}
-        {!isOwner && !isFree && !isPurchased && (
-          <div className="flex flex-wrap gap-3">
-            {/* Ф2: оплата через Robokassa (test-режим) */}
-            <PurchaseButton itemType="lesson" itemId={id} label={`Купить урок — ${lesson.price} ₽`} />
+        {/* Кнопки действий: разовая покупка и/или платная подписка на автора */}
+        {!isOwner && !isFree && (
+          <div className="flex flex-wrap items-start gap-4">
+            {!isPurchased && !hasSubscription && (
+              // Ф2: оплата через Robokassa (test-режим)
+              <PurchaseButton itemType="lesson" itemId={id} label={`Купить урок — ${lesson.price} ₽`} />
+            )}
+            {!isPurchased && lesson.in_subscription && coach?.user_id && Number(coach.subscription_price) > 0 && (
+              // Ф3: подписка на автора с выбором периода; активная — плашка с датой
+              <SubscriptionButton
+                coachUserId={coach.user_id}
+                monthlyPrice={Number(coach.subscription_price)}
+                subscription={subscription}
+              />
+            )}
           </div>
         )}
       </Card>
 
       {/* Контент урока */}
-      {(isFree || isPurchased || isOwner) && (
+      {(isFree || isPurchased || isOwner || hasSubscription) && (
         <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
@@ -435,7 +463,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
       )}
 
       {/* Прогресс обучения (для анонима компонент сам скрывается) */}
-      {(isFree || isPurchased || isOwner) && (
+      {(isFree || isPurchased || isOwner || hasSubscription) && (
         <div className="mb-6">
           <LessonProgress lessonId={id} />
         </div>

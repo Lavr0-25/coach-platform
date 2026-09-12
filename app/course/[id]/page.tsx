@@ -6,7 +6,9 @@ import dynamic from 'next/dynamic'
 import type { Metadata } from 'next'
 import FavoriteButton from '@/components/FavoriteButton'
 import PurchaseButton from '@/components/PurchaseButton'
+import SubscriptionButton from '@/components/SubscriptionButton'
 import { Card } from '@/components/ui/Card'
+import { getPaidSubscription } from '@/lib/access'
 
 const ReviewsSection = dynamic(
   () => import('@/components/CourseReviews'),
@@ -93,7 +95,8 @@ export default async function CoursePage({ params }: CoursePageProps) {
         user_id,
         display_name,
         specialization,
-        avatar_url
+        avatar_url,
+        subscription_price
       )
     `)
     .eq('id', id)
@@ -152,6 +155,14 @@ export default async function CoursePage({ params }: CoursePageProps) {
       .maybeSingle()
     isPurchased = !!purchase
   }
+
+  // Ф3: доступ по платной подписке на автора — для курсов с флагом
+  // in_subscription. Курс с флагом открывает подписчику весь курс целиком.
+  let subscription: Awaited<ReturnType<typeof getPaidSubscription>> = null
+  if (user && !isOwner && !isFree && course.in_subscription && coach?.user_id) {
+    subscription = await getPaidSubscription(supabase, user.id, coach.user_id)
+  }
+  const hasSubscription = !!subscription
 
   const getLessonsWord = (count: number) => {
     if (count === 0) return 'уроков'
@@ -248,6 +259,13 @@ export default async function CoursePage({ params }: CoursePageProps) {
               {course.price} ₽
             </span>
           )}
+
+          {/* Ф3: курс открыт по подписке на автора */}
+          {hasSubscription && (
+            <span className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-md shadow-teal-500/20">
+              По подписке
+            </span>
+          )}
           
           <span className="text-sm text-gray-500 flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-full">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -273,10 +291,10 @@ export default async function CoursePage({ params }: CoursePageProps) {
           )}
         </div>
 
-        {/* Кнопки действий для студентов */}
+        {/* Кнопки действий для студентов: разовая покупка и/или платная подписка */}
         {!isOwner && (
-          <div className="flex flex-wrap gap-3">
-            {isPurchased || isFree ? (
+          <div className="flex flex-wrap items-start gap-4">
+            {isPurchased || isFree || hasSubscription ? (
               <Link
                 href={firstLessonId ? `/lesson/${firstLessonId}` : '#'}
                 className="gradient-btn text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-colors inline-flex items-center gap-2"
@@ -290,6 +308,14 @@ export default async function CoursePage({ params }: CoursePageProps) {
             ) : (
               // Ф2: оплата через Robokassa (test-режим)
               <PurchaseButton itemType="course" itemId={id} label={`Купить курс — ${course.price} ₽`} />
+            )}
+            {!isFree && !isPurchased && course.in_subscription && coach?.user_id && Number(coach.subscription_price) > 0 && (
+              // Ф3: подписка на автора с выбором периода; активная — плашка с датой
+              <SubscriptionButton
+                coachUserId={coach.user_id}
+                monthlyPrice={Number(coach.subscription_price)}
+                subscription={subscription}
+              />
             )}
           </div>
         )}
