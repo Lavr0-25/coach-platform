@@ -205,7 +205,8 @@ export default async function MentorsPage({ searchParams }: MentorsPageProps) {
                     {coach.coursesCount}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {coach.coursesCount === 1 ? 'курс' : coach.coursesCount < 5 ? 'курса' : 'курсов'}
+                    {/* 0 и 5–20 — «ов» («0 курсов»), 2–4 — «а/я» */}
+                    {coach.coursesCount === 1 ? 'курс' : coach.coursesCount >= 2 && coach.coursesCount <= 4 ? 'курса' : 'курсов'}
                   </div>
                 </div>
                 
@@ -214,7 +215,7 @@ export default async function MentorsPage({ searchParams }: MentorsPageProps) {
                     {coach.lessonsCount}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {coach.lessonsCount === 1 ? 'урок' : coach.lessonsCount < 5 ? 'урока' : 'уроков'}
+                    {coach.lessonsCount === 1 ? 'урок' : coach.lessonsCount >= 2 && coach.lessonsCount <= 4 ? 'урока' : 'уроков'}
                   </div>
                 </div>
               </div>

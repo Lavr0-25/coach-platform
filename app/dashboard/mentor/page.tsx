@@ -44,8 +44,8 @@ export default async function MentorDashboardPage() {
   const coachId = coach?.id || ''
 
   // ── Данные для сводки ──────────────────────────────────────────────
-  const [lessonsRes, coursesRes, subsRes, favRes, progressRes] = await Promise.all([
-    // Мои уроки — до 5 последних
+  const [lessonsRes, lessonsCountRes, coursesRes, subsRes, favRes, progressRes] = await Promise.all([
+    // Мои уроки — до 5 последних (для списка «Создаю»)
     coachId
       ? supabase
           .from('lessons')
@@ -54,6 +54,11 @@ export default async function MentorDashboardPage() {
           .order('created_at', { ascending: false })
           .limit(5)
       : Promise.resolve({ data: [] } as const),
+    // Счётчик уроков — отдельным count-запросом: раньше считали по списку с
+    // limit(5) и карточка «Мои материалы» показывала максимум 5
+    coachId
+      ? supabase.from('lessons').select('id', { count: 'exact', head: true }).eq('coach_id', coachId)
+      : Promise.resolve({ count: 0 } as const),
     // Счётчик курсов
     coachId
       ? supabase.from('courses').select('id', { count: 'exact', head: true }).eq('coach_id', coachId)
@@ -72,7 +77,7 @@ export default async function MentorDashboardPage() {
   ])
 
   const myLessons = lessonsRes.data || []
-  const lessonsCount = myLessons.length
+  const lessonsCount = lessonsCountRes.count || myLessons.length
   const coursesCount = coursesRes.count || 0
   const subscribersCount = new Set((subsRes.data || []).map(s => s.user_id)).size
   const favoritesCount = favRes.count || 0

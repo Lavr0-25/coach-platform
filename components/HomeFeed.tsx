@@ -227,7 +227,7 @@ export default function HomeFeed({
 
     if (days === 0) return 'Сегодня'
     if (days === 1) return 'Вчера'
-    if (days < 7) return `${days} дней назад`
+    if (days < 7) return `${days} ${days >= 2 && days <= 4 ? 'дня' : 'дней'} назад`
     if (days < 30) return `${Math.floor(days / 7)} нед. назад`
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
   }
@@ -482,10 +482,7 @@ export default function HomeFeed({
 
               {/* Остальные фильтры */}
               <button
-                onClick={() => {
-                  setContentType('all')
-                  setActiveFilter('new')
-                }}
+                onClick={() => setActiveFilter('new')}
                 className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                   activeFilter === 'new'
                     ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
@@ -496,10 +493,7 @@ export default function HomeFeed({
               </button>
 
               <button
-                onClick={() => {
-                  setContentType('all')
-                  setActiveFilter('popular')
-                }}
+                onClick={() => setActiveFilter('popular')}
                 className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                   activeFilter === 'popular'
                     ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
@@ -510,10 +504,7 @@ export default function HomeFeed({
               </button>
 
               <button
-                onClick={() => {
-                  setContentType('all')
-                  setActiveFilter('free')
-                }}
+                onClick={() => setActiveFilter('free')}
                 className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                   activeFilter === 'free'
                     ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'
@@ -525,10 +516,7 @@ export default function HomeFeed({
 
               {user && (
                 <button
-                  onClick={() => {
-                    setContentType('all')
-                    setActiveFilter('subscriptions')
-                  }}
+                  onClick={() => setActiveFilter('subscriptions')}
                   className={`px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                     activeFilter === 'subscriptions'
                       ? 'gradient-btn text-white shadow-lg shadow-purple-500/30'

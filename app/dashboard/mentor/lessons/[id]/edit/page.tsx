@@ -313,7 +313,7 @@ function EditLessonForm({ lessonId }: { lessonId: string }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
           </svg>
-          <span className="hidden sm:inline">{isHidden ? 'Открыть урок' : 'Как видят студенты'}</span>
+          <span>{isHidden ? 'Открыть урок' : 'Как видят студенты'}</span>
         </Link>
       </div>
 

@@ -180,21 +180,22 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
     return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
   }
 
+  // 0 и 5–20 — форма «ов»: «0 уроков», «12 уроков»; 2–4 — «урока».
   const getLessonsWord = (count: number) => {
     if (count === 1) return 'урок'
-    if (count < 5) return 'урока'
+    if (count >= 2 && count <= 4) return 'урока'
     return 'уроков'
   }
 
   const getCoursesWord = (count: number) => {
     if (count === 1) return 'курс'
-    if (count < 5) return 'курса'
+    if (count >= 2 && count <= 4) return 'курса'
     return 'курсов'
   }
 
   const getStudentsWord = (count: number) => {
     if (count === 1) return 'подписчик'
-    if (count < 5) return 'подписчика'
+    if (count >= 2 && count <= 4) return 'подписчика'
     return 'подписчиков'
   }
 
