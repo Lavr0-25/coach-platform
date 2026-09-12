@@ -279,10 +279,13 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
                   {getStudentsWord(uniqueStudents)}
                 </div>
               </div>
-              <div className="text-center p-3 bg-purple-50 rounded-xl">
-                <div className="text-2xl sm:text-3xl font-bold gradient-text">{experienceYears}+</div>
-                <div className="text-sm text-gray-600">лет на платформе</div>
-              </div>
+              {/* Стаж < 1 года не показываем: «0+ лет» читается как баг (юзабилити 12.09) */}
+              {experienceYears >= 1 && (
+                <div className="text-center p-3 bg-purple-50 rounded-xl">
+                  <div className="text-2xl sm:text-3xl font-bold gradient-text">{experienceYears}+</div>
+                  <div className="text-sm text-gray-600">лет на платформе</div>
+                </div>
+              )}
             </div>
 
             {/* Ф3: платная подписка на автора — для гостей (не владелец профиля),

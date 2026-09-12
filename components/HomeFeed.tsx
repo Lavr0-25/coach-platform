@@ -45,6 +45,13 @@ type ContentType = 'all' | 'lessons' | 'courses'
 
 const ITEMS_PER_PAGE = 9
 
+// Группы синонимов поиска: запрос школьника («нейросети») не должен давать
+// пустоту, когда контент называется по-другому («ИИ»). Внутри группы слова
+// равнозначны — совпадение по любому варианту.
+const SEARCH_SYNONYM_GROUPS: string[][] = [
+  ['нейросети', 'нейросеть', 'нейронные сети', 'ии'],
+]
+
 export default function HomeFeed({
   initialItems,
   coaches,
@@ -134,15 +141,31 @@ export default function HomeFeed({
     return items
   }, [initialItems, shuffled, activeFilter, contentType, subscriptions, coaches])
 
+  // Группы синонимов: запрос школьника («нейросети») не должен давать пустоту,
+  // когда контент называется по-другому («ИИ»). Внутри группы слова равнозначны.
+
   const filteredBySearch = useMemo(() => {
     if (!searchQuery.trim()) return processedContent
     const query = searchQuery.toLowerCase()
+    // Запрос расширяется синонимами своей группы: совпадение по любому варианту
+    const variants = SEARCH_SYNONYM_GROUPS.some(g => g.includes(query))
+      ? SEARCH_SYNONYM_GROUPS.find(g => g.includes(query))!
+      : [query]
+    // Короткие варианты («ИИ») — только как отдельное слово: includes('ии')
+    // поймал бы «психологии», «настройки» и прочие «ии» внутри слов
+    const matchesVariant = (text: string, v: string) =>
+      v.length <= 2
+        ? text.toLowerCase().split(/[^a-zа-яё0-9]+/).includes(v)
+        : text.toLowerCase().includes(v)
     // Ищем по названию, описанию и имени автора урока/курса
     return processedContent.filter(item =>
-      item.title.toLowerCase().includes(query) ||
-      item.description?.toLowerCase().includes(query) ||
-      item.coach?.display_name?.toLowerCase().includes(query)
+      variants.some(v =>
+        matchesVariant(item.title, v) ||
+        matchesVariant(item.description ?? '', v) ||
+        matchesVariant(item.coach?.display_name ?? '', v)
+      )
     )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [processedContent, searchQuery])
 
   const displayedContent = filteredBySearch.slice(0, page * ITEMS_PER_PAGE)
@@ -258,11 +281,16 @@ export default function HomeFeed({
 
       <div className="container mx-auto px-4 pt-20 pb-8">
         <div className="flex gap-8">
-          {/* Боковая панель */}
+          {/* Боковая панель — только залогиненным: у гостя здесь нечего показывать,
+              а лента получает всю ширину (решение Анатолия, 12.09) */}
+          {user && (
           <aside className="hidden lg:block w-72 flex-shrink-0">
             <div className="sticky top-32">
               <Card variant="glow" padding="none" className="p-5">
-                {/* Поиск по авторам */}
+                {/* Поиск по авторам — только для залогиненных: гость не может
+                    подписываться, а по имени автора ищет главный поиск в шапке
+                    (два поля поиска на одном экране путали новичка, юзабилити 12.09) */}
+                {user && (
                 <div className="mb-4 relative">
                   <input
                     type="text"
@@ -275,9 +303,10 @@ export default function HomeFeed({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
+                )}
 
                 {/* Список */}
-                {user ? (
+                {user && (
                   <div className="space-y-2">
                     {coachSearchQuery ? (
                       filteredCoaches.length === 0 ? (
@@ -422,25 +451,22 @@ export default function HomeFeed({
                       Все авторы →
                     </Link>
                   </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-gray-500 mb-3">
-                      Войдите, чтобы подписываться
-                    </p>
-                    <Link
-                      href="/login"
-                      className="inline-block gradient-btn px-6 py-2.5 text-white text-sm rounded-full font-medium"
-                    >
-                      Войти
-                    </Link>
-                  </div>
                 )}
               </Card>
             </div>
           </aside>
+          )}
 
           {/* Основной контент */}
           <main className="flex-1 min-w-0">
+            {/* Вводная для гостя: первые 5 секунд — что за сайт и для кого (юзабилити 12.09) */}
+            {!user && (
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-5">
+                Знания и вдохновение от проверенных менторов —{' '}
+                <span className="gradient-text">начните бесплатно</span>
+              </h1>
+            )}
+
             {/* Все фильтры в одной строке */}
             <div className="flex gap-2 mb-6 overflow-x-auto pb-2 flex-wrap">
               {/* Типы контента */}
@@ -546,6 +572,22 @@ export default function HomeFeed({
                       ? 'Попробуйте изменить запрос'
                       : 'Пока нет доступного контента'}
                 </p>
+                {searchQuery && (
+                  <div className="mt-6">
+                    <p className="text-sm text-gray-500 mb-3">Популярное сейчас:</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {['ИИ', 'React', 'PostgreSQL', 'Дизайн', 'Психология', 'Коучинг'].map(topic => (
+                        <button
+                          key={topic}
+                          onClick={() => setSearchQuery(topic)}
+                          className="px-4 py-1.5 rounded-full text-sm bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors"
+                        >
+                          {topic}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <>

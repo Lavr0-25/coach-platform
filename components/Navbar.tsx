@@ -430,10 +430,10 @@ export default function Navbar() {
                 <Link
                   href="/register"
                   aria-label="Регистрация"
-                  className="gradient-btn flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 rounded-xl text-white shadow-lg shadow-purple-500/30 sm:flex-row sm:px-4 sm:py-2 sm:gap-1.5 font-medium text-sm"
+                  title="Регистрация"
+                  className="gradient-btn flex items-center justify-center gap-0.5 px-2 py-1.5 rounded-xl text-white shadow-lg shadow-purple-500/30 sm:px-4 sm:py-2 sm:gap-1.5 font-medium text-sm"
                 >
                   <UserPlus className="w-5 h-5 sm:hidden" strokeWidth={1.5} />
-                  <span className="text-[10px] leading-none sm:hidden">Регистрация</span>
                   <span className="hidden sm:inline">Регистрация</span>
                 </Link>
               </div>
