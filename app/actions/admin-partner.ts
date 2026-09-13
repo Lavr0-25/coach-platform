@@ -309,3 +309,93 @@ export async function getAdminAgreementFileUrl(
   if (error || !data) return { ok: false, error: 'Не удалось получить ссылку на файл' }
   return { ok: true, url: data.signedUrl }
 }
+
+// ─── Ф6.3: факсимиле Платформы (№25) ──────────────────────────────────────
+// Картинка «печать + роспись ООО „Проинфо"» хранится в публичном бакете brand
+// под постоянным именем facsimile.png (замена = перезапись), публичный URL —
+// в system_settings ключом facsimile_url. Ключа нет = факсимиле не загружено.
+const FACSIMILE_PATH = 'facsimile.png'
+const FACSIMILE_MAX_MB = 2
+
+// Читаем публичный URL факсимиле (для карточки админки и /offer-mentor/print)
+export async function getFacsimileUrl(): Promise<string | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('system_settings')
+    .select('value')
+    .eq('key', 'facsimile_url')
+    .maybeSingle()
+  const url = typeof data?.value === 'string' ? data.value : null
+  return url || null
+}
+
+export async function uploadFacsimile(formData: FormData): Promise<AdminActionResult> {
+  const file = formData.get('file')
+
+  const g = await requireAdmin()
+  if (!g.ok) return { ok: false, error: g.error }
+  const { supabase, adminId } = g
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: 'Выберите файл' }
+  }
+  if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
+    return { ok: false, error: 'Только PNG или JPEG' }
+  }
+  if (file.size > FACSIMILE_MAX_MB * 1024 * 1024) {
+    return { ok: false, error: `Файл слишком большой — максимум ${FACSIMILE_MAX_MB} МБ` }
+  }
+
+  const { error: uploadError } = await supabase.storage
+    .from('brand')
+    .upload(FACSIMILE_PATH, file, { contentType: file.type, upsert: true })
+  if (uploadError) {
+    return { ok: false, error: 'Не удалось загрузить картинку — попробуйте ещё раз' }
+  }
+
+  const { data } = supabase.storage.from('brand').getPublicUrl(FACSIMILE_PATH)
+  if (!data?.publicUrl) {
+    return { ok: false, error: 'Картинка загружена, но ссылка не получилась — сообщите разработчику' }
+  }
+
+  const { error: settingsError } = await supabase
+    .from('system_settings')
+    .upsert([{ key: 'facsimile_url', value: data.publicUrl }], { onConflict: 'key' })
+  if (settingsError) {
+    return { ok: false, error: 'Картинка загружена, но не включена — сообщите разработчику' }
+  }
+
+  await audit(supabase, adminId, 'facsimile_uploaded', 'system_settings', 'facsimile_url', {
+    file_name: file.name,
+    size: file.size,
+  })
+
+  revalidatePath('/admin/partner')
+  revalidatePath('/offer-mentor/print')
+  return { ok: true }
+}
+
+export async function removeFacsimile(): Promise<AdminActionResult> {
+  const g = await requireAdmin()
+  if (!g.ok) return { ok: false, error: g.error }
+  const { supabase, adminId } = g
+
+  const { error: storageError } = await supabase.storage.from('brand').remove([FACSIMILE_PATH])
+  // Картинки может уже не быть (убрали ключ раньше / сбой загрузки) —
+  // выключаем ключ в любом случае: он единственный источник «включено».
+  // Выключение = пустое значение (DELETE-политики на system_settings нет,
+  // читатели трактуют «ключа нет или пусто» одинаково: факсимиле выключено).
+  const { error: settingsError } = await supabase
+    .from('system_settings')
+    .update({ value: '' })
+    .eq('key', 'facsimile_url')
+  if (settingsError) return { ok: false, error: 'Не удалось убрать факсимиле' }
+
+  await audit(supabase, adminId, 'facsimile_removed', 'system_settings', 'facsimile_url', {
+    storage_error: storageError?.message || null,
+  })
+
+  revalidatePath('/admin/partner')
+  revalidatePath('/offer-mentor/print')
+  return { ok: true }
+}

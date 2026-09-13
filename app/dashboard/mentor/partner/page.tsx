@@ -75,6 +75,7 @@ export default function PartnerPage() {
   const [inn, setInn] = useState('')
   const [comment, setComment] = useState('')
   const [scan, setScan] = useState<File | null>(null)
+  const [facsimileRequested, setFacsimileRequested] = useState(false)
 
   // Реквизиты для выплат (появляются после одобрения заявки)
   const [payout, setPayout] = useState({ holder: '', account: '', bank: '', bik: '' })
@@ -186,6 +187,7 @@ export default function PartnerPage() {
     fd.set('inn', inn.trim())
     fd.set('comment', comment)
     if (scan) fd.set('scan', scan)
+    if (facsimileRequested) fd.set('facsimile_requested', 'on')
     const res = await submitPaidAccessRequest(fd)
     setSaving(false)
     if (!res.ok) {
@@ -536,6 +538,25 @@ export default function PartnerPage() {
                       </p>
                     </div>
                   )}
+                </div>
+
+                <div>
+                  <label htmlFor="facsimile" className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      id="facsimile"
+                      type="checkbox"
+                      name="facsimile_requested"
+                      checked={facsimileRequested}
+                      onChange={(e) => setFacsimileRequested(e.target.checked)}
+                      className="mt-1 w-4 h-4 accent-purple-600 flex-shrink-0"
+                    />
+                    <span className="text-sm text-gray-700">
+                      Проставить на договоре <b>факсимиле Платформы</b> (печать и подпись
+                      ООО «Проинфо») — тогда в персональной версии будет уже «подписанный
+                      платформой» документ: вам останется распечатать его, подписать своей
+                      рукой и приложить скан выше.
+                    </span>
+                  </label>
                 </div>
 
                 <div>

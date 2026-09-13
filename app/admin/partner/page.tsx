@@ -11,13 +11,15 @@ import Link from 'next/link'
 import { useToast } from '@/components/Toast'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Textarea } from '@/components/ui/Input'
+import { Input, Textarea } from '@/components/ui/Input'
 import {
   approvePaidAccessRequest,
   returnPaidAccessRequest,
   setPaidPublishingAllowed,
   uploadFinalSignedFile,
   getAdminAgreementFileUrl,
+  uploadFacsimile,
+  removeFacsimile,
 } from '@/app/actions/admin-partner'
 import {
   Check,
@@ -26,6 +28,9 @@ import {
   FileText,
   Handshake,
   RotateCcw,
+  Search,
+  Stamp,
+  Trash2,
   Upload,
   Wallet,
   XCircle,
@@ -70,6 +75,12 @@ export default function AdminPartnerPage() {
   const [offId, setOffId] = useState<string | null>(null) // открытая форма отключения продаж
   const [offReason, setOffReason] = useState('')
   const [uploadingFor, setUploadingFor] = useState<string | null>(null)
+  const [facsimileUrl, setFacsimileUrl] = useState<string | null>(null)
+  const [facsimileBusy, setFacsimileBusy] = useState(false)
+
+  // Поиск + фильтр по статусу (клиентские: все заявки уже загружены)
+  const [statusFilter, setStatusFilter] = useState<'all' | Status>('all')
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     loadAll()
@@ -77,7 +88,7 @@ export default function AdminPartnerPage() {
   }, [])
 
   const loadAll = async () => {
-    const [reqRes, coachRes, agrRes, filesRes] = await Promise.all([
+    const [reqRes, coachRes, agrRes, filesRes, facRes] = await Promise.all([
       supabase
         .from('paid_access_requests')
         .select('id, coach_user_id, inn, mentor_comment, status, admin_comment, created_at, decided_at')
@@ -88,6 +99,7 @@ export default function AdminPartnerPage() {
         .from('mentor_agreement_files')
         .select('id, coach_user_id, kind, original_name, uploaded_at')
         .order('uploaded_at', { ascending: false }),
+      supabase.from('system_settings').select('value, updated_at').eq('key', 'facsimile_url').maybeSingle(),
     ])
 
     setRequests((reqRes.data as Request[]) || [])
@@ -102,6 +114,9 @@ export default function AdminPartnerPage() {
     })
     setContracts(agrMap)
     setFiles((filesRes.data as FileInfo[]) || [])
+    const facRow = (facRes.data as { value?: unknown; updated_at?: string } | null) || null
+    const facValue = typeof facRow?.value === 'string' && facRow.value ? facRow.value : null
+    setFacsimileUrl(facValue ? `${facValue}?v=${facRow?.updated_at || ''}` : null)
     setLoading(false)
   }
 
@@ -171,6 +186,35 @@ export default function AdminPartnerPage() {
     await loadAll()
   }
 
+  // Ф6.3: факсимиле Платформы — загрузка/замена/удаление картинки.
+  // Ключа facsimile_url в system_settings нет = факсимиле выключено.
+  const handleUploadFacsimile = async (file: File) => {
+    setFacsimileBusy(true)
+    const fd = new FormData()
+    fd.set('file', file)
+    const res = await uploadFacsimile(fd)
+    setFacsimileBusy(false)
+    if (!res.ok) {
+      showToast(res.error || 'Ошибка', "error")
+      return
+    }
+    showToast('Факсимиле загружено — появится в договорах авторов, которые его запросили')
+    await loadAll()
+  }
+
+  const handleRemoveFacsimile = async () => {
+    if (!confirm('Убрать факсимиле? Оно исчезнет из персональных версий договоров.')) return
+    setFacsimileBusy(true)
+    const res = await removeFacsimile()
+    setFacsimileBusy(false)
+    if (!res.ok) {
+      showToast(res.error || 'Ошибка', "error")
+      return
+    }
+    showToast('Факсимиле убрано')
+    await loadAll()
+  }
+
   const statusBadge = (s: Status) =>
     s === 'submitted' ? (
       <Badge variant="orange">На проверке</Badge>
@@ -183,6 +227,24 @@ export default function AdminPartnerPage() {
   const sorted = [...requests].sort((a, b) => {
     const order: Record<Status, number> = { submitted: 0, approved: 1, returned: 2 }
     return order[a.status] - order[b.status]
+  })
+
+  // Счётчики по статусам — для кнопок фильтра
+  const statusCounts: Record<'all' | Status, number> = {
+    all: requests.length,
+    submitted: requests.filter(r => r.status === 'submitted').length,
+    approved: requests.filter(r => r.status === 'approved').length,
+    returned: requests.filter(r => r.status === 'returned').length,
+  }
+
+  // Поиск: автор, ИНН, номер договора (без регистра)
+  const q = query.trim().toLowerCase()
+  const filtered = sorted.filter(r => {
+    if (statusFilter !== 'all' && r.status !== statusFilter) return false
+    if (!q) return true
+    const name = (coaches[r.coach_user_id]?.display_name || '').toLowerCase()
+    const contract = (contracts[r.coach_user_id] || '').toLowerCase()
+    return r.inn.includes(q) || name.includes(q) || contract.includes(q)
   })
 
   return (
@@ -198,17 +260,126 @@ export default function AdminPartnerPage() {
         Все решения фиксируются в журнале действий.
       </p>
 
+      {/* Ф6.3: факсимиле Платформы — картинка для персональных договоров */}
+      <div className="bg-white rounded-2xl shadow-sm border p-5 mb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Stamp className="w-4 h-4 text-purple-600 flex-shrink-0" />
+          <h2 className="font-semibold text-gray-900">Факсимиле Платформы</h2>
+          {facsimileUrl && <Badge variant="greenFill">Включено</Badge>}
+        </div>
+        <p className="text-sm text-gray-500 mb-3">
+          Печать и подпись ООО «Проинфо» для персональных версий договора — у авторов,
+          которые попросили факсимиле галочкой в заявке (п. 10.5 договора). PNG или JPEG, до 2 МБ.
+        </p>
+        <div className="flex flex-wrap items-center gap-4">
+          {facsimileUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={facsimileUrl}
+              alt="Факсимиле Платформы"
+              className="h-20 w-auto max-w-[200px] object-contain border border-gray-200 rounded-xl bg-white p-1"
+            />
+          ) : (
+            <div className="h-20 w-40 rounded-xl border border-dashed border-gray-300 flex items-center justify-center text-xs text-gray-400">
+              не загружено
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex">
+              <input
+                type="file"
+                accept="image/png,image/jpeg"
+                className="hidden"
+                disabled={facsimileBusy}
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (f) handleUploadFacsimile(f)
+                  e.target.value = ''
+                }}
+              />
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-white text-purple-700 border border-purple-300 rounded-xl hover:bg-purple-50 transition-colors text-sm font-medium cursor-pointer">
+                <Upload className="w-4 h-4" strokeWidth={1.5} />
+                {facsimileBusy ? 'Загрузка…' : facsimileUrl ? 'Заменить' : 'Загрузить факсимиле'}
+              </span>
+            </label>
+            {facsimileUrl && (
+              <Button size="sm" variant="ghost" onClick={handleRemoveFacsimile} loading={facsimileBusy}>
+                <Trash2 className="w-4 h-4" />
+                Убрать
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600" />
         </div>
-      ) : sorted.length === 0 ? (
+      ) : requests.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm border p-8 text-center text-gray-500">
           Заявок пока нет. Автор подаёт заявку в кабинете: «Партнёрская программа».
         </div>
       ) : (
-        <div className="space-y-4">
-          {sorted.map(r => {
+        <>
+          {/* Поиск + фильтр по статусу */}
+          <div className="bg-white rounded-2xl shadow-sm border p-4 mb-4 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <Input
+                type="search"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Поиск: автор, ИНН или номер договора…"
+                className="pl-9"
+                aria-label="Поиск по заявкам"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ['all', 'Все'],
+                  ['submitted', 'На проверке'],
+                  ['approved', 'Одобрена'],
+                  ['returned', 'Возвращена'],
+                ] as const
+              ).map(([value, label]) => {
+                const active = statusFilter === value
+                const count = statusCounts[value]
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setStatusFilter(value)}
+                    aria-pressed={active}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                      active
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300 hover:text-purple-700'
+                    }`}
+                  >
+                    {label}
+                    <span
+                      className={`text-xs rounded-full px-1.5 py-0.5 ${
+                        active ? 'bg-white/20' : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {filtered.length === 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border p-8 text-center text-gray-500">
+              Ничего не найдено по заданным условиям.
+            </div>
+          )}
+
+          <div className="space-y-4">
+          {filtered.map(r => {
             const coach = coaches[r.coach_user_id]
             const contractNumber = contracts[r.coach_user_id]
             const myFiles = files.filter(f => f.coach_user_id === r.coach_user_id)
@@ -383,7 +554,8 @@ export default function AdminPartnerPage() {
               </div>
             )
           })}
-        </div>
+          </div>
+        </>
       )}
     </main>
   )

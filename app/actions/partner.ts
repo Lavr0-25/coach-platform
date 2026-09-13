@@ -20,7 +20,7 @@ export type PartnerActionResult = { ok: boolean; error?: string }
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 // ИНН физлица (12 цифр) или организации (10 цифр) — CHECK той же формы в БД
 const INN_RE = /^\d{10}$|^\d{12}$/
-const OFFER_VERSION = '1.1'
+const OFFER_VERSION = '1.2'
 const MAX_SCAN_MB = 10
 
 // Акцепт оферты: фиксируем «кто, когда, откуда» — это подпись со стороны
@@ -100,11 +100,17 @@ export async function submitPaidAccessRequest(formData: FormData): Promise<Partn
     }
   }
 
+  // Ф6.3: галочка «проставить факсимиле Платформы» — часть заявки (№25).
+  // Факсимиле появится в персональной версии (/offer-mentor/print) после
+  // одобрения заявки, если админ загрузил картинку.
+  const facsimileRequested = String(formData.get('facsimile_requested') || '') === 'on'
+
   const { error: insertError } = await supabase.from('paid_access_requests').insert({
     coach_user_id: user.id,
     inn,
     mentor_comment: comment || null,
     status: 'submitted',
+    facsimile_requested: facsimileRequested,
   })
 
   if (insertError) {

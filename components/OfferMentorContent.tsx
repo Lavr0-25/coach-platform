@@ -10,15 +10,18 @@ type Props = {
   /** Данные автора для персональной версии (печать + подпись). NULL = публичная оферта. */
   authorName?: string | null
   inn?: string | null
+  /** Публичный URL факсимиле Платформы — только для персональных версий авторов,
+   * запросивших его галочкой в заявке (Ф6.3, №25). */
+  facsimileUrl?: string | null
 }
 
-export function OfferMentorContent({ authorName, inn }: Props) {
+export function OfferMentorContent({ authorName, inn, facsimileUrl }: Props) {
   const personalized = Boolean(inn)
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border p-6 sm:p-8 space-y-6 text-gray-700 leading-relaxed text-[15px]">
       <p className="text-sm text-gray-500">
-        Публичная оферта · редакция от 12 сентября 2026 г. · версия 1.1
+        Публичная оферта · редакция от 13 сентября 2026 г. · версия 1.2
       </p>
 
       <p>
@@ -332,6 +335,14 @@ export function OfferMentorContent({ authorName, inn }: Props) {
           <b>10.4.</b> Во всём, что не урегулировано офертой, применяются нормы гражданского
           законодательства РФ.
         </p>
+        <p>
+          <b>10.5.</b> Платформа вправе подписывать договор факсимиле — воспроизведением
+          собственноручной подписи уполномоченного лица и печати ООО «Проинфо». По запросу
+          Автора (галочка в заявке на платные продажи) факсимиле проставляется в
+          персональной версии договора. Стороны признают факсимиле равным собственноручной
+          подписи (п. 2 ст. 160 ГК РФ) и не вправе оспаривать заключение договора по мотиву
+          подписания факсимиле.
+        </p>
       </section>
 
       <section className="pt-4 border-t border-gray-200">
@@ -339,8 +350,10 @@ export function OfferMentorContent({ authorName, inn }: Props) {
         <p>
           ООО «Проинфо» · ИНН 5047113440 · ОГРН 1105047002499
           <br />
+          125212, г. Москва, б-р Кронштадтский, д. 8, к. 1
+          <br />
           <span className="text-gray-500">
-            Адрес, банковские реквизиты и e-mail вписываются перед подписанием финальной
+            Банковские реквизиты и e-mail вписываются перед подписанием финальной
             версии договора.
           </span>
         </p>
@@ -365,10 +378,25 @@ export function OfferMentorContent({ authorName, inn }: Props) {
             </div>
             <div>
               <div>Дата: «____» ______________ 20___ г.</div>
-              <div className="mt-6 text-gray-500 text-xs">
-                Платформа (ООО «Проинфо») подписывает финальную версию договора и прикрепляет
-                её к вашему кабинету после одобрения заявки.
-              </div>
+              {facsimileUrl ? (
+                <div className="mt-6">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={facsimileUrl}
+                    alt="Факсимиле Платформы: подпись и печать ООО «Проинфо»"
+                    className="h-16 w-auto max-w-[180px] object-contain"
+                  />
+                  <div className="mt-1 text-gray-500 text-xs">
+                    Платформа (ООО «Проинфо»), подписано факсимиле — п. 10.5 договора
+                    (равно собственноручной подписи).
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-6 text-gray-500 text-xs">
+                  Платформа (ООО «Проинфо») подписывает финальную версию договора и прикрепляет
+                  её к вашему кабинету после одобрения заявки.
+                </div>
+              )}
             </div>
           </div>
         </section>

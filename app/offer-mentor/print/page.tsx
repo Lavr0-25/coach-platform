@@ -5,16 +5,56 @@
 // Открывается из заявки на платные продажи в кабинете (кнопка активна, когда
 // ИНН введён); печать/сохранение в PDF — вручную кнопкой на странице.
 // Данные передаются в адресной строке (это данные самого автора, не секрет).
+// Ф6.3: если автор просил факсимиле галочкой в заявке, эта заявка одобрена и
+// админ загрузил картинку — в блоке подписи стоит факсимиле Платформы (№25).
+// Флаг хранится в самой заявке (paid_access_requests): автор создаёт её
+// INSERT'ом, отдельных прав на обновление договора у него нет.
 
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { OfferMentorContent } from '@/components/OfferMentorContent'
 import { Printer } from 'lucide-react'
 
 function PrintView() {
   const params = useSearchParams()
+  const supabase = createClient()
   const inn = params.get('inn')
   const authorName = params.get('name')
+
+  // Условия показа факсимиле (см. шапку): запрос автора + одобренная заявка +
+  // картинка загружена админом. Данные собственные (RLS автора) или публичные.
+  const [facsimileUrl, setFacsimileUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || !inn) return
+
+      const [reqRes, facRes] = await Promise.all([
+        supabase
+          .from('paid_access_requests')
+          .select('facsimile_requested')
+          .eq('coach_user_id', user.id)
+          .eq('status', 'approved')
+          .order('created_at', { ascending: false })
+          .limit(1),
+        supabase.from('system_settings').select('value, updated_at').eq('key', 'facsimile_url').maybeSingle(),
+      ])
+
+      const requested = Boolean(
+        (reqRes.data as { facsimile_requested?: boolean }[] | null)?.[0]?.facsimile_requested
+      )
+      const facRow = (facRes.data as { value?: unknown; updated_at?: string } | null) || null
+      const url = typeof facRow?.value === 'string' && facRow.value ? facRow.value : null
+      if (requested && url) {
+        // ?v= — кэш-бастер: после замены картинки браузер не показывает старую
+        setFacsimileUrl(`${url}?v=${facRow?.updated_at || ''}`)
+      }
+    }
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inn])
 
   // Диалог печати НЕ запускаем автоматически: автор смотрит текст (со своими
   // данными), затем сохраняет в PDF кнопкой сам.
@@ -40,7 +80,7 @@ function PrintView() {
         </button>
       </div>
 
-      <OfferMentorContent authorName={authorName} inn={inn} />
+      <OfferMentorContent authorName={authorName} inn={inn} facsimileUrl={facsimileUrl} />
     </div>
   )
 }
