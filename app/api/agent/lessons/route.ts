@@ -1,5 +1,6 @@
 import { getAgentClient } from '@/lib/agentAuth'
 import { sanitizeLessonHtml } from '@/lib/editor/sanitizeLessonHtml'
+import { findBannedWord } from '@/lib/bannedWords'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Агентское API: текстовые уроки — вторая половина «ИИ-завода контента».
@@ -28,25 +29,6 @@ const MAX_PUBLISH_PER_DAY = 3
 
 function stripTags(html: string): string {
   return (html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-}
-
-// Проверка запрещённых слов по всем текстовым полям урока.
-// Сравнение по целым словам, не по подстроке: подстрока ловила обычные слова
-// («конча» в «кончать», «манда» в «команда», «бля» в «рубля», «млять» в
-// «утомлять»). Список в banned_words хранит полные словоформы, поэтому
-// точного совпадения токена достаточно.
-async function findBannedWord(
-  client: SupabaseClient,
-  texts: (string | null | undefined)[]
-): Promise<string | null> {
-  const { data: words, error } = await client.from('banned_words').select('word')
-  if (error) return null // список недоступен — не блокируем (ошибку покажет отдельный вызов)
-  const haystack = texts.filter(Boolean).join(' ').toLowerCase()
-  const tokens = new Set(haystack.split(/[^a-zа-яё0-9]+/).filter(Boolean))
-  for (const { word } of words || []) {
-    if (word && tokens.has(word.toLowerCase())) return word
-  }
-  return null
 }
 
 async function getCoachId(client: SupabaseClient, userId: string) {

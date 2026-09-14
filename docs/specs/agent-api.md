@@ -1,6 +1,6 @@
 # Спека: агентское API (`/api/agent/*`)
 
-> Статус: `draft` · обновлено 2026-09-04 · ответственный: Анатолий + Claude Code
+> Статус: `draft` · обновлено 2026-09-13 · ответственный: Анатолий + Claude Code
 
 ## Назначение
 
@@ -148,6 +148,55 @@ Windows планировщик) берёт следующую тему, пише
 Публикация помечает тему «published». Публиковать можно только текстовые уроки
 агента (422 для остальных).
 
+## Соцсети: очередь постов (бэклог №20, 2026-09-13)
+
+Проблема: `api.telegram.org` из РФ недоступен без VPN — контент-завод не может
+публиковать в Telegram без включённого ПК с VPN. Решение: посты ставятся в
+**очередь** в базе (`scheduled_posts`, миграция 2026-09-13-f20-scheduled-posts.sql),
+а публикует Vercel-функция `/api/cron/publish-scheduled` — серверы Vercel вне РФ.
+
+Запуск публикации — два независимых триггера (дубли исключены атомарным
+«захватом»: `pending` → `publishing` условным update, второй вызов получает 0 строк):
+- pg_cron + pg_net — POST каждые 15 минут с заголовком `x-cron-secret`;
+- Vercel Cron (`vercel.json`) — GET раз в сутки, резервный догон
+  (`Authorization: Bearer $CRON_SECRET` подставляется Vercel сам).
+
+Переменные окружения (Vercel → Settings → Environment Variables):
+`CRON_SECRET` (тот же вписан в pg_cron-задачу), `TG_BOT_TOKEN`, `TG_CHANNEL_ID`
+(по умолчанию `@rightway_platform`). Пока `TG_BOT_TOKEN` не настроен, очередь
+не трогается — посты остаются `pending`.
+
+Жизненный цикл поста: `pending` → `publishing` (взят публикацией) →
+`published` (есть `published_at` и `external_message_id`) / `failed` (3 неудачных
+попытки, `attempts`, причина в `error`) / `cancelled` (автор отменил).
+Фото — публичный URL в бакете `covers` (`posts/{coach_id}/…`); Telegram
+скачивает его сам (`sendPhoto` по URL). Подпись к фото ≤ 1024, текст без фото
+≤ 4096 (лимиты Telegram проверяются при постановке в очередь).
+
+### `POST /api/agent/scheduled-posts` — поставить пост в очередь
+
+Тело `{ "text", "publish_at", "photo_base64?", "photo_ext?" }` → 201
+`{ ok, post: {id, channel, status, publish_at, photo_url, created_at}, scheduled: true }`.
+- `publish_at` — ISO, строго в будущем (немедленная отправка = пара минут вперёд).
+- Фото: base64 + расширение (`jpg|jpeg|png|webp`, до 5 МБ) — сервер грузит в
+  `covers` и пишет `photo_url`. Без фото — только `text`.
+- 422 — пустой текст, неверная дата, превышен лимит длины (1024 с фото /
+  4096 без), найдено запрещённое слово (`banned_words`, общий модуль
+  `lib/bannedWords.ts` — тот же целословный поиск, что у уроков), неверный
+  `photo_ext`. 429 — дневной лимит `MAX_POSTS_PER_DAY = 5` постов на автора.
+- Проваливший ворота пост в очередь НЕ ставится (в отличие от уроков:
+  пост уйдёт в публичный канал, человека на проверке нет).
+
+### `GET /api/agent/scheduled-posts` — свои посты
+
+→ `{ ok, posts: [...] }` — последние 50, свежие сверху (id, channel, status,
+text, photo_url, publish_at, published_at, error, created_at).
+
+### `PATCH /api/agent/scheduled-posts` — отменить пост в очереди
+
+Тело `{ "id", "cancel": true }` → `{ ok, post }`. Отменять можно только
+`pending` (404, если пост уже опубликован/отменён или чужой).
+
 ## Границы (осознанно НЕ входит)
 
 - **Блокировки пользователей** — нет. Сначала методика модерации
@@ -184,6 +233,11 @@ UPDATE/DELETE) для каждой роли. Отсутствие политик
 
 ## История
 
+- 2026-09-13 — очередь постов в соцсети (бэклог №20): `scheduled_posts`
+  (миграция 2026-09-13-f20-scheduled-posts.sql), `/api/agent/scheduled-posts`
+  (POST/GET/PATCH), публикация `/api/cron/publish-scheduled` (pg_cron каждые
+  15 минут + резервный Vercel Cron раз в сутки); общий модуль запрещённых
+  слов `lib/bannedWords.ts` (вынесен из lessons-роута).
 - 2026-09-04 — агентская часть ИИ-завода (бэклог №2): отложенная публикация у
   агента (`publish_at` в POST lessons, ворота лимита при планировании),
   `GET /api/agent/settings` (`publish_time` из `coaches.ai_publish_time`,
