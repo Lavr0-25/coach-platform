@@ -23,6 +23,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 //
 // Доступ: x-agent-key (lib/agentAuth.ts), клиент = сессия владельца ключа,
 // RLS не даёт агенту трогать чужие посты.
+// POST — только для владельцев админских ключей (пост уходит в публичный
+// канал платформы без модерации); GET/PATCH — любые авторы (только свои посты).
 
 const MAX_POSTS_PER_DAY = 5
 const TG_CAPTION_LIMIT = 1024
@@ -38,6 +40,16 @@ async function getCoachId(client: SupabaseClient, userId: string) {
 export async function POST(request: Request) {
   const auth = await getAgentClient(request)
   if ('error' in auth) return auth.error
+
+  // Пост уйдёт в публичный канал платформы без ручной модерации, поэтому
+  // ставить посты в очередь может только админский ключ (бэклог: свой канал
+  // автора + модерация — отдельная фича).
+  if (auth.role !== 'admin') {
+    return Response.json(
+      { error: 'Постановка постов в очередь доступна только администраторам платформы (публикация в свой канал автора — в разработке)' },
+      { status: 403 }
+    )
+  }
 
   const coachId = await getCoachId(auth.client, auth.userId)
   if (!coachId) return Response.json({ error: 'Профиль автора не найден' }, { status: 404 })
