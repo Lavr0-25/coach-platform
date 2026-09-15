@@ -265,7 +265,8 @@ export default async function ProfilePage({ params }: MentorPageProps) {
                     {lesson.title}
                   </h3>
                   <div className="flex items-center justify-between pt-3 border-t border-purple-100">
-                    {lesson.is_free_preview ? (
+                    {/* Бейдж по цене: is_free_preview («открыт для чтения») не делает урок бесплатным */}
+                    {Number(lesson.price) === 0 ? (
                       <Badge variant="greenFill">Бесплатно</Badge>
                     ) : (
                       <span className="text-sm font-bold text-purple-700">{lesson.price} ₽</span>

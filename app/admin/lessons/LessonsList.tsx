@@ -90,7 +90,9 @@ export default function LessonsList({ initialLessons }: { initialLessons: any[] 
             {lessons.map((lesson) => {
               const coach = lesson.coaches
               const content = lesson.lesson_content?.[0]
-              const isFree = lesson.price === 0 || lesson.is_free_preview
+              // Бейдж по цене: is_free_preview («открыт для чтения») не делает
+              // урок бесплатным — флаг показывается отдельным чипом ниже
+              const isFree = lesson.price === 0
 
               return (
                 <div key={lesson.id} className="p-4 md:p-6 hover:bg-purple-50/30 transition-colors">

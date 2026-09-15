@@ -10,6 +10,11 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { Inbox } from 'lucide-react'
 
+// Деньги в русской записи: 1000 → «1 000 ₽»
+function money(n: number) {
+  return `${n.toLocaleString('ru-RU')} ₽`
+}
+
 export default function AnalyticsPage() {
   const supabase = createClient()
   const [user, setUser] = useState<any>(null)
@@ -28,6 +33,12 @@ export default function AnalyticsPage() {
   })
   const [chartData, setChartData] = useState<any[]>([])
   const [lessonsStats, setLessonsStats] = useState<any[]>([])
+  // Продажи: покупки наших материалов (RLS пускает ментора к своим — миграция
+  // docs/migrations/2026-09-15-f7-purchases-stats.sql)
+  const [sales, setSales] = useState<any[]>([])
+  const [salesTotal, setSalesTotal] = useState(0)
+  const [salesRevenue, setSalesRevenue] = useState(0)
+  const [salesRevenue30, setSalesRevenue30] = useState(0)
 
   useEffect(() => {
     loadData()
@@ -78,9 +89,10 @@ export default function AnalyticsPage() {
       // Общая статистика
       const totalLessons = allLessons?.length || 0
 
-      const { count: totalCourses } = await supabase
+      // Курсы автора: список нужен и для счётчика, и для названий в продажах
+      const { data: allCourses } = await supabase
         .from('courses')
-        .select('*', { count: 'exact', head: true })
+        .select('id, title')
         .eq('coach_id', coachData.id)
 
       // 🔥 Подсчёт уникальных подписчиков через subscriptions
@@ -103,6 +115,78 @@ export default function AnalyticsPage() {
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
       const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+      // 💰 Продажи: покупки наших уроков и курсов. В деньгах считаем только
+      // completed — pending значит «оплата не дошла» и деньгами не является.
+      // «На руки» берём из coach_earnings (комиссия фиксируется в момент покупки).
+      const { data: purchasesData } = await supabase
+        .from('purchases')
+        .select('id, lesson_id, course_id, amount, coach_earnings, payment_status, user_id, purchased_at')
+        .order('purchased_at', { ascending: false })
+
+      // Платные подписки на автора (Ф3): списания из журнала subscription_payments.
+      // RLS сам отбирает только наши (coach_user_id = наш user id).
+      const { data: subPaymentsData } = await supabase
+        .from('subscription_payments')
+        .select('id, amount, coach_earnings, status, period_months, user_id, paid_at, created_at')
+        .order('paid_at', { ascending: false })
+
+      const lessonTitle = new Map<string, string>((allLessons || []).map((l: any) => [l.id, l.title]))
+      const courseTitle = new Map<string, string>((allCourses || []).map((c: any) => [c.id, c.title]))
+
+      // Имена покупателей — отдельным запросом по профилям (по id из покупок и подписок)
+      const buyerIds = [
+        ...new Set([
+          ...(purchasesData || []).map((p: any) => p.user_id),
+          ...(subPaymentsData || []).map((sp: any) => sp.user_id),
+        ]),
+      ]
+      const buyerName = new Map<string, string>()
+      if (buyerIds.length > 0) {
+        const { data: buyersData } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', buyerIds)
+        for (const b of buyersData || []) buyerName.set(b.id, b.full_name || 'Ученик')
+      }
+
+      const completedPurchases = (purchasesData || []).filter((p: any) => p.payment_status === 'completed')
+
+      // Сколько раз куплен каждый урок — для колонки «Продано» в таблице уроков
+      const salesByLesson = new Map<string, number>()
+      for (const p of completedPurchases) {
+        if (p.lesson_id) salesByLesson.set(p.lesson_id, (salesByLesson.get(p.lesson_id) || 0) + 1)
+      }
+
+      const salesRows = completedPurchases.map((p: any) => ({
+        id: p.id,
+        buyer: buyerName.get(p.user_id) || 'Ученик',
+        title: lessonTitle.get(p.lesson_id || '') || courseTitle.get(p.course_id || '') || 'Материал',
+        amount: Number(p.amount || 0),
+        earnings: Number(p.coach_earnings ?? p.amount ?? 0),
+        date: p.purchased_at,
+      }))
+
+      // Списания подписок добавляем к продажам той же строкой в таблицу
+      const subRows = (subPaymentsData || [])
+        .filter((sp: any) => sp.status === 'completed')
+        .map((sp: any) => ({
+          id: `sub-${sp.id}`,
+          buyer: buyerName.get(sp.user_id) || 'Ученик',
+          title: `Подписка на автора · ${sp.period_months} мес.`,
+          amount: Number(sp.amount || 0),
+          earnings: Number(sp.coach_earnings ?? sp.amount ?? 0),
+          date: sp.paid_at || sp.created_at,
+        }))
+      salesRows.push(...subRows)
+
+      const allSales = [...completedPurchases, ...subRows]
+      const revenueTotal = allSales.reduce(
+        (s: number, p: any) => s + Number(p.coach_earnings ?? p.amount ?? 0), 0
+      )
+      const revenue30 = allSales
+        .filter((p: any) => new Date(p.purchased_at || p.date) >= oneMonthAgo)
+        .reduce((s: number, p: any) => s + Number(p.coach_earnings ?? p.amount ?? 0), 0)
 
       const activityByDay: { [key: string]: { views: number; completed: number } } = {}
       allProgress?.forEach(p => {
@@ -146,19 +230,25 @@ export default function AnalyticsPage() {
           totalViews: totalLessonViews,
           monthViews,
           dayViews,
+          sold: salesByLesson.get(lesson.id) || 0,
           social: socialByLesson.get(lesson.id) || { likes: 0, favorites: 0 },
         }
       }) || []
 
       setStats({
         totalLessons,
-        totalCourses: totalCourses || 0,
+        totalCourses: allCourses?.length || 0,
         subscribers: subscribersCount,
         totalViews,
         totalCompleted,
         totalLikes: [...socialByLesson.values()].reduce((s, v) => s + v.likes, 0),
         totalFavorites: [...socialByLesson.values()].reduce((s, v) => s + v.favorites, 0),
       })
+
+      setSales(salesRows)
+      setSalesTotal(salesRows.length)
+      setSalesRevenue(revenueTotal)
+      setSalesRevenue30(revenue30)
 
       setChartData(chart)
       setLessonsStats(lessons)
@@ -195,88 +285,158 @@ export default function AnalyticsPage() {
           Аналитика и статистика
         </h1>
         <p className="text-gray-600">
-          Отслеживайте прогресс обучения, просмотры и активность подписчиков
+          Продажи, аудитория и вовлечённость: кто и что покупает, кто смотрит и как реагирует
         </p>
       </div>
 
-      {/* Основные метрики */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <Card variant="glow" padding="none" className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl">
-              📚
-            </div>
-            <div>
-              <div className="text-2xl font-bold gradient-text">{stats.totalLessons}</div>
-              <div className="text-sm text-gray-600">Всего уроков</div>
-            </div>
-          </div>
-        </Card>
+      {/* 💰 Продажи */}
+      <div className="mb-8">
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">₽</span>
+          Продажи
+        </h2>
 
-        <Card variant="glow" padding="none" className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl">
-              🎓
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+          <Card variant="glow" padding="none" className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl">
+                🛒
+              </div>
+              <div>
+                <div className="text-2xl font-bold gradient-text">{salesTotal}</div>
+                <div className="text-sm text-gray-600">Продаж всего</div>
+              </div>
             </div>
-            <div>
-              <div className="text-2xl font-bold gradient-text">{stats.totalCourses}</div>
-              <div className="text-sm text-gray-600">Всего курсов</div>
-            </div>
-          </div>
-        </Card>
+          </Card>
 
-        {/* 🔥 КЛИКАБЕЛЬНАЯ ССЫЛКА НА ОТДЕЛЬНУЮ СТРАНИЦУ (исправлен путь) */}
-        <Link
-          href="/dashboard/mentor/subscribers"
-          className="style-card p-6 hover:shadow-lg transition-colors group block"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl transition-transform">
-              👥
+          <Card variant="glow" padding="none" className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-2xl">
+                💰
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-emerald-600">{money(salesRevenue)}</div>
+                <div className="text-sm text-gray-600">Всего на руки</div>
+              </div>
             </div>
-            <div>
-              <div className="text-2xl font-bold gradient-text">{stats.subscribers}</div>
-              <div className="text-sm text-gray-600">Подписчиков</div>
-            </div>
-          </div>
-        </Link>
+          </Card>
 
-        <Card variant="glow" padding="none" className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl">
-              👁️
+          <Card variant="glow" padding="none" className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl">
+                📈
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-blue-600">{money(salesRevenue30)}</div>
+                <div className="text-sm text-gray-600">За 30 дней</div>
+              </div>
             </div>
-            <div>
-              <div className="text-2xl font-bold gradient-text">{stats.totalViews}</div>
-              <div className="text-sm text-gray-600">Просмотров</div>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        </div>
 
-        {/* Реакции учеников: лайки и избранное по всем урокам */}
-        <Card variant="glow" padding="none" className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-2xl">
-              ❤️
+        {/* Таблица продаж */}
+        {sales.length > 0 ? (
+          <Card variant="glow" padding="none" className="overflow-hidden border border-purple-100">
+            <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-purple-50 border-b border-purple-100 text-sm font-semibold text-gray-700">
+              <div className="col-span-3">Покупатель</div>
+              <div className="col-span-4">Материал</div>
+              <div className="col-span-2 text-center">Дата</div>
+              <div className="col-span-1 text-center">Сумма</div>
+              <div className="col-span-2 text-center">На руки</div>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-red-600">{stats.totalLikes}</div>
-              <div className="text-sm text-gray-600">Лайков</div>
+            <div className="divide-y divide-purple-50">
+              {sales.map((s) => (
+                <div key={s.id} className="grid grid-cols-1 md:grid-cols-12 gap-1 md:gap-4 px-6 py-4">
+                  <div className="col-span-3 font-semibold text-gray-900">{s.buyer}</div>
+                  <div className="col-span-4 text-gray-700 truncate">{s.title}</div>
+                  <div className="col-span-2 text-center text-sm text-gray-500">
+                    {new Date(s.date).toLocaleString('ru-RU', {
+                      day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
+                    })}
+                  </div>
+                  <div className="col-span-1 text-center font-semibold text-gray-700">
+                    {money(s.amount)}
+                    <span className="text-xs text-gray-400 md:hidden"> — сумма</span>
+                  </div>
+                  <div className="col-span-2 text-center font-bold text-emerald-600">
+                    {money(s.earnings)}
+                    <span className="text-xs text-gray-400 md:hidden"> — на руки</span>
+                  </div>
+                </div>
+              ))}
             </div>
+          </Card>
+        ) : (
+          <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 text-center">
+            <p className="text-gray-600 mb-1">Пока продаж нет</p>
+            <p className="text-sm text-gray-500">
+              Как только кто-то купит ваш урок или курс, покупка появится здесь
+            </p>
           </div>
-        </Card>
+        )}
+      </div>
 
-        <Card variant="glow" padding="none" className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-2xl">
-              ⭐
+      {/* 👥 Аудитория и вовлечённость */}
+      <div className="mb-8">
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm">👥</span>
+          Аудитория и вовлечённость
+        </h2>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 🔥 КЛИКАБЕЛЬНАЯ ССЫЛКА НА ОТДЕЛЬНУЮ СТРАНИЦУ (исправлен путь) */}
+          <Link
+            href="/dashboard/mentor/subscribers"
+            className="style-card p-6 hover:shadow-lg transition-colors group block"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl transition-transform">
+                👥
+              </div>
+              <div>
+                <div className="text-2xl font-bold gradient-text">{stats.subscribers}</div>
+                <div className="text-sm text-gray-600">Подписчиков</div>
+              </div>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-amber-600">{stats.totalFavorites}</div>
-              <div className="text-sm text-gray-600">В избранном</div>
+          </Link>
+
+          <Card variant="glow" padding="none" className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 gradient-icon rounded-xl flex items-center justify-center text-white text-2xl">
+                👁️
+              </div>
+              <div>
+                <div className="text-2xl font-bold gradient-text">{stats.totalViews}</div>
+                <div className="text-sm text-gray-600">Просмотров</div>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+
+          {/* Реакции учеников: лайки и избранное по всем урокам */}
+          <Card variant="glow" padding="none" className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-2xl">
+                ❤️
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-red-600">{stats.totalLikes}</div>
+                <div className="text-sm text-gray-600">Лайков</div>
+              </div>
+            </div>
+          </Card>
+
+          <Card variant="glow" padding="none" className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-2xl">
+                ⭐
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-amber-600">{stats.totalFavorites}</div>
+                <div className="text-sm text-gray-600">В избранном</div>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* График активности с сеткой */}
@@ -417,7 +577,7 @@ export default function AnalyticsPage() {
               <div className="col-span-2 text-center">За месяц</div>
               <div className="col-span-1 text-center">За день</div>
               <div className="col-span-2 text-center">Реакции</div>
-              <div className="col-span-2 text-center">Статус</div>
+              <div className="col-span-2 text-center">Цена · продажи</div>
             </div>
 
             {/* Строки таблицы */}
@@ -495,9 +655,10 @@ export default function AnalyticsPage() {
                     </div>
                   </div>
 
-                  {/* Статус/Цена */}
-                  <div className="col-span-2 flex items-center justify-center">
-                    {lesson.is_free_preview ? (
+                  {/* Цена · продажи: бейдж по цене (флаг is_free_preview — «открыт
+                      для чтения», бесплатность не делает); ниже — сколько раз купили */}
+                  <div className="col-span-2 flex flex-col items-center justify-center gap-1">
+                    {Number(lesson.price) === 0 ? (
                       <Badge variant="greenFill">
                         Бесплатно
                       </Badge>
@@ -506,6 +667,9 @@ export default function AnalyticsPage() {
                         {lesson.price} ₽
                       </span>
                     )}
+                    <span className="text-xs text-gray-500">
+                      {lesson.sold > 0 ? `Продано: ${lesson.sold}` : '—'}
+                    </span>
                   </div>
                 </Link>
               ))}

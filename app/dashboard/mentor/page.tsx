@@ -265,7 +265,8 @@ function LessonRow({ lesson }: { lesson: any }) {
         <p className="text-xs text-gray-500 mt-0.5">
           {new Date(lesson.created_at).toLocaleDateString('ru-RU')}
           {' · '}
-          {lesson.price > 0 && !lesson.is_free_preview ? `${lesson.price} ₽` : 'бесплатно'}
+          {/* Цена по цене: флаг is_free_preview («открыт для чтения») бесплатность не меняет */}
+          {Number(lesson.price) > 0 ? `${lesson.price} ₽` : 'бесплатно'}
         </p>
       </div>
       <Badge variant={isPublished ? 'green' : 'orange'} className="flex-shrink-0">

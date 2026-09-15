@@ -481,7 +481,8 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
 
                     <div className="flex items-center justify-between pt-3 border-t border-purple-100">
                       <div className="flex items-center gap-2">
-                        {lesson.is_free_preview ? (
+                        {/* Бейдж по цене: is_free_preview («открыт для чтения») не делает урок бесплатным */}
+                        {Number(lesson.price) === 0 ? (
                           <Badge variant="greenFill">
                             Бесплатно
                           </Badge>
