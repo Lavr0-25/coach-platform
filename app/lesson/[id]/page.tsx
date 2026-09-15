@@ -257,6 +257,16 @@ export default async function LessonPage({ params }: LessonPageProps) {
           <div className="text-center">
             <div className="text-6xl mb-4"></div>
             <p className="text-gray-600">Контент урока недоступен</p>
+            {/* Гостю объясняем, как открыть контент, — тупик «недоступен» без
+                единой кнопки ловился багхантом 15.09 на уроке с is_free_preview */}
+            {!user && (
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 mt-4 gradient-btn px-5 py-2.5 text-white rounded-full font-medium text-sm shadow-lg shadow-purple-500/30"
+              >
+                Войдите, чтобы читать
+              </Link>
+            )}
           </div>
         </div>
       )
@@ -384,13 +394,22 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
         {/* Статистика */}
         <div className="flex flex-wrap items-center gap-3 mb-5">
-          {isFree ? (
+          {/* Бейдж смотрит только на цену: is_free_preview («открыт для чтения»)
+              не делает урок бесплатным — иначе платный урок врёт бейджем «Бесплатно» */}
+          {lesson.price === 0 ? (
             <span className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-md shadow-green-500/20">
               Бесплатно
             </span>
           ) : (
             <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-bold px-4 py-1.5 rounded-full shadow-md shadow-purple-500/20">
               {lesson.price} ₽
+            </span>
+          )}
+
+          {/* Урок с ценой и открытым содержимым: честно предупреждаем, что читать можно бесплатно */}
+          {Number(lesson.price) > 0 && lesson.is_free_preview && (
+            <span className="bg-gray-100 text-gray-700 text-sm font-medium px-4 py-1.5 rounded-full border border-gray-200">
+              Открыт для чтения
             </span>
           )}
 
@@ -430,8 +449,10 @@ export default async function LessonPage({ params }: LessonPageProps) {
           )}
         </div>
 
-        {/* Кнопки действий: разовая покупка и/или платная подписка на автора */}
-        {!isOwner && !isFree && (
+        {/* Кнопки действий: разовая покупка и/или платная подписка на автора.
+            Покупать есть смысл только платный урок с закрытым содержимым:
+            если is_free_preview, контент и так открыт (RLS пускает залогиненных) */}
+        {!isOwner && Number(lesson.price) > 0 && !lesson.is_free_preview && (
           <div className="flex flex-wrap items-start gap-4">
             {!isPurchased && !hasSubscription && (
               // Ф2: оплата через Robokassa (test-режим)

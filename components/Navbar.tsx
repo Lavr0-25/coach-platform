@@ -266,14 +266,15 @@ export default function Navbar() {
                   </button>
                 )}
 
-                {isMentor ? (
-                  <div className="relative" ref={menuRef}>
-                    <button
-                      onClick={() => setShowProfileMenu(!showProfileMenu)}
-                      className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-purple-50 transition-colors"
-                    >
-                      {/* Аватарка или инициалы */}
-                      {profile?.avatar_url ? (
+                {/* Меню профиля — всем залогиненным (не только авторам):
+                    студент видит Кабинет/Избранное/Обращения, автор — кабинет автора */}
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-purple-50 transition-colors"
+                  >
+                    {/* Аватарка или инициалы */}
+                    {profile?.avatar_url ? (
                         <img
                           src={profile.avatar_url}
                           alt={profile?.display_name || ''}
@@ -345,7 +346,7 @@ export default function Navbar() {
                           )}
 
                           <Link
-                            href="/dashboard/mentor"
+                            href={isMentor ? '/dashboard/mentor' : '/dashboard'}
                             className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
                             onClick={() => setShowProfileMenu(false)}
                           >
@@ -355,6 +356,7 @@ export default function Navbar() {
                             Личный кабинет
                           </Link>
 
+                          {isMentor && (
                           <Link
                             href="/dashboard/mentor/lessons"
                             className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-purple-50 transition-colors"
@@ -365,6 +367,7 @@ export default function Navbar() {
                             </svg>
                             Мои материалы
                           </Link>
+                          )}
 
                           <Link
                             href="/favorites"
@@ -405,14 +408,6 @@ export default function Navbar() {
                       </div>
                     )}
                   </div>
-                ) : (
-                  <Link
-                    href="/login"
-                    className="px-4 py-2 text-gray-700 hover:text-purple-600 font-medium transition-colors"
-                  >
-                    Войти
-                  </Link>
-                )}
               </>
             ) : (
               <div className="flex items-center gap-2">
