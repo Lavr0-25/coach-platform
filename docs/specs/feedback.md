@@ -27,7 +27,9 @@
 - Пользователь видит и правит **только свои** записи: RLS-политики (своё + админ)
   и в server actions повторный фильтр `.eq('user_id', user.id)` — вторая ступень.
 - **Мат-фильтр на сервере** (миграция
-  `docs/migrations/2026-09-12-security-messages-profiles.sql`): BEFORE-триггер
+  `docs/migrations/2026-09-12-security-messages-profiles.sql`; логика
+  заменена `docs/migrations/2026-09-16-banned-words-whole-word.sql` —
+  сравнение по целым словам вместо подстроки): BEFORE-триггер
   `feedback_banned_words` проверяет `title`/`description`/`user_name` по
   `banned_words` и отклоняет вставку/обновление с матом (ошибка
   «Текст содержит недопустимое слово»). Клиентский фильтр остаётся как
