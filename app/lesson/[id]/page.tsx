@@ -6,7 +6,9 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
+import { headers } from 'next/headers'
 import type { Metadata } from 'next'
+import { resolveSource, isBot } from '@/lib/utm'
 import FavoriteButton from '@/components/FavoriteButton'
 import PurchaseButton from '@/components/PurchaseButton'
 import SubscriptionButton from '@/components/SubscriptionButton'
@@ -30,6 +32,10 @@ const LessonComments = dynamic(
 interface LessonPageProps {
   params: Promise<{
     id: string
+  }>
+  searchParams: Promise<{
+    utm_source?: string
+    utm_campaign?: string
   }>
 }
 
@@ -114,22 +120,30 @@ export async function generateMetadata({ params }: LessonPageProps): Promise<Met
   }
 }
 
-export default async function LessonPage({ params }: LessonPageProps) {
+export default async function LessonPage({ params, searchParams }: LessonPageProps) {
   const { id } = await params
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Отслеживаем просмотр урока
-  if (user) {
-    await supabase
-      .from('analytics_events')
-      .insert({
-        event_type: 'lesson_view',
-        user_id: user.id,
-        target_id: id,
-        target_type: 'lesson',
-      })
+  // Отслеживаем просмотр урока. №30: считаем и гостей (RLS-политика
+  // analytics_anon_insert_views разрешает INSERT с user_id IS NULL), источник
+  // перехода — utm_source из ссылки, иначе referer (lib/utm.ts). Краулеров
+  // не считаем — иначе охваты раздуются ботами.
+  {
+    const [{ utm_source }, hdrs] = await Promise.all([searchParams, headers()])
+    const userAgent = hdrs.get('user-agent')
+    if (!isBot(userAgent)) {
+      await supabase
+        .from('analytics_events')
+        .insert({
+          event_type: 'lesson_view',
+          user_id: user?.id ?? null,
+          target_id: id,
+          target_type: 'lesson',
+          metadata: { source: resolveSource(utm_source, hdrs.get('referer')) },
+        })
+    }
   }
 
   // Самоприглашение по ссылке — см. комментарий к ensureLinkAccess.

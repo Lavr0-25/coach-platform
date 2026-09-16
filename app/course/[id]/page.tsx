@@ -4,11 +4,13 @@ import Link from 'next/link'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import FavoriteButton from '@/components/FavoriteButton'
 import PurchaseButton from '@/components/PurchaseButton'
 import SubscriptionButton from '@/components/SubscriptionButton'
 import { Card } from '@/components/ui/Card'
 import { getPaidSubscription } from '@/lib/access'
+import { resolveSource, isBot } from '@/lib/utm'
 
 const ReviewsSection = dynamic(
   () => import('@/components/CourseReviews'),
@@ -38,6 +40,7 @@ interface CoursePageProps {
   params: Promise<{
     id: string
   }>
+  searchParams: Promise<{ utm_source?: string; utm_campaign?: string }>
 }
 
 // Мета-теги страницы курса — для поисковиков и ИИ-агентов
@@ -67,22 +70,27 @@ export async function generateMetadata({ params }: CoursePageProps): Promise<Met
   }
 }
 
-export default async function CoursePage({ params }: CoursePageProps) {
+export default async function CoursePage({ params, searchParams }: CoursePageProps) {
   const { id } = await params
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Отслеживаем просмотр курса
-  if (user) {
-    await supabase
-      .from('analytics_events')
-      .insert({
+  // Отслеживаем просмотр курса. №30: считаем и гостей (RLS
+  // analytics_anon_insert_views теперь пускает course_view от анонима),
+  // источник перехода — utm_source/referer (lib/utm.ts), краулеров не считаем.
+  {
+    const [{ utm_source }, hdrs] = await Promise.all([searchParams, headers()])
+    const userAgent = hdrs.get('user-agent')
+    if (!isBot(userAgent)) {
+      await supabase.from('analytics_events').insert({
         event_type: 'course_view',
-        user_id: user.id,
+        user_id: user?.id ?? null,
         target_id: id,
         target_type: 'course',
+        metadata: { source: resolveSource(utm_source, hdrs.get('referer')) },
       })
+    }
   }
 
   // Получаем данные курса
