@@ -83,8 +83,10 @@ export async function GET(request: Request) {
   if (payError) return new Response('db error', { status: 500 })
   if (!completed?.length) return new Response(`OK${invId}`)
 
-  // Продлеваем подписку. period_start — «встык» за текущим периодом, если
-  // подписка уже была активна (ученик продлил заранее), иначе сейчас.
+  // Продлеваем подписку. period_start — «встык» за текущим оплаченным
+  // периодом (активная подписка или остаток после отмены — ученик оплатил
+  // эти дни, сгорать им нельзя), иначе сейчас. Свежая строка приходит
+  // с period_end = момент заказа → старт «сейчас», как и раньше.
   const { data: sub } = await admin
     .from('paid_subscriptions')
     .select('id, status, period_end, user_id, coach_user_id')
@@ -93,8 +95,7 @@ export async function GET(request: Request) {
   if (!sub) return new Response('db error', { status: 500 })
 
   const now = new Date()
-  const wasActive = sub.status === 'active'
-  const start = wasActive && sub.period_end && new Date(sub.period_end) > now
+  const start = sub.period_end && new Date(sub.period_end) > now
     ? new Date(sub.period_end)
     : now
   const end = new Date(start)

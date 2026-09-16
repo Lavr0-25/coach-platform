@@ -98,15 +98,14 @@ export async function startSubscription(formData: FormData): Promise<StartSubscr
     .maybeSingle()
 
   if (existingRow) {
-    // period_end ставим «сейчас» как временную точку — вебхук прибавит к ней
-    // купленные месяцы; price — снимок текущей цены ментора.
+    // Период НЕ затираем: если у cancelled-строки остался оплаченный остаток
+    // (ученик отменил заранее и переоформляет), вебхук прибавит месяцы
+    // «встык» к нему — остаток не сгорает. Меняем только статус/цену/inv_id.
     const { data, error } = await admin
       .from('paid_subscriptions')
       .update({
         status: 'pending',
         price: monthlyPrice,
-        period_start: new Date().toISOString(),
-        period_end: new Date().toISOString(),
         inv_id: invId,
         updated_at: new Date().toISOString(),
       })
