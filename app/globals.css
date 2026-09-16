@@ -369,6 +369,34 @@ html[data-theme="dark"][data-palette="b3"] { --paper: #131313; --card: #1d1d1f; 
   scrollbar-color: color-mix(in srgb, var(--grad-a) 60%, var(--paper)) transparent;
 }
 
+/* Скрытый скроллбар для узких прокручиваемых строк (вкладки, чипы):
+   контент скроллится, полоса не показывается. Нужен, потому что при
+   overflow-x: auto браузер неявно включает и вертикальную прокрутку —
+   у строк-вкладок из-за этого появлялась собственная полоса. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Скроллбар скрыт полностью (решение Анатолия, 16.09): правый край чистый.
+   Прокрутка колёсиком/тачем/клавиатурой работает как обычно; на мобильных
+   полосы и так не было. Ориентир позиции на странице — контент. */
+::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Firefox: скрыть у страницы и всех внутренних прокручиваемых блоков */
+@-moz-document url-prefix() {
+  * {
+    scrollbar-width: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gradient-btn, .style-card { transition: none; }
   .gradient-btn:hover, .style-card:hover { transform: none; }

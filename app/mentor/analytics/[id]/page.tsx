@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Card } from '@/components/ui/Card'
-import { Inbox } from 'lucide-react'
+import { BookOpen, Eye, FileText, Heart, Inbox, ShoppingCart, Star, Target, Wallet } from 'lucide-react'
 import { sourceLabel } from '@/lib/utm'
 
 // Деньги в русской записи: 1000 → «1 000 ₽»
@@ -28,6 +28,20 @@ function plural(n: number, one: string, few: string, many: string) {
 // Дата дня графика по индексу (последний индекс = сегодня)
 function dayLabel(idx: number, days: number) {
   return new Date(Date.now() - (days - 1 - idx) * 86400000).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+}
+
+// Короткая дата для оси X графика: «18 авг»
+function dayShort(idx: number, days: number) {
+  return new Date(Date.now() - (days - 1 - idx) * 86400000).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+}
+
+// «Красивый» шаг оси Y: ряд 1, 2, 2.5, 5 × 10^n — чтобы подписи были круглыми
+function niceStep(x: number) {
+  const pow = Math.pow(10, Math.floor(Math.log10(Math.max(1e-9, x))))
+  for (const m of [1, 2, 2.5, 5, 10]) {
+    if (m * pow >= x) return m * pow
+  }
+  return 10 * pow
 }
 
 const PERIODS = [
@@ -79,6 +93,24 @@ export default function MaterialAnalyticsPage() {
   const [hoverReactions, setHoverReactions] = useState<number | null>(null)
   const [hoverSources, setHoverSources] = useState<number | null>(null)
   const [hoverEngage, setHoverEngage] = useState<number | null>(null)
+
+  // Скрытые линии на графиках (клик по легенде). Ключ — id линии/источника
+  const [hiddenLines, setHiddenLines] = useState<Record<string, boolean>>({})
+  const [hiddenReactions, setHiddenReactions] = useState<Record<string, boolean>>({})
+  const [hiddenSources, setHiddenSources] = useState<Record<string, boolean>>({})
+
+  // Клик по легенде: скрыть/показать линию. Последнюю видимую не прячем —
+  // иначе график останется пустым (allKeys — все ключи этого графика)
+  const toggleSeries = (
+    map: Record<string, boolean>,
+    setter: (m: Record<string, boolean>) => void,
+    key: string,
+    allKeys: string[],
+  ) => {
+    const othersVisible = allKeys.some(k => k !== key && !map[k])
+    if (!map[key] && !othersVisible) return
+    setter({ ...map, [key]: !map[key] })
+  }
 
   useEffect(() => {
     loadData()
@@ -304,6 +336,13 @@ export default function MaterialAnalyticsPage() {
     }))
     .sort((a, b) => b.total - a.total)
 
+  // Источники, не скрытые кликом по легенде
+  const visibleStack = sourceStack.filter(s => !hiddenSources[s.label])
+
+  // Суммы реакций за период (для кольцевой диаграммы и итогов)
+  const likesTotal = likesSeries.reduce((a, b) => a + b, 0)
+  const favoritesTotal = favoritesSeries.reduce((a, b) => a + b, 0)
+
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-7xl pt-24 sm:pt-28">
       <MentorSectionNav className="mb-6" />
@@ -317,8 +356,10 @@ export default function MaterialAnalyticsPage() {
           <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-blue-600 flex-shrink-0 hidden sm:flex items-center justify-center">
             {material.cover ? (
               <Image src={material.cover} alt={material.title} fill sizes="64px" className="w-full h-full object-cover" />
+            ) : isCourse ? (
+              <BookOpen className="h-6 w-6 text-white opacity-60" strokeWidth={1.5} />
             ) : (
-              <span className="text-white text-lg opacity-50">{isCourse ? '📚' : '📝'}</span>
+              <FileText className="h-6 w-6 text-white opacity-60" strokeWidth={1.5} />
             )}
           </div>
           <div className="min-w-0">
@@ -354,7 +395,7 @@ export default function MaterialAnalyticsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card variant="glow" padding="none" className="p-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 gradient-icon rounded-xl flex items-center justify-center text-white text-xl">👁️</div>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600"><Eye className="h-5 w-5" strokeWidth={2} /></span>
             <div>
               <div className="text-xl font-bold gradient-text">{totalViews}</div>
               <div className="text-xs text-gray-600">Просмотров (охват)</div>
@@ -363,7 +404,7 @@ export default function MaterialAnalyticsPage() {
         </Card>
         <Card variant="glow" padding="none" className="p-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-xl">🛒</div>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><ShoppingCart className="h-5 w-5" strokeWidth={2} /></span>
             <div>
               <div className="text-xl font-bold text-emerald-600">{salesCount}</div>
               <div className="text-xs text-gray-600">Покупок</div>
@@ -372,7 +413,7 @@ export default function MaterialAnalyticsPage() {
         </Card>
         <Card variant="glow" padding="none" className="p-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">💰</div>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Wallet className="h-5 w-5" strokeWidth={2} /></span>
             <div>
               <div className="text-xl font-bold text-blue-600">{money(salesEarnings)}</div>
               <div className="text-xs text-gray-600">На руки за период</div>
@@ -381,7 +422,7 @@ export default function MaterialAnalyticsPage() {
         </Card>
         <Card variant="glow" padding="none" className="p-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-xl">🎯</div>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600"><Target className="h-5 w-5" strokeWidth={2} /></span>
             <div>
               <div className="text-xl font-bold text-amber-600">{conversion}%</div>
               <div className="text-xs text-gray-600">Просмотр → покупка</div>
@@ -397,7 +438,7 @@ export default function MaterialAnalyticsPage() {
         {/* Подпись под курсором: значение + пояснение (вместо всплывающего тултипа) */}
         <p className="text-sm text-gray-600 mb-4 min-h-[20px]">
           {hoverViews === null ? (
-            <span className="text-gray-400">Наведите курсор на столбец — покажу цифры за этот день</span>
+            <span className="text-gray-400">Наведите курсор на график — покажу цифры за этот день</span>
           ) : (
             <>
               <b className="text-gray-900">{dayLabel(hoverViews, period)}</b>
@@ -411,32 +452,65 @@ export default function MaterialAnalyticsPage() {
 
         {totalViews + salesCount > 0 ? (
           <div>
-            {/* Легенда */}
-            <div className="flex items-center gap-6 text-sm mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-gradient-to-r from-purple-500 to-blue-500"></div>
-                <span className="text-gray-600">Просмотры</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-gradient-to-r from-green-500 to-emerald-500"></div>
-                <span className="text-gray-600">Покупки</span>
-              </div>
-            </div>
-
-            <div className="relative flex items-end gap-1 h-64 pb-8 overflow-x-auto" onMouseLeave={() => setHoverViews(null)}>
-              <DayBars
-                views={viewsSeries}
-                purchases={purchasesSeries}
-                max={chartMaxSafe(viewsSeries, purchasesSeries)}
-                onHover={setHoverViews}
+            {/* Легенда: клик по пункту скрывает/показывает линию */}
+            <div className="flex flex-wrap items-center gap-1 mb-4">
+              <LegendToggle
+                label="Просмотры"
+                color="#7c3aed"
+                hidden={!!hiddenLines.views}
+                onClick={() => toggleSeries(hiddenLines, setHiddenLines, 'views', ['views', 'sales'])}
+              />
+              <LegendToggle
+                label="Покупки"
+                color="#10b981"
+                hidden={!!hiddenLines.sales}
+                onClick={() => toggleSeries(hiddenLines, setHiddenLines, 'sales', ['views', 'sales'])}
               />
             </div>
+
+            <LineChart
+              period={period}
+              hover={hoverViews}
+              onHover={setHoverViews}
+              series={[
+                ...(hiddenLines.views ? [] : [{ key: 'views', color: '#7c3aed', values: viewsSeries }]),
+                ...(hiddenLines.sales ? [] : [{ key: 'sales', color: '#10b981', values: purchasesSeries }]),
+              ]}
+            />
 
             {/* Итого по дням */}
             <div className="flex flex-wrap gap-x-8 gap-y-2 pt-4 border-t border-purple-100 mt-4 text-sm text-gray-600">
               <span>Всего просмотров: <b className="text-gray-900">{totalViews}</b></span>
               <span>Всего покупок: <b className="text-gray-900">{salesCount}</b></span>
               <span>Оплачено за период: <b className="text-gray-900">{money(salesAmount)}</b></span>
+            </div>
+
+            {/* Кольцевая диаграмма: конверсия просмотра в покупку */}
+            <div className="flex flex-col sm:flex-row items-center gap-6 mt-4 pt-4 border-t border-purple-100">
+              <DonutChart
+                segments={[
+                  { color: '#10b981', value: salesCount },
+                  { color: '#c4b5fd', value: Math.max(0, totalViews - salesCount) },
+                ]}
+                center={`${conversion}%`}
+                sub="конверсия"
+              />
+              <div className="w-full space-y-2 text-sm">
+                <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-2.5">
+                  <span className="inline-flex items-center gap-2 text-gray-600">
+                    <span className="h-3 w-3 rounded-full bg-emerald-500"></span>
+                    Купили после просмотра
+                  </span>
+                  <b className="text-emerald-600">{salesCount}</b>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-purple-50 px-4 py-2.5">
+                  <span className="inline-flex items-center gap-2 text-gray-600">
+                    <span className="h-3 w-3 rounded-full bg-purple-300"></span>
+                    Смотрели без покупки
+                  </span>
+                  <b className="text-purple-600">{Math.max(0, totalViews - salesCount)}</b>
+                </div>
+              </div>
             </div>
           </div>
         ) : (
@@ -458,7 +532,7 @@ export default function MaterialAnalyticsPage() {
         {/* Подпись под курсором: значение + пояснение */}
         <p className="text-sm text-gray-600 mb-4 min-h-[20px]">
           {hoverReactions === null ? (
-            <span className="text-gray-400">Наведите курсор на столбец — покажу цифры за этот день</span>
+            <span className="text-gray-400">Наведите курсор на график — покажу цифры за этот день</span>
           ) : (
             <>
               <b className="text-gray-900">{dayLabel(hoverReactions, period)}</b>
@@ -471,36 +545,62 @@ export default function MaterialAnalyticsPage() {
 
         {likesSeries.some(v => v > 0) || favoritesSeries.some(v => v > 0) ? (
           <div>
-            {/* Легенда */}
-            <div className="flex items-center gap-6 text-sm mb-4">
+            {/* Легенда: клик по пункту скрывает/показывает линию */}
+            <div className="flex flex-wrap items-center gap-1 mb-4">
               {!isCourse && (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-red-500"></div>
-                  <span className="text-gray-600">Лайки</span>
-                </div>
+                <LegendToggle
+                  label="Лайки"
+                  color="#ef4444"
+                  hidden={!!hiddenReactions.likes}
+                  onClick={() => toggleSeries(hiddenReactions, setHiddenReactions, 'likes', ['likes', 'favorites'])}
+                />
               )}
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-amber-400"></div>
-                <span className="text-gray-600">В избранном</span>
-              </div>
-            </div>
-
-            <div className="relative flex items-end gap-1 h-64 pb-8 overflow-x-auto" onMouseLeave={() => setHoverReactions(null)}>
-              <ReactionBars
-                likes={likesSeries}
-                favorites={favoritesSeries}
-                max={chartMaxSafe(likesSeries, favoritesSeries)}
-                showLikes={!isCourse}
-                onHover={setHoverReactions}
+              <LegendToggle
+                label="В избранном"
+                color="#f59e0b"
+                hidden={!!hiddenReactions.favorites}
+                onClick={() => toggleSeries(hiddenReactions, setHiddenReactions, 'favorites', isCourse ? ['favorites'] : ['likes', 'favorites'])}
               />
             </div>
 
-            {/* Итого по дням */}
-            <div className="flex flex-wrap gap-x-8 gap-y-2 pt-4 border-t border-purple-100 mt-4 text-sm text-gray-600">
-              {!isCourse && (
-                <span>Лайков за период: <b className="text-gray-900">{likesSeries.reduce((a, b) => a + b, 0)}</b></span>
-              )}
-              <span>В избранное за период: <b className="text-gray-900">{favoritesSeries.reduce((a, b) => a + b, 0)}</b></span>
+            <LineChart
+              period={period}
+              hover={hoverReactions}
+              onHover={setHoverReactions}
+              series={[
+                ...(!isCourse && !hiddenReactions.likes ? [{ key: 'likes', color: '#ef4444', values: likesSeries }] : []),
+                ...(hiddenReactions.favorites ? [] : [{ key: 'favorites', color: '#f59e0b', values: favoritesSeries }]),
+              ]}
+            />
+
+            {/* Кольцевая диаграмма: доля реакций */}
+            <div className="flex flex-col sm:flex-row items-center gap-6 mt-4 pt-4 border-t border-purple-100">
+              <DonutChart
+                segments={[
+                  ...(!isCourse ? [{ color: '#ef4444', value: likesTotal }] : []),
+                  { color: '#f59e0b', value: favoritesTotal },
+                ]}
+                center={String(likesTotal + favoritesTotal)}
+                sub={plural(likesTotal + favoritesTotal, 'реакция', 'реакции', 'реакций')}
+              />
+              <div className="w-full space-y-2 text-sm">
+                {!isCourse && (
+                  <div className="flex items-center justify-between rounded-xl bg-red-50 px-4 py-2.5">
+                    <span className="inline-flex items-center gap-2 text-gray-600">
+                      <span className="h-3 w-3 rounded-full bg-red-500"></span>
+                      Лайки
+                    </span>
+                    <b className="text-red-600">{likesTotal}</b>
+                  </div>
+                )}
+                <div className="flex items-center justify-between rounded-xl bg-amber-50 px-4 py-2.5">
+                  <span className="inline-flex items-center gap-2 text-gray-600">
+                    <span className="h-3 w-3 rounded-full bg-amber-400"></span>
+                    В избранном
+                  </span>
+                  <b className="text-amber-500">{favoritesTotal}</b>
+                </div>
+              </div>
             </div>
           </div>
         ) : (
@@ -527,24 +627,64 @@ export default function MaterialAnalyticsPage() {
               <>
                 <b className="text-gray-900">{dayLabel(hoverSources, period)}</b>
                 {' — '}
-                {sourceStack.reduce((a, s) => a + (s.values[hoverSources] || 0), 0)}{' '}
-                {plural(sourceStack.reduce((a, s) => a + (s.values[hoverSources] || 0), 0), 'переход', 'перехода', 'переходов')} на материал
-                {sourceStack.some(s => (s.values[hoverSources] || 0) > 0) && (
-                  <>: {sourceStack.filter(s => (s.values[hoverSources] || 0) > 0).map(s => `${sourceLabel(s.label)} — ${s.values[hoverSources]}`).join(', ')}</>
+                {visibleStack.reduce((a, s) => a + (s.values[hoverSources] || 0), 0)}{' '}
+                {plural(visibleStack.reduce((a, s) => a + (s.values[hoverSources] || 0), 0), 'переход', 'перехода', 'переходов')} на материал
+                {visibleStack.some(s => (s.values[hoverSources] || 0) > 0) && (
+                  <>: {visibleStack.filter(s => (s.values[hoverSources] || 0) > 0).map(s => `${sourceLabel(s.label)} — ${s.values[hoverSources]}`).join(', ')}</>
                 )}
               </>
             )}
           </p>
 
-          {Object.keys(sources).length > 0 ? (
+          {Object.keys(sources).length > 0 && visibleStack.length > 0 ? (
             <SourceStack
-              stack={sourceStack}
-              max={chartMaxSafe(...sourceStack.map(s => s.values))}
+              stack={visibleStack}
+              max={chartMaxSafe(...visibleStack.map(s => s.values))}
               onHover={setHoverSources}
             />
           ) : (
             <p className="text-sm text-gray-500">
               Пока нет переходов за период. Делитесь ссылкой с меткой utm_source (telegram, dzen, vk…) — источник появится здесь.
+            </p>
+          )}
+
+          {/* Кольцевая диаграмма долей + легенда-переключатели: клик по строке
+              скрывает/показывает источник на графике и в диаграмме */}
+          {sourceStack.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center gap-6 pt-4 border-t border-purple-100 mt-4">
+              <DonutChart
+                segments={visibleStack.map(s => ({ color: s.color, value: s.total }))}
+                center={String(visibleStack.reduce((a, s) => a + s.total, 0))}
+                sub={plural(visibleStack.reduce((a, s) => a + s.total, 0), 'переход', 'перехода', 'переходов')}
+              />
+              <div className="w-full space-y-2">
+                {sourceStack.map(s => {
+                  const visTotal = visibleStack.reduce((a, x) => a + x.total, 0)
+                  const share = !hiddenSources[s.label] && visTotal > 0 ? Math.round((s.total / visTotal) * 100) : null
+                  return (
+                    <button
+                      key={s.label}
+                      onClick={() => toggleSeries(hiddenSources, setHiddenSources, s.label, sourceStack.map(x => x.label))}
+                      className={`w-full flex items-center justify-between rounded-xl px-4 py-2 text-sm transition-all hover:opacity-80 ${hiddenSources[s.label] ? 'opacity-40' : ''}`}
+                      style={{ backgroundColor: `${s.color}14` }}
+                    >
+                      <span className="inline-flex items-center gap-2 text-gray-600">
+                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: s.color }}></span>
+                        {sourceLabel(s.label)}
+                      </span>
+                      <span className="text-gray-700">
+                        {share !== null && <b className="mr-2">{share}%</b>}
+                        <b>{s.total}</b>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          {sourceStack.length > 0 && (
+            <p className="text-xs text-gray-400 mt-2">
+              Нажмите на источник, чтобы показать его отдельно или в комбинации с другими
             </p>
           )}
           <p className="text-xs text-gray-400 mt-3">
@@ -598,35 +738,45 @@ export default function MaterialAnalyticsPage() {
             </div>
           )}
 
-          {/* Итоги за всё время */}
-          <div className="grid grid-cols-3 gap-3 text-center mt-6">
-            <div className="bg-purple-50 rounded-xl p-4">
-              <div className="text-2xl font-bold gradient-text">{started}</div>
-              <div className="text-xs text-gray-600 mt-1">Начали читать</div>
-            </div>
-            <div className="bg-emerald-50 rounded-xl p-4">
-              <div className="text-2xl font-bold text-emerald-600">{completed}</div>
-              <div className="text-xs text-gray-600 mt-1">Завершили</div>
-            </div>
-            <div className="bg-blue-50 rounded-xl p-4">
-              <div className="text-2xl font-bold text-blue-600">
-                {started > 0 ? Math.round((completed / started) * 100) : 0}%
+          {/* Итоги за всё время: кольцевая диаграмма дочитывания */}
+          <div className="flex flex-col sm:flex-row items-center gap-6 mt-6 pt-6 border-t border-purple-100">
+            <DonutChart
+              segments={[
+                { color: '#10b981', value: completed },
+                { color: '#c4b5fd', value: Math.max(0, started - completed) },
+              ]}
+              center={`${started > 0 ? Math.round((completed / started) * 100) : 0}%`}
+              sub="дочитали"
+            />
+            <div className="w-full space-y-2 text-sm">
+              <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-2.5">
+                <span className="inline-flex items-center gap-2 text-gray-600">
+                  <span className="h-3 w-3 rounded-full bg-emerald-500"></span>
+                  Завершили
+                </span>
+                <b className="text-emerald-600">{completed}</b>
               </div>
-              <div className="text-xs text-gray-600 mt-1">Дочитали</div>
+              <div className="flex items-center justify-between rounded-xl bg-purple-50 py-2.5 px-4">
+                <span className="inline-flex items-center gap-2 text-gray-600">
+                  <span className="h-3 w-3 rounded-full bg-purple-300"></span>
+                  Начали, но не дочитали
+                </span>
+                <b className="text-purple-600">{Math.max(0, started - completed)}</b>
+              </div>
+              <div className="flex items-center justify-between px-4 py-1 text-xs text-gray-500">
+                <span>Всего начали читать</span>
+                <b className="text-gray-700">{started}</b>
+              </div>
             </div>
           </div>
           {!isCourse && (
             <div className="flex items-center gap-6 mt-4 text-sm">
               <span className="inline-flex items-center gap-1.5 text-red-600" title="Лайки">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
+                <Heart className="h-4 w-4" fill="currentColor" />
                 {social.likes} лайков
               </span>
               <span className="inline-flex items-center gap-1.5 text-amber-500" title="В избранном">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                </svg>
+                <Star className="h-4 w-4" fill="currentColor" />
                 {social.favorites} в избранном
               </span>
             </div>
@@ -690,63 +840,155 @@ function SourceStack({ stack, max, onHover }: {
           )
         })}
       </div>
+    </div>
+  )
+}
 
-      {/* Легенда: цвет + источник + сумма за период */}
-      <div className="flex flex-wrap gap-2 pt-4 border-t border-purple-100 mt-4">
-        {ordered.map(s => (
-          <span key={s.label} className="inline-flex items-center gap-1.5 text-sm text-gray-600">
-            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }}></span>
-            {sourceLabel(s.label)}: <b className="text-gray-900">{s.total}</b>
-          </span>
-        ))}
+// Кнопка легенды: клик скрывает/показывает линию (или источник) на графике
+function LegendToggle({ label, color, hidden, onClick }: {
+  label: string
+  color: string
+  hidden: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm text-gray-600 transition-all hover:bg-purple-50 ${hidden ? 'opacity-40' : ''}`}
+    >
+      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: color }}></span>
+      {label}
+    </button>
+  )
+}
+
+// Кольцевая диаграмма («пончик»): доли нескольких сегментов. Каждый сегмент —
+// своя окружность со смещением по кругу (rotate). В центре — главный
+// показатель (процент или сумма)
+function DonutChart({ segments, center, sub, track = '#ede9fe' }: {
+  segments: { color: string; value: number }[]
+  center: string
+  sub: string
+  track?: string
+}) {
+  const R = 52
+  const C = 2 * Math.PI * R // длина окружности
+  const total = segments.reduce((a, s) => a + s.value, 0)
+  const visibleCount = segments.filter(s => s.value > 0).length
+  let acc = 0 // пройденная доля круга (для стартового угла следующего сегмента)
+  return (
+    <div className="relative shrink-0">
+      <svg width="140" height="140" viewBox="0 0 140 140">
+        <circle cx="70" cy="70" r={R} fill="none" stroke={track} strokeWidth="16" />
+        {total > 0 && segments.map((s, i) => {
+          if (s.value <= 0) return null
+          const len = (s.value / total) * C
+          const rot = -90 + (acc / total) * 360
+          acc += s.value
+          return (
+            <circle
+              key={i}
+              cx="70" cy="70" r={R} fill="none" stroke={s.color} strokeWidth="16"
+              strokeLinecap={visibleCount > 1 ? 'butt' : 'round'}
+              strokeDasharray={`${len} ${C - len}`}
+              transform={`rotate(${rot} 70 70)`}
+            />
+          )
+        })}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-2xl font-bold text-gray-900">{center}</span>
+        <span className="text-[11px] text-gray-500">{sub}</span>
       </div>
     </div>
   )
 }
 
-// Пары столбцов по дням: лайк (красный) + избранное (янтарный)
-function ReactionBars({ likes, favorites, max, showLikes, onHover }: {
-  likes: number[]
-  favorites: number[]
-  max: number
-  showLikes: boolean
-  onHover?: (idx: number | null) => void
+// Линейный график по дням: несколько серий-линий, сетка, оси, вертикальная
+// линия-указатель под курсором. Родитель решает, какие серии передавать —
+// скрытые кликом по легенде сюда просто не попадают
+function LineChart({ series, period, hover, onHover, height = 220 }: {
+  series: { key: string; color: string; values: number[] }[]
+  period: number
+  hover: number | null
+  onHover: (idx: number | null) => void
+  height?: number
 }) {
-  return (
-    <>
-      {favorites.map((f, idx) => {
-        const liked = likes[idx] || 0
-        const dayDate = new Date(Date.now() - (favorites.length - 1 - idx) * 86400000)
-        const likeH = (liked / max) * 100
-        const favH = (f / max) * 100
-        return (
-          <div
-            key={idx}
-            className="flex-1 min-w-[14px] flex flex-col items-center group relative cursor-pointer"
-            onMouseEnter={() => onHover?.(idx)}
-          >
-            <div className="w-full flex items-end justify-center gap-0.5 h-56">
-              {showLikes && (
-                <div className="w-1/2 max-w-[12px] flex flex-col justify-end h-full">
-                  {liked > 0 && (
-                    <div className="w-full bg-red-500 rounded-t-sm" style={{ height: `${Math.max(likeH, 2)}%` }}></div>
-                  )}
-                </div>
-              )}
-              <div className="w-1/2 max-w-[12px] flex flex-col justify-end h-full">
-                {f > 0 && (
-                  <div className="w-full bg-amber-400 rounded-t-sm" style={{ height: `${Math.max(favH, 2)}%` }}></div>
-                )}
-              </div>
-            </div>
+  const W = 640
+  const H = height
+  const PAD_T = 10          // отступ сверху до первой линии сетки
+  const BASE = H - 20       // базовая линия (ось нуля)
+  const PLOT = BASE - PAD_T // высота поля значений
+  const n = series[0]?.values.length || 0
+  const peak = Math.max(1, ...series.flatMap(s => s.values))
+  const step = niceStep(peak / 4)
+  const top = step * 4
+  const x = (i: number) => (i * W) / Math.max(1, n - 1)
+  const y = (v: number) => BASE - (v / top) * PLOT
+  const ticks = [4, 3, 2, 1].map(k => step * k)
 
-            <div className="text-[10px] text-gray-500 mt-2 absolute -bottom-6 whitespace-nowrap">
-              {dayDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}
-            </div>
-          </div>
-        )
-      })}
-    </>
+  return (
+    <div>
+      {/* ось Y — HTML-подписи слева (SVG с preserveAspectRatio="none" растягивает текст) */}
+      <div className="relative" style={{ paddingLeft: 34 }} onMouseLeave={() => onHover(null)}>
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full block" style={{ height }} preserveAspectRatio="none">
+          {/* сетка */}
+          {[0, 1, 2, 3, 4].map(k => (
+            <line key={k} x1="0" y1={BASE - (k * PLOT) / 4} x2={W} y2={BASE - (k * PLOT) / 4} stroke="#ece9f4" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+          ))}
+          {/* вертикальная линия-указатель под курсором */}
+          {hover !== null && n > 1 && (
+            <line x1={x(hover)} y1={PAD_T} x2={x(hover)} y2={BASE} stroke="#c4b5fd" strokeWidth="1" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
+          )}
+          {/* линии серий */}
+          {series.map(s => (
+            <path
+              key={s.key}
+              d={s.values.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ')}
+              fill="none"
+              stroke={s.color}
+              strokeWidth="2.5"
+              vectorEffect="non-scaling-stroke"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          ))}
+          {/* невидимые зоны наведения по дням */}
+          {Array.from({ length: n }, (_, i) => (
+            <rect
+              key={i}
+              x={x(i) - W / (2 * (n - 1))}
+              y={0}
+              width={W / (n - 1)}
+              height={H}
+              fill="transparent"
+              onMouseEnter={() => onHover(i)}
+              className="cursor-pointer"
+            />
+          ))}
+        </svg>
+        {/* подписи оси Y */}
+        <div className="absolute left-0 top-0 w-8 pointer-events-none" style={{ height }}>
+          {ticks.map((t, k) => (
+            <span
+              key={k}
+              className="absolute right-1.5 text-[11px] text-gray-400 -translate-y-1/2"
+              style={{ top: `${((BASE - (t / top) * PLOT) / H) * 100}%` }}
+            >
+              {t >= 1000 ? `${(t / 1000).toLocaleString('ru-RU')}к` : t}
+            </span>
+          ))}
+          <span className="absolute right-1.5 text-[11px] text-gray-400 -translate-y-1/2" style={{ top: `${(BASE / H) * 100}%` }}>0</span>
+        </div>
+      </div>
+      {/* ось X — даты */}
+      <div className="flex justify-between text-[11px] text-gray-400 mt-1" style={{ paddingLeft: 34 }}>
+        {[0, 1, 2, 3, 4, 5].map(k => {
+          const idx = Math.round((k * (n - 1)) / 5)
+          return <span key={k} className={k === 0 ? '' : 'translate-x-2'}>{dayShort(idx, period)}</span>
+        })}
+      </div>
+    </div>
   )
 }
 
