@@ -6,6 +6,7 @@ import { redirect, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import { Hint } from '@/components/Hint'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { BookOpen, Eye, FileText, Inbox, Receipt, ShoppingCart, Target, Wallet } from 'lucide-react'
@@ -59,27 +60,32 @@ function niceStep(x: number) {
 }
 
 // Числовые колонки таблицы «Все материалы», доступные для сортировки
-type SortKey = 'reach' | 'totalViews' | 'monthViews' | 'dayViews' | 'likes' | 'favorites' | 'sold' | 'earnings'
+type SortKey = 'reach' | 'impressions' | 'ctr' | 'totalViews' | 'monthViews' | 'dayViews' | 'likes' | 'favorites' | 'sold' | 'earnings'
 
 // Заголовок сортируемой колонки: клик — по убыванию → по возрастанию → сброс
-function SortHeader({ label, sortKey, sort, onSort, className }: {
+function SortHeader({ label, sortKey, sort, onSort, className, about }: {
   label: string
   sortKey: SortKey
   sort: { key: SortKey; dir: 'asc' | 'desc' } | null
   onSort: (key: SortKey) => void
   className?: string
+  about?: string
 }) {
   const active = sort?.key === sortKey
   const arrow = active ? (sort!.dir === 'desc' ? '↓' : '↑') : '↕'
+  // подсказка — рядом с кнопкой, не внутри: button внутри button недопустим
   return (
-    <button
-      onClick={() => onSort(sortKey)}
-      title="Сортировать: клик — от большего к меньшему, ещё клик — от меньшего к большему, третий — сброс"
-      className={`inline-flex items-center gap-1 whitespace-nowrap hover:text-purple-700 transition-colors ${active ? 'text-purple-700' : ''} ${className || ''}`}
-    >
-      {label}
-      <span className="text-xs">{arrow}</span>
-    </button>
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap ${className || ''}`}>
+      <button
+        onClick={() => onSort(sortKey)}
+        title="Сортировать: клик — от большего к меньшему, ещё клик — от меньшего к большему, третий — сброс"
+        className={`inline-flex items-center gap-1 hover:text-purple-700 transition-colors ${active ? 'text-purple-700' : ''}`}
+      >
+        {label}
+        <span className="text-xs">{arrow}</span>
+      </button>
+      {about && <Hint text={about} />}
+    </span>
   )
 }
 
@@ -102,12 +108,13 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 }
 
 // KPI-карточка: подпись + крупная цифра + дельта к прошлому периоду + спарклайн
-function KpiCard({ icon: Icon, label, value, delta, hint, sparkColor, spark }: {
+function KpiCard({ icon: Icon, label, value, delta, hint, about, sparkColor, spark }: {
   icon: LucideIcon
   label: string
   value: string
   delta: { text: string; up: boolean; noSuffix?: boolean } | null
   hint?: string
+  about?: string
   sparkColor?: string
   spark?: number[]
 }) {
@@ -119,7 +126,10 @@ function KpiCard({ icon: Icon, label, value, delta, hint, sparkColor, spark }: {
           <Icon className="h-5 w-5" strokeWidth={2} />
         </span>
         <div className="min-w-0">
-          <div className="text-[13px] text-gray-500 truncate">{label}</div>
+          <div className="text-[13px] text-gray-500 truncate flex items-center gap-1" title={label}>
+            <span className="truncate">{label}</span>
+            {about && <Hint text={about} />}
+          </div>
           <div className="text-2xl font-bold text-gray-900 mt-1">{value}</div>
           {delta && (
             <div className={`text-xs font-semibold mt-0.5 ${delta.up ? 'text-emerald-600' : 'text-red-500'}`}>
@@ -401,6 +411,8 @@ export default function AnalyticsPage() {
   const [viewEvents, setViewEvents] = useState<ViewEvent[]>([])
   // Сырые записи прогресса (авторизованные ученики) — график «Завершения»
   const [progressRows, setProgressRows] = useState<Array<{ lesson_id: string; ts: number; status: string }>>([])
+  // Показы и клики карточек каталога (CTR) — 30 дней, по материалам
+  const [catalogStats, setCatalogStats] = useState<Map<string, { impressions: number; clicks: number }>>(new Map())
 
   // Управление таблицей «Все материалы»: поиск, фильтр, порционная выдача, сортировка
   const [tableSearch, setTableSearch] = useState('')
@@ -593,20 +605,36 @@ export default function AnalyticsPage() {
       // №30: события просмотров за 180 дней — из них собираются все графики
       // (КПЭ, источники, «когда читают», топ материалов). Гостевые события
       // (user_id IS NULL) RLS тоже отдаёт — фильтр только по нашим материалам.
+      // Показы/клики каталога (CTR) считаем отдельно, в охваты они не входят.
       const days180Ago = new Date(now.getTime() - 180 * 86400000)
       const viewEvents: ViewEvent[] = []
       // Охваты за 30 дней — для колонки «Охваты» таблицы материалов
       const reach30ByKey = new Map<string, number>()
+      const catalog30 = new Map<string, { impressions: number; clicks: number }>()
       if (lessonIds.length > 0 || courseIds.length > 0) {
         const { data: viewsData } = await supabase
           .from('analytics_events')
-          .select('target_id, target_type, created_at, metadata')
+          .select('event_type, target_id, target_type, created_at, metadata')
           .in('target_id', [...lessonIds, ...courseIds])
           .gte('created_at', days180Ago.toISOString())
 
         const keyOf = (type: string, tid: string) => `${type}:${tid}`
         for (const ev of viewsData || []) {
           const ts = new Date(ev.created_at).getTime()
+          // Показы/клики каталога — в отдельную воронку, не в просмотры страниц
+          if (ev.event_type === 'catalog_impression' || ev.event_type === 'catalog_click') {
+            if (ts >= oneMonthAgo.getTime()) {
+              const k = keyOf(ev.target_type, ev.target_id)
+              const cur = catalog30.get(k) || { impressions: 0, clicks: 0 }
+              if (ev.event_type === 'catalog_impression') cur.impressions++
+              else cur.clicks++
+              catalog30.set(k, cur)
+            }
+            continue
+          }
+          // Сюда попадают только просмотры страниц (lesson_view) — на случай
+          // появления новых типов событий охват не должен их поглощать
+          if (ev.event_type && ev.event_type !== 'lesson_view') continue
           viewEvents.push({
             key: keyOf(ev.target_type, ev.target_id),
             ts,
@@ -618,6 +646,7 @@ export default function AnalyticsPage() {
           }
         }
       }
+      setCatalogStats(catalog30)
       setViewEvents(viewEvents)
       setReach(
         [...lessonIds.map(id => ({ id, type: 'lesson' as const })), ...courseIds.map(id => ({ id, type: 'course' as const }))]
@@ -804,6 +833,11 @@ export default function AnalyticsPage() {
     const numOf = (m: any): number => {
       switch (tableSort.key) {
         case 'reach': return reach.find(r => r.type === m.type && r.id === m.id)?.total30 ?? 0
+        case 'impressions': return catalogStats.get(`${m.type}:${m.id}`)?.impressions || 0
+        case 'ctr': {
+          const c = catalogStats.get(`${m.type}:${m.id}`)
+          return c && c.impressions > 0 ? (c.clicks / c.impressions) * 100 : -1
+        }
         case 'totalViews': return m.totalViews || 0
         case 'monthViews': return m.monthViews || 0
         case 'dayViews': return m.dayViews || 0
@@ -878,6 +912,7 @@ export default function AnalyticsPage() {
             <KpiCard
               icon={Wallet}
               label={`На руки за ${period} ${plural(period, 'день', 'дня', 'дней')}`}
+              about="Ваша выручка за период после удержания комиссии платформы — то, что реально придёт на выплату."
               value={money(earningsCur)}
               delta={deltaPct(earningsCur, earningsPrev)}
               spark={earningsDaily}
@@ -886,6 +921,7 @@ export default function AnalyticsPage() {
             <KpiCard
               icon={ShoppingCart}
               label="Продаж"
+              about="Сколько раз оплатили ваши материалы за период. Покупка засчитывается после подтверждения платежа платёжной системой."
               value={String(salesInPeriod.length)}
               delta={deltaPct(salesInPeriod.length, salesPrev)}
               spark={salesDaily}
@@ -894,6 +930,7 @@ export default function AnalyticsPage() {
             <KpiCard
               icon={Eye}
               label="Просмотров (включая гостей)"
+              about="Сколько раз открыли страницы ваших материалов, включая неавторизованных читателей из соцсетей и поиска."
               value={viewsCur.toLocaleString('ru-RU')}
               delta={deltaPct(viewsCur, viewsPrev)}
               spark={viewsDaily}
@@ -902,6 +939,7 @@ export default function AnalyticsPage() {
             <KpiCard
               icon={Target}
               label="Конверсия просмотр → покупка"
+              about="Доля посетителей страниц, которые купили материал. Много просмотров при низкой конверсии — повод доработать описание, обложку или цену."
               value={`${convCur.toFixed(1).replace('.', ',')}%`}
               delta={viewsPrev > 0 ? deltaPct(convCur, convPrev) : null}
               hint={salesInPeriod.length > 0 && viewsCur > 0 ? `${salesInPeriod.length} ${plural(salesInPeriod.length, 'продажа', 'продажи', 'продаж')} из ${viewsCur.toLocaleString('ru-RU')}` : undefined}
@@ -911,7 +949,10 @@ export default function AnalyticsPage() {
           {/* График + источники */}
           <div className="grid lg:grid-cols-[1.7fr_1fr] gap-4 mb-4">
             <Card variant="glow" padding="none" className="p-5">
-              <h3 className="font-bold text-gray-900">Просмотры и продажи по дням</h3>
+              <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                Просмотры и продажи по дням
+                <Hint text="Просмотры страниц ваших материалов и оплаты по дням. Пики подскажут, какие публикации приводят читателей — повторяйте то, что работает." />
+              </h3>
               <p className="text-xs text-gray-500 mt-0.5 mb-3">
                 Просмотры страниц материалов (включая гостей) и оплаченные покупки
               </p>
@@ -933,13 +974,19 @@ export default function AnalyticsPage() {
 
             <Card variant="glow" padding="none" className="p-5">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-gray-900">Аудитория</h3>
+                <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                  Аудитория
+                  <Hint text="Читатели, подписанные на ваши обновления: новые материалы появятся у них в ленте и в уведомлениях." />
+                </h3>
                 <Link href="/dashboard/mentor/subscribers" className="text-xs text-purple-600 hover:text-purple-700 font-medium">
                   Подписчики: {stats.subscribers} →
                 </Link>
               </div>
               <p className="text-xs text-gray-500 mt-0.5">Подписчики — читатели, подписанные на обновления</p>
-              <h4 className="text-sm font-semibold text-gray-700 mt-5 mb-1">Откуда приходят читатели</h4>
+              <h4 className="text-sm font-semibold text-gray-700 mt-5 mb-1 flex items-center gap-2">
+                Откуда приходят читатели
+                <Hint text="Откуда переходы: соцсети и мессенджеры видны по меткам utm в ссылках, остальное — по ссылающейся странице. Помогает понять, какую площадку стоит развивать." />
+              </h4>
               <SourceBars sources={sources} total={viewsCur} />
             </Card>
           </div>
@@ -947,7 +994,10 @@ export default function AnalyticsPage() {
           {/* Топ материалов + когда читают */}
           <div className="grid lg:grid-cols-[1.7fr_1fr] gap-4">
             <Card variant="glow" padding="none" className="p-5">
-              <h3 className="font-bold text-gray-900">Лучшие материалы за период</h3>
+              <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                Лучшие материалы за период
+                <Hint text="Три материала с самым большим охватом. Смотрите, какие темы заходят — на них и опирайтесь в следующих публикациях." />
+              </h3>
               {topReach.length > 0 ? (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-4">
@@ -974,7 +1024,10 @@ export default function AnalyticsPage() {
             </Card>
 
             <Card variant="glow" padding="none" className="p-5">
-              <h3 className="font-bold text-gray-900">Когда читают</h3>
+              <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                Когда читают
+                <Hint text="Просмотры по дням недели. Самый читаемый день — ориентир для публикации: выходите за день-два до пика." />
+              </h3>
               <p className="text-xs text-gray-500 mt-0.5">Просмотры по дням недели за период</p>
               <DowChart counts={dowCounts} />
             </Card>
@@ -988,7 +1041,10 @@ export default function AnalyticsPage() {
           {/* График показателя по дням */}
           <Card variant="glow" padding="none" className="p-5 mb-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="font-bold text-gray-900">Показатель по дням — все материалы</h3>
+              <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                Показатель по дням — все материалы
+                <Hint text="Суммарно по всем вашим материалам: просмотры, завершения чтения или продажи — переключается кнопками справа." />
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {([
                   { key: 'views', label: 'Просмотры' },
@@ -1070,40 +1126,50 @@ export default function AnalyticsPage() {
 
               <Card variant="glow" padding="none" className="overflow-hidden border border-purple-100">
                 <div className="hidden md:grid grid-cols-12 gap-4 px-6 pt-3 bg-purple-50 text-xs font-medium text-gray-500">
-                  {/* надзаголовок-группа над колонками открытий */}
-                  <div className="col-span-4"></div>
+                  {/* надзаголовки-группы над колонками каталога и открытий */}
+                  <div className="col-span-3"></div>
+                  <div className="col-span-2 text-center">Каталог</div>
                   <div className="col-span-3 text-center">Открытия</div>
-                  <div className="col-span-5"></div>
+                  <div className="col-span-4"></div>
                 </div>
                 <div className="hidden md:grid grid-cols-12 gap-4 px-6 pb-3 bg-purple-50 border-b border-purple-100 text-sm font-semibold text-gray-700">
-                  <div className="col-span-3">Материал</div>
+                  <div className="col-span-2">Материал</div>
                   <div className="col-span-1 text-center">
-                    <SortHeader label="Охваты" sortKey="reach" sort={tableSort} onSort={toggleSort} />
+                    <SortHeader label="Охваты" sortKey="reach" sort={tableSort} onSort={toggleSort} about="Сколько раз открыли страницу материала за выбранный период, включая гостей. Клик — переход к детальной статистике." />
+                  </div>
+                  {/* группа «Каталог» — показы карточек на главной и CTR */}
+                  <div className="col-span-2 grid grid-cols-2 gap-2 rounded-lg bg-purple-100/60 py-1.5">
+                    <div className="text-center">
+                      <SortHeader label="Показы" sortKey="impressions" sort={tableSort} onSort={toggleSort} about="Сколько раз карточку материала показали на главной за 30 дней. Один показ на карточку за сессию браузера." />
+                    </div>
+                    <div className="text-center">
+                      <SortHeader label="CTR" sortKey="ctr" sort={tableSort} onSort={toggleSort} about="Кликабельность карточки: клики / показы. Растёт, когда обложка и название цепляют." />
+                    </div>
                   </div>
                   {/* группа «Открытия» — три колонки на общей подложке */}
                   <div className="col-span-3 grid grid-cols-3 gap-2 rounded-lg bg-purple-100/60 py-1.5">
                     <div className="text-center">
-                      <SortHeader label="Всего" sortKey="totalViews" sort={tableSort} onSort={toggleSort} />
+                      <SortHeader label="Всего" sortKey="totalViews" sort={tableSort} onSort={toggleSort} about="Открытия материала зарегистрированными учениками за всё время: сколько раз начинали читать." />
                     </div>
                     <div className="text-center">
-                      <SortHeader label="За месяц" sortKey="monthViews" sort={tableSort} onSort={toggleSort} />
+                      <SortHeader label="За месяц" sortKey="monthViews" sort={tableSort} onSort={toggleSort} about="Начали читать за последние 30 дней." />
                     </div>
                     <div className="text-center">
-                      <SortHeader label="За день" sortKey="dayViews" sort={tableSort} onSort={toggleSort} />
+                      <SortHeader label="За день" sortKey="dayViews" sort={tableSort} onSort={toggleSort} about="Начали читать за последние 24 часа." />
                     </div>
                   </div>
                   <div className="col-span-1 text-center">
-                    <SortHeader label="Лайк" sortKey="likes" sort={tableSort} onSort={toggleSort} />
+                    <SortHeader label="Лайк" sortKey="likes" sort={tableSort} onSort={toggleSort} about="«Сердечки» от читателей за всё время. У курсов лайков не бывает." />
                   </div>
                   <div className="col-span-1 text-center">
-                    <SortHeader label="Избранное" sortKey="favorites" sort={tableSort} onSort={toggleSort} />
+                    <SortHeader label="Избранное" sortKey="favorites" sort={tableSort} onSort={toggleSort} about="Добавления материала в избранное за всё время." />
                   </div>
                   <div className="col-span-1 text-center">Цена</div>
                   <div className="col-span-1 text-center">
-                    <SortHeader label="Покупок" sortKey="sold" sort={tableSort} onSort={toggleSort} />
+                    <SortHeader label="Покупок" sortKey="sold" sort={tableSort} onSort={toggleSort} about="Оплаченные покупки материала за выбранный период." />
                   </div>
                   <div className="col-span-1 text-center">
-                    <SortHeader label="На руки" sortKey="earnings" sort={tableSort} onSort={toggleSort} />
+                    <SortHeader label="На руки" sortKey="earnings" sort={tableSort} onSort={toggleSort} about="Ваша выручка по материалу за период после комиссии платформы." />
                   </div>
                 </div>
 
@@ -1123,7 +1189,7 @@ export default function AnalyticsPage() {
                           title="Открыть статистику материала"
                         >
                           {/* Материал */}
-                          <div className="col-span-3 flex items-center gap-3">
+                          <div className="col-span-2 flex items-center gap-3">
                             <div className="relative w-16 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-blue-600 flex-shrink-0 flex items-center justify-center">
                               {(mat.cover_image || mat.cover_image_url) ? (
                                 <Image
@@ -1168,6 +1234,32 @@ export default function AnalyticsPage() {
                               <div className="text-lg font-bold gradient-text">{reach30 ?? 0}</div>
                               <div className="text-[10px] text-gray-500">подробнее</div>
                             </Link>
+                          </div>
+
+                          {/* Каталог: показы карточки на главной + CTR (клики/показы) */}
+                          <div className="col-span-2 grid grid-cols-2 gap-2 rounded-lg bg-purple-50 py-1.5">
+                            <div className="flex items-center justify-center">
+                              <div className="text-center">
+                                <div className="text-lg font-bold text-gray-700" title="Сколько раз карточку показали на главной за 30 дней">
+                                  {catalogStats.get(`${mat.type}:${mat.id}`)?.impressions || 0}
+                                </div>
+                                <div className="text-xs text-gray-500 md:hidden">Показы</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-center">
+                              <div className="text-center">
+                                {(() => {
+                                  const c = catalogStats.get(`${mat.type}:${mat.id}`)
+                                  const ctr = c && c.impressions > 0 ? (c.clicks / c.impressions) * 100 : null
+                                  return (
+                                    <div className={`text-lg font-bold ${ctr === null ? 'text-gray-400' : 'text-blue-600'}`} title="Клики по карточке / показы, за 30 дней">
+                                      {ctr === null ? '—' : `${ctr.toFixed(1).replace('.', ',')}%`}
+                                    </div>
+                                  )
+                                })()}
+                                <div className="text-xs text-gray-500 md:hidden">CTR</div>
+                              </div>
+                            </div>
                           </div>
 
                           {/* группа «Открытия» — три колонки на общей подложке */}

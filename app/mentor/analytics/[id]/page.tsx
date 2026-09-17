@@ -7,8 +7,9 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { redirect } from 'next/navigation'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import { Hint } from '@/components/Hint'
 import { Card } from '@/components/ui/Card'
-import { BookOpen, Eye, FileText, Heart, Inbox, ShoppingCart, Star, Target, Wallet } from 'lucide-react'
+import { BookOpen, Eye, FileText, Heart, Inbox, MousePointerClick, ShoppingCart, Star, Target, Wallet } from 'lucide-react'
 import { sourceLabel } from '@/lib/utm'
 
 // Деньги в русской записи: 1000 → «1 000 ₽»
@@ -87,6 +88,8 @@ export default function MaterialAnalyticsPage() {
   const [completed, setCompleted] = useState(0)
   const [startedSeries, setStartedSeries] = useState<number[]>([])
   const [completedSeries, setCompletedSeries] = useState<number[]>([])
+  // Каталог: показы карточки на главной + клики (CTR)
+  const [catalog, setCatalog] = useState({ impressions: 0, clicks: 0 })
 
   // День под курсором на каждом из графиков — для строки-подписи над графиком
   const [hoverViews, setHoverViews] = useState<number | null>(null)
@@ -168,13 +171,28 @@ export default function MaterialAnalyticsPage() {
         new Date(now.getTime() - (period - 1 - i) * 86400000).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
       )
 
-      // Охваты: события просмотра страницы материала (включая гостей)
+      // Охваты: события просмотра страницы материала (включая гостей).
+      // Фильтр по типу события обязателен: показы/клики каталога (CTR)
+      // живут в этой же таблице и в охват страниц входить не должны.
       const { data: viewsData } = await supabase
         .from('analytics_events')
         .select('created_at, metadata')
+        .eq('event_type', 'lesson_view')
         .eq('target_type', mat.type)
         .eq('target_id', mat.id)
         .gte('created_at', periodStart.toISOString())
+
+      // Каталог: показы карточки на главной и клики по ней (CTR)
+      const { data: catalogData } = await supabase
+        .from('analytics_events')
+        .select('event_type')
+        .eq('target_type', mat.type)
+        .eq('target_id', mat.id)
+        .in('event_type', ['catalog_impression', 'catalog_click'])
+        .gte('created_at', periodStart.toISOString())
+      const catImpressions = (catalogData || []).filter((e: any) => e.event_type === 'catalog_impression').length
+      const catClicks = (catalogData || []).filter((e: any) => e.event_type === 'catalog_click').length
+      setCatalog({ impressions: catImpressions, clicks: catClicks })
 
       const vSeries = new Array(period).fill(0)
       const srcCounts: Record<string, number> = {}
@@ -392,13 +410,16 @@ export default function MaterialAnalyticsPage() {
       </div>
 
       {/* Сводные цифры за период */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <Card variant="glow" padding="none" className="p-5">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600"><Eye className="h-5 w-5" strokeWidth={2} /></span>
             <div>
               <div className="text-xl font-bold gradient-text">{totalViews}</div>
-              <div className="text-xs text-gray-600">Просмотров (охват)</div>
+              <div className="text-xs text-gray-600 flex items-center gap-1">
+                Просмотров (охват)
+                <Hint text="Сколько раз страницу материала открыли за период, включая неавторизованных читателей из соцсетей и поиска." />
+              </div>
             </div>
           </div>
         </Card>
@@ -407,7 +428,10 @@ export default function MaterialAnalyticsPage() {
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><ShoppingCart className="h-5 w-5" strokeWidth={2} /></span>
             <div>
               <div className="text-xl font-bold text-emerald-600">{salesCount}</div>
-              <div className="text-xs text-gray-600">Покупок</div>
+              <div className="text-xs text-gray-600 flex items-center gap-1">
+                Покупок
+                <Hint text="Сколько раз материал оплатили за период. Покупка засчитывается после подтверждения платежа платёжной системой." />
+              </div>
             </div>
           </div>
         </Card>
@@ -416,7 +440,10 @@ export default function MaterialAnalyticsPage() {
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Wallet className="h-5 w-5" strokeWidth={2} /></span>
             <div>
               <div className="text-xl font-bold text-blue-600">{money(salesEarnings)}</div>
-              <div className="text-xs text-gray-600">На руки за период</div>
+              <div className="text-xs text-gray-600 flex items-center gap-1">
+                На руки за период
+                <Hint text="Ваша выручка за период после удержания комиссии платформы — то, что реально придёт на выплату." />
+              </div>
             </div>
           </div>
         </Card>
@@ -425,7 +452,22 @@ export default function MaterialAnalyticsPage() {
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600"><Target className="h-5 w-5" strokeWidth={2} /></span>
             <div>
               <div className="text-xl font-bold text-amber-600">{conversion}%</div>
-              <div className="text-xs text-gray-600">Просмотр → покупка</div>
+              <div className="text-xs text-gray-600 flex items-center gap-1">
+                Просмотр → покупка
+                <Hint text="Доля посетителей страницы, которые купили материал. Мало покупок при хороших просмотрах — повод доработать описание, обложку или цену." />
+              </div>
+            </div>
+          </div>
+        </Card>
+        <Card variant="glow" padding="none" className="p-5">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600"><MousePointerClick className="h-5 w-5" strokeWidth={2} /></span>
+            <div>
+              <div className="text-xl font-bold text-indigo-600">{catalog.impressions}</div>
+              <div className="text-xs text-gray-600 flex items-center gap-1">
+                <span>Показов в каталоге · CTR {catalog.impressions > 0 ? `${(catalog.clicks / catalog.impressions * 100).toFixed(1).replace('.', ',')}%` : '—'}</span>
+                <Hint text="Сколько раз карточку материала показали на главной за период. CTR — доля показов, закончившихся кликом: растёт, когда обложка и название цепляют. Показ считается один раз за сессию." />
+              </div>
             </div>
           </div>
         </Card>
@@ -433,7 +475,10 @@ export default function MaterialAnalyticsPage() {
 
       {/* График по дням: просмотры (фиолетовый) + покупки (зелёный внутри) */}
       <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-8">
-        <h2 className="text-lg font-bold text-gray-900 mb-2">По дням за период</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+          По дням за период
+          <Hint text="Просмотры страницы и покупки по дням. Замечаете пики — смотрите, что публиковали в тот день, и повторяйте это." />
+        </h2>
 
         {/* Подпись под курсором: значение + пояснение (вместо всплывающего тултипа) */}
         <p className="text-sm text-gray-600 mb-4 min-h-[20px]">
@@ -527,7 +572,10 @@ export default function MaterialAnalyticsPage() {
       {/* Реакции по дням: лайки (красный) + избранное (янтарный). Для курса
           лайков не существует — показываем только избранное */}
       <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-8">
-        <h2 className="text-lg font-bold text-gray-900 mb-2">Реакции по дням</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+          Реакции по дням
+          <Hint text="Лайки и добавления в избранное показывают, что материал отзывается. Много просмотров при нулевых реакциях — контент не оправдал ожидание от заголовка." />
+        </h2>
 
         {/* Подпись под курсором: значение + пояснение */}
         <p className="text-sm text-gray-600 mb-4 min-h-[20px]">
@@ -617,7 +665,10 @@ export default function MaterialAnalyticsPage() {
       {/* Источники переходов — на всю ширину (график по общим правилам) */}
       <div className="mb-8">
         <Card variant="glow" padding="none" className="p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Откуда приходят читатели</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+            Откуда приходят читатели
+            <Hint text="Откуда переходы: соцсети и мессенджеры видны по меткам utm в ссылках, остальное — по ссылающейся странице. Помогает понять, какую площадку стоит развивать." />
+          </h2>
 
           {/* Подпись под курсором: значение + пояснение */}
           <p className="text-sm text-gray-600 mb-4 min-h-[20px]">
@@ -693,7 +744,10 @@ export default function MaterialAnalyticsPage() {
         </Card>
 
         <Card variant="glow" padding="none" className="p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-2">Вовлечённость учеников</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+            Вовлечённость учеников
+            <Hint text="Сколько зарегистрированных учеников начали читать и сколько дочитали до конца. Дочитывание — главный сигнал качества содержания." />
+          </h2>
 
           {/* Подпись под курсором: значение + пояснение */}
           <p className="text-sm text-gray-600 mb-4 min-h-[20px]">

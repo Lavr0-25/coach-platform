@@ -10,6 +10,7 @@ import FavoriteButton from '@/components/FavoriteButton'
 import { useSearch } from '@/components/SearchContext'
 import { useToast } from '@/components/Toast'
 import { Card } from '@/components/ui/Card'
+import { CatalogImpression, trackCatalogClick } from '@/components/CatalogTracking'
 import { SearchX } from 'lucide-react'
 
 export interface HomeItem {
@@ -593,10 +594,12 @@ export default function HomeFeed({
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {displayedContent.map((item) => (
-                    <Card key={`${item.type}-${item.id}`} variant="glow" padding="none" className="group overflow-hidden relative">
+                    <CatalogImpression key={`${item.type}-${item.id}`} type={item.type} id={item.id}>
+                    <Card variant="glow" padding="none" className="group overflow-hidden relative">
                       <Link
                         href={`/${item.type === 'lesson' ? 'lesson' : 'course'}/${item.id}`}
                         className="block"
+                        onClick={() => trackCatalogClick(item.type, item.id)}
                       >
                         {/* Превью */}
                         <div className="aspect-video bg-gradient-to-br from-purple-100 via-indigo-50 to-blue-100 relative overflow-hidden">
@@ -718,6 +721,7 @@ export default function HomeFeed({
                         </div>
                       </Link>
                     </Card>
+                    </CatalogImpression>
                   ))}
                 </div>
 
