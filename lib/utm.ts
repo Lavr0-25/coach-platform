@@ -9,6 +9,7 @@ export const UTM_SOURCES = {
   vc: 'vc',
   vk: 'vk',
   yandex: 'yandex',
+  rss: 'rss',
   direct: 'direct',
 } as const
 
@@ -36,6 +37,7 @@ const SOURCE_LABELS: Record<string, string> = {
   google: 'Google',
   vk: 'VK',
   vc: 'vc.ru',
+  rss: 'RSS',
   direct: 'Прямая',
   other: 'Другое',
 }
