@@ -14,22 +14,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { buildPaymentUrl, isRobokassaConfigured } from '@/lib/robokassa'
+import { getEffectiveCommission } from '@/lib/commission'
 
 export type StartSubscriptionResult = { ok: true; url: string } | { ok: false; error: string }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-// Комиссия платформы из system_settings (Ф1), fallback 30% — как в purchase.ts
-async function getCommissionPercent(supabase: ReturnType<typeof createAdminClient>): Promise<number> {
-  if (!supabase) return 30
-  const { data } = await supabase
-    .from('system_settings')
-    .select('value')
-    .eq('key', 'platform_commission')
-    .maybeSingle()
-  const percent = Number(data?.value?.percent)
-  return Number.isFinite(percent) && percent >= 0 && percent <= 90 ? percent : 30
-}
 
 export async function startSubscription(formData: FormData): Promise<StartSubscriptionResult> {
   const coachUserId = String(formData.get('coachUserId') || '')
@@ -66,9 +55,11 @@ export async function startSubscription(formData: FormData): Promise<StartSubscr
     return { ok: false, error: 'Нельзя подписаться на самого себя' }
   }
 
-  // 2. Деньги: сумма = цена × месяцы; комиссия от всей суммы платежа
+  // 2. Деньги: сумма = цена × месяцы; комиссия (ручная ставка → глобальная −
+  //    бенефиты) от всей суммы платежа
   const amount = Math.round(monthlyPrice * months * 100) / 100
-  const percent = await getCommissionPercent(admin)
+  const commission = await getEffectiveCommission(admin, coachUserId)
+  const percent = commission.percent
   const platformCommission = Math.round(amount * percent) / 100
   const coachEarnings = Math.round((amount - platformCommission) * 100) / 100
 

@@ -16,6 +16,7 @@ import {
   approvePaidAccessRequest,
   returnPaidAccessRequest,
   setPaidPublishingAllowed,
+  setCoachCommissionRate,
   uploadFinalSignedFile,
   getAdminAgreementFileUrl,
   uploadFacsimile,
@@ -27,6 +28,7 @@ import {
   ExternalLink,
   FileText,
   Handshake,
+  Percent,
   RotateCcw,
   Search,
   Stamp,
@@ -49,7 +51,11 @@ type Request = {
   decided_at: string | null
 }
 
-type CoachInfo = { display_name: string | null; paid_publishing_allowed: boolean | null }
+type CoachInfo = {
+  display_name: string | null
+  paid_publishing_allowed: boolean | null
+  commission_rate: number | null
+}
 
 type FileInfo = {
   id: string
@@ -78,6 +84,12 @@ export default function AdminPartnerPage() {
   const [facsimileUrl, setFacsimileUrl] = useState<string | null>(null)
   const [facsimileBusy, setFacsimileBusy] = useState(false)
 
+  // Индивидуальная ставка (№33): id автора, чью ставку редактируем, + значение поля.
+  // Пустое поле = снять ставку (вернуться к глобальной).
+  const [rateEditId, setRateEditId] = useState<string | null>(null)
+  const [rateValue, setRateValue] = useState('')
+  const [rateSaving, setRateSaving] = useState(false)
+
   // Поиск + фильтр по статусу (клиентские: все заявки уже загружены)
   const [statusFilter, setStatusFilter] = useState<'all' | Status>('all')
   const [query, setQuery] = useState('')
@@ -93,7 +105,7 @@ export default function AdminPartnerPage() {
         .from('paid_access_requests')
         .select('id, coach_user_id, inn, mentor_comment, status, admin_comment, created_at, decided_at')
         .order('created_at', { ascending: false }),
-      supabase.from('coaches').select('user_id, display_name, paid_publishing_allowed'),
+      supabase.from('coaches').select('user_id, display_name, paid_publishing_allowed, commission_rate'),
       supabase.from('mentor_agreements').select('coach_user_id, contract_number, status'),
       supabase
         .from('mentor_agreement_files')
@@ -105,7 +117,11 @@ export default function AdminPartnerPage() {
     setRequests((reqRes.data as Request[]) || [])
     const coachMap: Record<string, CoachInfo> = {}
     ;((coachRes.data as any[]) || []).forEach(c => {
-      coachMap[c.user_id] = { display_name: c.display_name, paid_publishing_allowed: c.paid_publishing_allowed }
+      coachMap[c.user_id] = {
+        display_name: c.display_name,
+        paid_publishing_allowed: c.paid_publishing_allowed,
+        commission_rate: c.commission_rate,
+      }
     })
     setCoaches(coachMap)
     const agrMap: Record<string, string | null> = {}
@@ -128,6 +144,22 @@ export default function AdminPartnerPage() {
     }
     window.open(res.url, '_blank', 'noopener')
   }, [showToast])
+
+  // Сохранить индивидуальную ставку автора (№33). Пустое поле — снять ставку.
+  const handleSaveRate = async (coachUserId: string) => {
+    const trimmed = rateValue.trim().replace(',', '.')
+    const percent = trimmed === '' ? null : Number(trimmed)
+    setRateSaving(true)
+    const res = await setCoachCommissionRate(coachUserId, percent)
+    setRateSaving(false)
+    if (!res.ok) {
+      showToast(res.error || 'Не удалось сохранить ставку', 'error')
+      return
+    }
+    setRateEditId(null)
+    showToast(percent === null ? 'Индивидуальная ставка снята' : `Ставка ${percent}% сохранена`, 'success')
+    loadAll()
+  }
 
   const handleApprove = async (r: Request) => {
     if (!confirm(`Одобрить заявку и присвоить номер договора?`)) return
@@ -416,6 +448,53 @@ export default function AdminPartnerPage() {
                   ИНН {r.inn} · подана {new Date(r.created_at).toLocaleDateString('ru-RU')}
                   {r.decided_at && ` · решение ${new Date(r.decided_at).toLocaleDateString('ru-RU')}`}
                 </p>
+                {/* Индивидуальная ставка комиссии (№33, п. 5.3 оферты) — для действующих авторов */}
+                {r.status === 'approved' && (
+                  <div className="mb-3">
+                    {rateEditId === r.coach_user_id ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          size="compact"
+                          value={rateValue}
+                          onChange={e => setRateValue(e.target.value)}
+                          placeholder="комиссия, % (пусто = снять)"
+                          className="max-w-56"
+                        />
+                        <Button size="sm" onClick={() => handleSaveRate(r.coach_user_id)} loading={rateSaving}>
+                          Сохранить
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setRateEditId(null)}>
+                          Отмена
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Percent className="w-4 h-4 text-purple-600" />
+                        <span className="text-gray-700">
+                          {coach?.commission_rate != null ? (
+                            <>
+                              Комиссия платформы: <strong>{coach.commission_rate}%</strong> (индивидуальная)
+                            </>
+                          ) : (
+                            'Комиссия платформы: стандартная'
+                          )}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setRateEditId(r.coach_user_id)
+                            setRateValue(coach?.commission_rate != null ? String(coach.commission_rate) : '')
+                          }}
+                        >
+                          Изменить
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {/* Явно показываем, что автор указал (и что не указал) */}
                 <p className="text-sm text-gray-700 mb-2 whitespace-pre-line break-words">
                   Комментарий автора: {r.mentor_comment || <span className="text-gray-400">—</span>}

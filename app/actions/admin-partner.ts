@@ -11,6 +11,7 @@
 // сами отсекают не-админа; гвард ниже — для понятных ошибок.
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 export type AdminActionResult = { ok: boolean; error?: string }
@@ -397,5 +398,60 @@ export async function removeFacsimile(): Promise<AdminActionResult> {
 
   revalidatePath('/admin/partner')
   revalidatePath('/offer-mentor/print')
+  return { ok: true }
+}
+// №33 бэклога (2026-09-17): индивидуальная ставка комиссии автора — реализация
+// п. 5.3 оферты v1.2. Хранится в coaches.commission_rate (колонка есть с Ф1);
+// расчёт её применяет с высшим приоритетом (lib/commission.ts). percent=null —
+// «снять индивидуальную ставку» (вернуться к глобальной). Меняется только
+// админом; автору уходит уведомление (п. 8.2 оферты: существенные изменения
+// ставки — через кабинет).
+export async function setCoachCommissionRate(
+  coachUserId: string,
+  percent: number | null
+): Promise<AdminActionResult> {
+  if (!UUID_RE.test(coachUserId)) return { ok: false, error: 'Некорректный запрос' }
+
+  const g = await requireAdmin()
+  if (!g.ok) return { ok: false, error: g.error }
+  const { supabase, adminId } = g
+
+  if (percent !== null) {
+    const p = Number(percent)
+    if (!Number.isFinite(p) || p < 0 || p > 90 || Math.round(p * 10) !== p * 10) {
+      return { ok: false, error: 'Ставка — от 0 до 90, максимум один знак после запятой' }
+    }
+  }
+
+  const { error } = await supabase
+    .from('coaches')
+    .update({ commission_rate: percent })
+    .eq('user_id', coachUserId)
+  if (error) return { ok: false, error: 'Не удалось сохранить ставку' }
+
+  await audit(supabase, adminId, 'coach_commission_rate_set', 'coaches', coachUserId, {
+    percent,
+  })
+
+  // Уведомление — только через сервисный ключ: у notifications нет
+  // INSERT-политики (пишет «система»; тип 'commission' добавлен миграцией
+  // 2026-09-17).
+  const admin = createAdminClient()
+  if (admin) {
+    await admin.from('notifications').insert({
+      user_id: coachUserId,
+      type: 'commission',
+      title: 'Ставка комиссии изменена',
+      message:
+        percent === null
+          ? 'Индивидуальная ставка снята — действует стандартная ставка платформы (см. раздел «Партнёрская программа»).'
+          : `Для вас установлена индивидуальная ставка: комиссия платформы ${percent}%. Подробности — в разделе «Партнёрская программа».`,
+      link: '/dashboard/mentor/partner',
+      is_read: false,
+    })
+  }
+
+  revalidatePath('/admin/partner')
+  revalidatePath('/dashboard/mentor/partner')
   return { ok: true }
 }

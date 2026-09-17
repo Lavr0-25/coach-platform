@@ -5,6 +5,27 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { validatePassword } from '@/lib/password'
+import { saveReferral } from '@/app/actions/referral'
+
+// Реферальный код (№32): RefCapture кладёт его в localStorage при заходе
+// по ссылке ?ref=<coach_user_id>. Читаем после успешного signUp и отправляем
+// на сервер (там авторизация уже есть). Хранится 30 дней.
+const REF_STORAGE_KEY = 'rw_ref'
+const REF_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
+
+function popReferralCode(): string | null {
+  try {
+    const raw = localStorage.getItem(REF_STORAGE_KEY)
+    if (!raw) return null
+    localStorage.removeItem(REF_STORAGE_KEY)
+    const parsed = JSON.parse(raw) as { code?: string; at?: number }
+    if (!parsed.code || typeof parsed.code !== 'string') return null
+    if (!parsed.at || Date.now() - parsed.at > REF_MAX_AGE_MS) return null
+    return parsed.code
+  } catch {
+    return null
+  }
+}
 
 export default function RegisterPage() {
   const supabase = createClient()
@@ -68,6 +89,18 @@ export default function RegisterPage() {
       }
 
       setSuccess(true)
+
+      // Реферальная атрибуция — после регистрации, не мешает основному потоку.
+      // id передаём из ответа signUp: при включённом подтверждении e-mail
+      // сессии ещё нет, а идентификатор у нового пользователя уже есть.
+      const refCode = popReferralCode()
+      if (refCode) {
+        try {
+          await saveReferral(refCode, data?.user?.id ?? undefined)
+        } catch {
+          /* атрибуция не критична — регистрация уже прошла */
+        }
+      }
       
       setTimeout(() => {
         router.push('/login')

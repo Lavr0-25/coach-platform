@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { Manrope, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import BanCheck from "@/components/BanCheck";
 import HelpLink from "@/components/HelpLink";
+import RefCapture from "@/components/RefCapture";
 import { SearchProvider } from "@/components/SearchContext";
 import { ToastProvider } from "@/components/Toast";
 
@@ -77,6 +79,9 @@ export default function RootLayout({
           <ToastProvider>
             <Navbar />
             <BanCheck />
+            <Suspense fallback={null}>
+              <RefCapture />
+            </Suspense>
             <main className="flex-1 bg-gray-50 text-gray-900">{children}</main>
           </ToastProvider>
         </SearchProvider>

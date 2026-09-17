@@ -23,12 +23,14 @@ import {
   BadgeCheck,
   Check,
   Clock,
+  Copy,
   Download,
   ExternalLink,
   FileText,
   Handshake,
   Lock,
   RotateCcw,
+  Users,
   Wallet,
   XCircle,
 } from 'lucide-react'
@@ -81,6 +83,13 @@ export default function PartnerPage() {
   const [payout, setPayout] = useState({ holder: '', account: '', bank: '', bik: '' })
   const [payoutSavedAt, setPayoutSavedAt] = useState<string | null>(null)
   const [payoutSaving, setPayoutSaving] = useState(false)
+
+  // Реферальная программа (№32): ссылка, число приведённых, активная скидка.
+  const [refUserId, setRefUserId] = useState<string | null>(null)
+  const [refCount, setRefCount] = useState(0)
+  const [refDiscountPp, setRefDiscountPp] = useState(0)
+  const [refUntil, setRefUntil] = useState<string | null>(null)
+  const [refCopied, setRefCopied] = useState(false)
   const accountDigits = payout.account.replace(/[\s-]/g, '')
   const isAccount = /^\d{20}$/.test(accountDigits) // счёт — БИК обязателен
   const payoutValid =
@@ -102,7 +111,7 @@ export default function PartnerPage() {
         return
       }
 
-      const [coachRes, agreementRes, payoutRes] = await Promise.all([
+      const [coachRes, agreementRes, payoutRes, refCountRes, refBenefitRes] = await Promise.all([
         supabase
           .from('coaches')
           .select('paid_publishing_allowed, display_name')
@@ -118,10 +127,32 @@ export default function PartnerPage() {
           .select('holder_name, account_no, bank_name, bik, updated_at')
           .eq('coach_user_id', user.id)
           .maybeSingle(),
+        // Реферальная программа (№32): политика referrals_coach_select — свои записи
+        supabase
+          .from('referral_registrations')
+          .select('id', { count: 'exact', head: true })
+          .eq('coach_user_id', user.id),
+        // Активный бенефит: политика benefits_coach_select — свои записи
+        supabase
+          .from('commission_benefits')
+          .select('discount_pp, expires_at')
+          .eq('coach_user_id', user.id)
+          .is('revoked_at', null)
+          .or('expires_at.is.null,expires_at.gt.now()'),
       ])
 
       setPaidAllowed(!!(coachRes.data as any)?.paid_publishing_allowed)
       setDisplayName((coachRes.data as any)?.display_name || '')
+      setRefUserId(user.id)
+      setRefCount(refCountRes.count || 0)
+      const myBenefits = (refBenefitRes.data as { discount_pp: number; expires_at: string | null }[]) || []
+      setRefDiscountPp(myBenefits.reduce((s, b) => s + Number(b.discount_pp || 0), 0))
+      const furthest = myBenefits
+        .map(b => b.expires_at)
+        .filter((d): d is string => !!d)
+        .sort()
+        .at(-1)
+      setRefUntil(furthest || null)
       const agr = (agreementRes.data as Agreement) || null
       setAgreement(agr)
       if (payoutRes.data) {
@@ -281,6 +312,57 @@ export default function PartnerPage() {
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-6">
           {success}
         </div>
+      )}
+
+      {/* Реферальная программа (№32, п. 5.4 оферты): ссылка + статус бенефита */}
+      {refUserId && (
+        <Card variant="glow" padding="none" className="p-6 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center flex-shrink-0">
+              <Users className="w-6 h-6" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-gray-900 text-lg">Приглашайте учеников — ваша ставка комиссии снижается</div>
+              <p className="text-sm text-gray-600 mt-1">
+                Каждый новый пользователь, зарегистрировавшийся по вашей ссылке,
+                снижает комиссию платформы на 5 п.п. (п. 5.4 оферты) и продлевает
+                срок её действия на 1 месяц.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <code className="text-xs font-mono bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 break-all max-w-full">
+                  {typeof window !== 'undefined' ? `${window.location.origin}/?ref=${refUserId}` : ''}
+                </code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(`${window.location.origin}/?ref=${refUserId}`)
+                      setRefCopied(true)
+                      setTimeout(() => setRefCopied(false), 2000)
+                    } catch {
+                      /* clipboard недоступен — код виден рядом, можно выделить */
+                    }
+                  }}
+                >
+                  {refCopied ? <Check className="w-4 h-4" strokeWidth={2} /> : <Copy className="w-4 h-4" strokeWidth={1.5} />}
+                  {refCopied ? 'Скопировано' : 'Скопировать'}
+                </Button>
+              </div>
+              <p className="text-sm text-gray-700 mt-3">
+                Приведено пользователей: <strong>{refCount}</strong>
+                {refDiscountPp > 0 ? (
+                  <>
+                    {' '}· действует скидка <strong>−{refDiscountPp} п.п.</strong> до{' '}
+                    <strong>{new Date(refUntil!).toLocaleDateString('ru-RU')}</strong>
+                  </>
+                ) : (
+                  ' · скидка пока не активна'
+                )}
+              </p>
+            </div>
+          </div>
+        </Card>
       )}
 
       {/* СТАТУС: продажи включены */}
