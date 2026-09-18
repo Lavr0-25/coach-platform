@@ -46,6 +46,23 @@ type ContentType = 'all' | 'lessons' | 'courses'
 
 const ITEMS_PER_PAGE = 9
 
+// Заглушки обложек: одна и та же фиолетовая плашка на всей ленте сливалась
+// в монотонную стену (юзабилити 18.09). Цвет выбирается детерминированно
+// по id материала — у карточки всегда один и тот же оттенок при каждом заходе.
+const COVER_PLACEHOLDERS = [
+  'from-purple-100 via-indigo-50 to-blue-100',
+  'from-amber-100 via-orange-50 to-rose-100',
+  'from-teal-100 via-cyan-50 to-sky-100',
+  'from-rose-100 via-pink-50 to-fuchsia-100',
+  'from-lime-100 via-emerald-50 to-teal-100',
+]
+
+function coverPlaceholderClass(id: string): string {
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) % 997
+  return COVER_PLACEHOLDERS[hash % COVER_PLACEHOLDERS.length]
+}
+
 // Группы синонимов поиска: запрос школьника («нейросети») не должен давать
 // пустоту, когда контент называется по-другому («ИИ»). Внутри группы слова
 // равнозначны — совпадение по любому варианту.
@@ -479,7 +496,7 @@ export default function HomeFeed({
                     : 'bg-white text-gray-700 hover:bg-purple-50 border border-purple-200'
                 }`}
               >
-                Материалы
+                Уроки
               </button>
 
               <button
@@ -602,7 +619,7 @@ export default function HomeFeed({
                         onClick={() => trackCatalogClick(item.type, item.id)}
                       >
                         {/* Превью */}
-                        <div className="aspect-video bg-gradient-to-br from-purple-100 via-indigo-50 to-blue-100 relative overflow-hidden">
+                        <div className={`aspect-video bg-gradient-to-br ${coverPlaceholderClass(item.id)} relative overflow-hidden`}>
                           {item.cover_image ? (
                             <img
                               src={item.cover_image}

@@ -23,12 +23,18 @@ function readSeen(): Set<string> {
   }
 }
 
-function insertEvent(eventType: string, type: string, id: string) {
-  createClient()
+// user_id берём из сессии: у залогиненного событие проходит политику
+// analytics_insert_own (user_id = auth.uid()), у гостя остаётся null.
+// Слать user_id: null при залогиненном нельзя — RLS молча отклонит вставку
+// (403-шум в консоли, метрики каталога от своих пользователей не писались).
+async function insertEvent(eventType: string, type: string, id: string) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  supabase
     .from('analytics_events')
     .insert({
       event_type: eventType,
-      user_id: null,
+      user_id: user?.id ?? null,
       target_id: id,
       target_type: type,
       metadata: { source: 'catalog' },

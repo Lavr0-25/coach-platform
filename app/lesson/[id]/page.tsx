@@ -239,6 +239,22 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
   ])
   const likedByMe = !!likeRes.data
 
+  // «Что дальше» (юзабилити 18.09): другие опубликованные материалы этого же
+  // автора — читатель дошёл до конца урока, ведём его дальше. coach_id ссылается
+  // на coaches.id (не user_id!). RLS сам отсеет неопубликованные от гостей.
+  let moreFromAuthor: { id: string; title: string; cover_image: string | null; price: number }[] = []
+  if (coach) {
+    const { data: more } = await supabase
+      .from('lessons')
+      .select('id, title, cover_image, price')
+      .eq('coach_id', coach.id)
+      .eq('is_published', true)
+      .neq('id', id)
+      .order('created_at', { ascending: false })
+      .limit(3)
+    moreFromAuthor = more ?? []
+  }
+
   const getContentTypeIcon = (contentType: string | null) => {
     const icons: Record<string, string> = {
       video: '🎬',
@@ -562,6 +578,67 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
           <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-base sm:text-lg">
             {lesson.description}
           </div>
+        </Card>
+      )}
+
+      {/* «Что дальше» (юзабилити 18.09): другие материалы автора + гостю —
+          мягкий следующий шаг (вход/регистрация), а не конец страницы */}
+      {(moreFromAuthor.length > 0 || !user) && (
+        <Card variant="glow" padding="none" className="p-6 sm:p-8 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
+            <span className="gradient-icon w-8 h-8 rounded-lg flex items-center justify-center text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </span>
+            Что дальше
+          </h2>
+
+          {moreFromAuthor.length > 0 && (
+            <div className="space-y-3">
+              {moreFromAuthor.map((m) => (
+                <Link
+                  key={m.id}
+                  href={`/lesson/${m.id}`}
+                  className="flex items-center gap-4 rounded-xl border border-purple-100 bg-white p-3 hover:border-purple-300 hover:bg-purple-50 transition-colors"
+                >
+                  {m.cover_image ? (
+                    <Image
+                      src={m.cover_image}
+                      alt={m.title}
+                      width={96}
+                      height={54}
+                      className="w-24 h-14 rounded-lg object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-24 h-14 rounded-lg bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center text-xl flex-shrink-0">
+                      📖
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <div className="font-semibold text-gray-900 truncate">{m.title}</div>
+                    <div className="text-sm text-gray-500">
+                      {Number(m.price) > 0 ? `${m.price} ₽` : 'Бесплатно'}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {!user && (
+            <div className={`bg-purple-50 border border-purple-100 rounded-xl p-4 text-sm text-gray-700 ${moreFromAuthor.length > 0 ? 'mt-4' : ''}`}>
+              Понравился материал?{' '}
+              <Link href="/login" className="text-purple-700 font-semibold hover:underline">
+                Войдите
+              </Link>{' '}
+              или{' '}
+              <Link href="/register" className="text-purple-700 font-semibold hover:underline">
+                зарегистрируйтесь
+              </Link>
+              , чтобы сохранять уроки и задавать вопросы автору.
+            </div>
+          )}
         </Card>
       )}
 
