@@ -7,8 +7,9 @@
 
 import { useRef, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
+import type { Editor } from '@tiptap/react'
 import { createClient } from '@/lib/supabase/client'
-import { getLessonExtensions, parseVkUrl } from '@/lib/editor/lessonExtensions'
+import { getLessonExtensions, parseVkUrl, parseRutubeUrl } from '@/lib/editor/lessonExtensions'
 
 interface RichTextEditorProps {
   value: string
@@ -50,11 +51,14 @@ function ToolbarButton({
 }
 
 export default function RichTextEditor({ value, onChange, lessonId }: RichTextEditorProps) {
-  const [insertPanel, setInsertPanel] = useState<'youtube' | 'vk' | null>(null)
+  const [insertPanel, setInsertPanel] = useState<'youtube' | 'vk' | 'rutube' | null>(null)
   const [insertUrl, setInsertUrl] = useState('')
   const [insertError, setInsertError] = useState('')
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Ref-указатель на редактор: нужен внутри handlePaste (конфиг создаётся
+  // до того, как useEditor вернёт редактор — прямая ссылка даёт цикл типов TS)
+  const editorRef = useRef<Editor | null>(null)
 
   const editor = useEditor({
     extensions: getLessonExtensions(),
@@ -64,11 +68,33 @@ export default function RichTextEditor({ value, onChange, lessonId }: RichTextEd
         class: 'lesson-prose-editor outline-none min-h-[300px] focus:outline-none',
         'aria-label': 'Текст урока',
       },
+      // Вставка «чистой» ссылки на видео (Ctrl+V) превращается в видео-блок —
+      // как через кнопку «Вставить видео». Конвертируем только одиночную ссылку
+      // без других слов/переносов; не распозналась — остаётся обычным текстом.
+      handlePaste: (_view, event) => {
+        const ed = editorRef.current
+        if (!ed) return false
+        const text = event.clipboardData?.getData('text/plain')?.trim()
+        if (!text || /\s/.test(text) || !/^[a-z]+:\/\//i.test(text)) return false
+        if (parseRutubeUrl(text)) {
+          ed.chain().focus().setRutubeVideo(text).run()
+          return true
+        }
+        if (parseVkUrl(text)) {
+          ed.chain().focus().setVkVideo(text).run()
+          return true
+        }
+        // setYoutubeVideo сам проверяет адрес: не YouTube — вернёт false,
+        // и ссылка вставится как обычный текст
+        return !!ed.chain().focus().setYoutubeVideo({ src: text }).run()
+      },
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   })
 
-  const openInsertPanel = (type: 'youtube' | 'vk') => {
+  editorRef.current = editor
+
+  const openInsertPanel = (type: 'youtube' | 'vk' | 'rutube') => {
     setInsertPanel(type)
     setInsertUrl('')
     setInsertError('')
@@ -86,6 +112,12 @@ export default function RichTextEditor({ value, onChange, lessonId }: RichTextEd
         setInsertError('Не похоже на ссылку YouTube. Нужна ссылка вида https://youtube.com/watch?v=...')
         return
       }
+    } else if (insertPanel === 'rutube') {
+      if (!parseRutubeUrl(url)) {
+        setInsertError('Не похоже на ссылку Rutube. Нужна ссылка вида https://rutube.ru/video/<id>/')
+        return
+      }
+      editor.chain().focus().setRutubeVideo(url).run()
     } else {
       if (!parseVkUrl(url)) {
         setInsertError('Не похоже на ссылку VK. Нужна ссылка вида https://vk.com/video-123_456')
@@ -288,6 +320,18 @@ export default function RichTextEditor({ value, onChange, lessonId }: RichTextEd
             <path d="M13 17.5c-5.5 0-8.7-3.8-8.8-10h2.8c.1 4.5 2.1 6.4 3.7 6.8V7.5h2.6v3.9c1.6-.2 3.2-1.9 3.8-3.9h2.6c-.4 2.4-2 4.1-3.1 4.8 1.1.6 2.9 2 3.6 4.7h-2.9c-.5-1.8-1.9-3.2-3.9-3.4v3.4l-.7.5z" />
           </svg>
         </ToolbarButton>
+        <ToolbarButton
+          onClick={() => openInsertPanel('rutube')}
+          active={insertPanel === 'rutube'}
+          title="Вставить видео Rutube"
+        >
+          {/* Rutube: круг с треугольником-плей и «хвостом» буквы R */}
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 9.2v5.6l4.6-2.8-4.6-2.8z" fill="currentColor" stroke="none" />
+            <path strokeLinecap="round" d="M15.5 12v6.5" />
+          </svg>
+        </ToolbarButton>
         <span className="w-px bg-purple-100 mx-1" aria-hidden />
         <ToolbarButton
           onClick={() => editor.chain().focus().undo().run()}
@@ -313,7 +357,11 @@ export default function RichTextEditor({ value, onChange, lessonId }: RichTextEd
       {insertPanel && (
         <div className="bg-purple-50 border-b border-purple-100 px-4 py-3">
           <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-            {insertPanel === 'youtube' ? 'Ссылка на YouTube-видео' : 'Ссылка на видео VK'}
+            {insertPanel === 'youtube'
+              ? 'Ссылка на YouTube-видео'
+              : insertPanel === 'rutube'
+                ? 'Ссылка на видео Rutube'
+                : 'Ссылка на видео VK'}
           </label>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
@@ -321,7 +369,13 @@ export default function RichTextEditor({ value, onChange, lessonId }: RichTextEd
               value={insertUrl}
               onChange={(e) => setInsertUrl(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmInsert() } }}
-              placeholder={insertPanel === 'youtube' ? 'https://youtube.com/watch?v=...' : 'https://vk.com/video-123_456'}
+              placeholder={
+                insertPanel === 'youtube'
+                  ? 'https://youtube.com/watch?v=...'
+                  : insertPanel === 'rutube'
+                    ? 'https://rutube.ru/video/<id>/'
+                    : 'https://vk.com/video-123_456'
+              }
               className="flex-1 px-3 py-2 border border-purple-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 bg-white transition-[box-shadow,border-color]"
               autoFocus
             />

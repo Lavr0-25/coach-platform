@@ -70,6 +70,66 @@ declare module '@tiptap/core' {
   }
 }
 
+// --- Rutube ----------------------------------------------------------------
+// По образцу VK: rutube.ru работает в РФ, у YouTube с этим проблемы.
+// Схема: блок-«атом» с атрибутом src (готовый embed-адрес), парсится с
+// iframe[data-rutube-video]. Ссылку https://rutube.ru/video/<id>/ превращаем
+// в embed https://rutube.ru/play/embed/<id> (id — 32 hex-символа).
+export function parseRutubeUrl(url: string): string | null {
+  const m = url.match(/rutube\.ru\/video\/([0-9a-f]{32})\/?/)
+  if (!m) return null
+  return `https://rutube.ru/play/embed/${m[1]}`
+}
+
+export const RutubeVideo = Node.create({
+  name: 'rutubeVideo',
+  group: 'block',
+  atom: true,
+
+  addAttributes() {
+    return {
+      src: { default: null },
+    }
+  },
+
+  parseHTML() {
+    return [{ tag: 'iframe[data-rutube-video]' }]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      'iframe',
+      mergeAttributes(HTMLAttributes, {
+        'data-rutube-video': '',
+        allow: 'autoplay; fullscreen; picture-in-picture',
+        allowfullscreen: true,
+        class: 'lesson-video-embed',
+      }),
+    ]
+  },
+
+  addCommands() {
+    return {
+      setRutubeVideo:
+        (url: string) =>
+        ({ commands }) => {
+          const embed = parseRutubeUrl(url)
+          if (!embed) return false
+          return commands.insertContent({ type: this.name, attrs: { src: embed } })
+        },
+    }
+  },
+})
+
+// Типы для команды setRutubeVideo
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    rutubeVideo: {
+      setRutubeVideo: (url: string) => ReturnType
+    }
+  }
+}
+
 // --- Набор расширений урока -------------------------------------------------
 export function getLessonExtensions() {
   return [
@@ -88,5 +148,6 @@ export function getLessonExtensions() {
     // отдельные блоки, всегда по центру (margin: auto в CSS), как в Дзене.
     TextAlign.configure({ types: ['heading', 'paragraph'] }),
     VkVideo,
+    RutubeVideo,
   ]
 }

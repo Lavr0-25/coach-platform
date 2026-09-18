@@ -1,6 +1,6 @@
 # RightWay — настройка ИИ-агента автора (файл-задание)
 
-> Версия инструкции: 1.1 · обновлена 18.09.2026
+> Версия инструкции: 1.3 · обновлена 18.09.2026
 
 Ты — ИИ-агент автора платформы RightWay (маркетплейс коучей и менторов).
 Автор передал тебе этот файл, чтобы ты **сам подготовил своё рабочее место**:
@@ -105,12 +105,15 @@
   видео. Картинки на самой платформе доступны автору в редакторе — не
   сообщайте автору, что картинки «запрещены на платформе»; запрет касается
   только публикаций через агентское API (защита от мусорного контента).
-- **Видео**: в текст урока можно вставить видео VK (основной вариант,
-  работает в РФ) или YouTube (не рекомендуется — в РФ не работает).
-  Формат VK — конвертируйте ссылку на видео в embed-адрес:
-  `https://vk.com/video-123_456` → `<iframe src="https://vk.com/video_ext.php?oid=-123&id=456" data-vk-video="" allowfullscreen="true"></iframe>`
-  (число после «video» целиком уходит в `oid`, включая минус, если есть).
-  Формат YouTube: `<div data-youtube-video><iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID" allowfullscreen="true"></iframe></div>`.
+- **Видео**: в текст урока можно вставить видео Rutube или VK (оба работают
+  в РФ) либо YouTube (не рекомендуется — в РФ не работает). Форматы:
+  - Rutube (рекомендуется): `https://rutube.ru/video/<id>/` →
+    `<iframe src="https://rutube.ru/play/embed/<id>" data-rutube-video="" allowfullscreen="true"></iframe>`
+    (id — 32 символа из ссылки, остаётся тем же);
+  - VK: `https://vk.com/video-123_456` →
+    `<iframe src="https://vk.com/video_ext.php?oid=-123&id=456" data-vk-video="" allowfullscreen="true"></iframe>`
+    (число после «video» целиком уходит в `oid`, включая минус, если есть);
+  - YouTube: `<div data-youtube-video><iframe src="https://www.youtube-nocookie.com/embed/VIDEO_ID" allowfullscreen="true"></iframe></div>`.
   Другие iframe/хостинги платформа вырежет.
 - **Обложка**: у урока есть обложка — картинка в каталоге и карточке.
   Чтобы задать её, передайте в POST два поля: `cover_ext` (`jpg|jpeg|png|webp`)
@@ -137,6 +140,12 @@
      опубликуй немедленно:
      `curl -s -X PATCH -H "x-agent-key: <ключ>" -H "Content-Type: application/json" -d @<файл> <base_url>/api/agent/lessons`
      с телом `{"id":"<id урока>","publish":true}`.
+   - **Таймер публикации** — это поле `publish_at` в POST: дата-время в формате
+     ISO 8601 с зоной (например `2026-09-19T08:00:00+03:00`), строго в будущем.
+     Урок уйдёт в черновики, а платформа **сама** откроет его читателям в этот
+     момент — никакого отдельного таймера на компьютере ставить не нужно.
+     Если автор попросил опубликовать в конкретное время (не как в настройках) —
+     вычисли этот момент той же командой PowerShell и подставь его в `publish_at`.
 2. Создай урок:
    `curl -s -X POST -H "x-agent-key: <ключ>" -H "Content-Type: application/json" -d @<файл> <base_url>/api/agent/lessons`
    ⚠️ **Кириллица в аргументах curl в Windows ломается (CP1251)** — тела

@@ -163,9 +163,10 @@ Windows планировщик) берёт следующую тему, пише
 Публикация помечает тему «published». Публиковать можно только текстовые уроки
 агента (422 для остальных).
 
-**Видео в тексте (18.09.2026):** санитайзер пропускает только два embed-блока
+**Видео в тексте (18.09.2026):** санитайзер пропускает только три embed-блока
 (проверено тестом через схему Tiptap):
 - VK — `<iframe src="https://vk.com/video_ext.php?oid=…&id=…" data-vk-video="" allowfullscreen="true"></iframe>` (свое расширение `VkVideo` в `lib/editor/lessonExtensions.ts`, конвертация ссылок vk.com/vkvideo.ru в `video_ext.php`);
+- Rutube — `<iframe src="https://rutube.ru/play/embed/<id>" data-rutube-video="" allowfullscreen="true"></iframe>` (расширение `RutubeVideo` по образцу VK; ссылка `rutube.ru/video/<id>/`, id — 32 hex; рекомендован для РФ-аудитории вместе с VK);
 - YouTube — только внутри `<div data-youtube-video><iframe …></iframe></div>` (Tiptap v3 ищет iframe именно по этой обёртке; без неё вырезает). YouTube не рекомендуется — в РФ не работает.
 Любой другой iframe (в т.ч. YouTube без обёртки) молча отбрасывается схемой.
 
