@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { readFileSync } from 'fs'
+import path from 'path'
 import { Card } from '@/components/ui/Card'
 import { KeyRound, ListChecks, ChevronRight, CalendarClock, FileDown } from 'lucide-react'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
@@ -9,6 +11,20 @@ import { PublishTimeForm } from './PublishTimeForm'
 // Хаб раздела «Управление с ИИ»: всё, чем автор управляет ИИ-агентом, —
 // в одном месте. Рабочие инструменты автора (уроки, курсы, профиль) остаются
 // в кабинете; здесь только то, что нужно при подключённом агенте.
+
+// Версия инструкции — из шапки public/agent-setup.md (строка «Версия
+// инструкции: N · обновлена ДД.ММ.ГГГГ»). Файл — единый источник: обновили
+// md — на карточке цифра поменялась сама.
+function getAgentSetupMeta(): { version: string; updated: string } {
+  try {
+    const md = readFileSync(path.join(process.cwd(), 'public', 'agent-setup.md'), 'utf8')
+    const m = md.match(/Версия инструкции:\s*([\d.]+)\s*·\s*обновлена\s*([\d.]+)/)
+    if (m) return { version: m[1], updated: m[2] }
+  } catch {
+    // файл не прочитался — покажем прочерк, не падаем
+  }
+  return { version: '—', updated: '—' }
+}
 
 const TOOLS = [
   {
@@ -48,6 +64,9 @@ export default async function AiHubPage() {
     .select('ai_publish_time')
     .eq('user_id', user.id)
     .maybeSingle()
+
+  // Версия и дата инструкции — только для карточки «Инструкция для агента»
+  const { version, updated } = getAgentSetupMeta()
 
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-4xl pt-24 sm:pt-28">
@@ -95,6 +114,11 @@ export default async function AiHubPage() {
                     )}
                   </h2>
                   <p className="text-sm text-gray-600 mt-1">{description}</p>
+                  {download && (
+                    <p className="text-xs text-gray-400 mt-2">
+                      Версия {version} · обновлена {updated}
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
