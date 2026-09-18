@@ -5,10 +5,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Агентское API: текстовые уроки — вторая половина «ИИ-завода контента».
 // POST  /api/agent/lessons — создать черновик текстового урока:
-//         { topic_id?, title, description?, html, publish_at? }
+//         { topic_id?, title, description?, html, publish_at?, cover_base64?, cover_ext? }
 //         publish_at (ISO, строго в будущем) = отложенная публикация: черновик
 //         создан, pg_cron откроет его в срок (миграция 2026-09-03). Тема при
 //         этом сразу помечается published — тема обработана, лимит дня учтён.
+//         cover_base64 + cover_ext — обложка урока (запрос Дарины 18.09):
+//         base64 → публичный бакет covers (тот же паттерн, что фото постов).
 // PATCH /api/agent/lessons — опубликовать черновик немедленно: { id, publish: true }
 //
 // Ворота качества (автопубликация без человека — проверяем на сервере):
@@ -29,6 +31,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 const MIN_CONTENT_CHARS = 2000
 const MAX_PUBLISH_PER_DAY_BASE = 10
 const MAX_PUBLISH_PER_DAY_VERIFIED = 50
+const MAX_COVER_BYTES = 5 * 1024 * 1024 // лимит бакета covers
+const COVER_EXTS = ['jpg', 'jpeg', 'png', 'webp'] // разрешены и политикой бакета
 
 function stripTags(html: string): string {
   return (html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -63,6 +67,8 @@ export async function POST(request: Request) {
   const description = (body?.description as string | undefined)?.trim() || ''
   const html = (body?.html as string | undefined)?.trim() || ''
   const topicId = (body?.topic_id as string | undefined)?.trim() || null
+  const coverBase64 = (body?.cover_base64 as string | undefined)?.trim() || ''
+  const coverExt = (body?.cover_ext as string | undefined)?.trim().toLowerCase() || ''
 
   // Отложенная публикация: валидируем до создания черновика (мусора не оставляем)
   const publishAtRaw = (body?.publish_at as string | undefined)?.trim() || null
@@ -135,6 +141,35 @@ export async function POST(request: Request) {
 
   // Черновик: is_published=false, цена 0 (автоконтент бесплатный, цену ставит автор).
   // publish_at — отложенная публикация, pg_cron откроет урок в срок.
+  // Обложка: base64 → публичный бакет covers (паттерн фото постов, №20).
+  let coverImage: string | null = null
+  if (coverBase64) {
+    if (!COVER_EXTS.includes(coverExt)) {
+      return Response.json(
+        { error: `cover_ext должен быть одним из: ${COVER_EXTS.join(', ')}` },
+        { status: 422 }
+      )
+    }
+    const buffer = Buffer.from(coverBase64, 'base64')
+    if (buffer.length === 0) {
+      return Response.json({ error: 'cover_base64 пуст или не распознан' }, { status: 422 })
+    }
+    if (buffer.length > MAX_COVER_BYTES) {
+      return Response.json(
+        { error: `Обложка слишком большая: ${Math.round(buffer.length / 1024)} КБ, максимум ${MAX_COVER_BYTES / (1024 * 1024)} МБ` },
+        { status: 422 }
+      )
+    }
+    const path = `lessons/${coachId}/${Date.now()}.${coverExt}`
+    const { error: uploadError } = await auth.client.storage
+      .from('covers')
+      .upload(path, buffer, { contentType: coverExt === 'jpg' ? 'image/jpeg' : `image/${coverExt}` })
+    if (uploadError) return Response.json({ error: `Обложка не загружена: ${uploadError.message}` }, { status: 500 })
+
+    const { data: pub } = auth.client.storage.from('covers').getPublicUrl(path)
+    coverImage = pub.publicUrl
+  }
+
   const { data: lesson, error: lessonError } = await auth.client
     .from('lessons')
     .insert({
@@ -144,12 +179,12 @@ export async function POST(request: Request) {
       description: description || null,
       price: 0,
       is_free_preview: false,
-      cover_image: null,
+      cover_image: coverImage,
       order_index: 1,
       is_published: false,
       publish_at: publishAt,
     })
-    .select('id, title, is_published, publish_at, created_at')
+    .select('id, title, is_published, publish_at, cover_image, created_at')
     .single()
 
   if (lessonError) return Response.json({ error: lessonError.message }, { status: 500 })
