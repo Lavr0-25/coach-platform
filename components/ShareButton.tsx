@@ -17,6 +17,7 @@ export default function ShareButton({
   title,
   targetType,
   targetId,
+  meta,
   className,
 }: {
   /** Путь страницы без домена: /lesson/<id>, /course/<id>, /mentor/<id> */
@@ -26,6 +27,9 @@ export default function ShareButton({
   /** Тип цели события: 'lesson' | 'course' | 'profile' */
   targetType: 'lesson' | 'course' | 'profile'
   targetId: string
+  /** Дополнительные метаданные события (напр. { kind: 'referral' } для
+      партнёрской ссылки — отличить её в статистике от обычного шаринга профиля) */
+  meta?: Record<string, unknown>
   className?: string
 }) {
   const [copied, setCopied] = useState(false)
@@ -43,7 +47,7 @@ export default function ShareButton({
           target_type: targetType,
           target_id: targetId,
           user_id: user?.id ?? null,
-          metadata: { channel },
+          metadata: { channel, ...(meta || {}) },
         })
       } catch {
         // шаринг важнее аналитики: ошибка лога не должна ломать действие

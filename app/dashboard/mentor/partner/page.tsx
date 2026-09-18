@@ -439,6 +439,7 @@ export default function PartnerPage() {
                   title="Верный путь — платформа менторов"
                   targetType="profile"
                   targetId={refUserId}
+                  meta={{ kind: 'referral' }}
                 />
               </div>
               <p className="text-sm text-gray-700 mt-3">

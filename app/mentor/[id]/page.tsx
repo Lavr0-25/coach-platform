@@ -1,12 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import MentorProfile from '@/components/MentorProfile'
 import { ogCardUrl } from '@/lib/seo'
+import { isBot, resolveSource } from '@/lib/utm'
 
 interface MentorPageProps {
   params: Promise<{
     id: string
+  }>
+  searchParams: Promise<{
+    utm_source?: string
+    utm_campaign?: string
   }>
 }
 
@@ -41,7 +47,7 @@ export async function generateMetadata({ params }: MentorPageProps): Promise<Met
   }
 }
 
-export default async function MentorPage({ params }: MentorPageProps) {
+export default async function MentorPage({ params, searchParams }: MentorPageProps) {
   const { id } = await params
   const supabase = await createClient()
 
@@ -54,6 +60,25 @@ export default async function MentorPage({ params }: MentorPageProps) {
     .maybeSingle()
 
   if (!coach) notFound()
+
+  // Просмотр страницы автора (для статистики «Поделиться»: переходы по
+  // поделенным ссылкам видны по metadata.source = 'share'; тип 'profile_view'
+  // был зарезервирован в CHECK/RLS с 2026-09-03, пишем с 2026-09-18).
+  // target_id — user_id автора: его же проверяет SELECT-политика аналитики.
+  {
+    const [{ utm_source }, hdrs] = await Promise.all([searchParams, headers()])
+    const userAgent = hdrs.get('user-agent')
+    if (!isBot(userAgent)) {
+      const { data: { user } } = await supabase.auth.getUser()
+      await supabase.from('analytics_events').insert({
+        event_type: 'profile_view',
+        user_id: user?.id ?? null,
+        target_id: coach.user_id,
+        target_type: 'profile',
+        metadata: { source: resolveSource(utm_source, hdrs.get('referer')) },
+      })
+    }
+  }
 
   // JSON-LD для поисковиков (фича Б, 2026-09-18): профиль автора как Person.
   const jsonLd = {

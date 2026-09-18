@@ -1,15 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { redirect, useRouter } from 'next/navigation'
+import { redirect, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
 import { Hint } from '@/components/Hint'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
-import { BookOpen, Eye, FileText, Inbox, Receipt, ShoppingCart, Target, Wallet } from 'lucide-react'
+import { BookOpen, Eye, FileText, Inbox, Link2, Receipt, Share2, ShoppingCart, Target, Users, Wallet } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { sourceLabel } from '@/lib/utm'
 
@@ -60,7 +60,7 @@ function niceStep(x: number) {
 }
 
 // Числовые колонки таблицы «Все материалы», доступные для сортировки
-type SortKey = 'reach' | 'impressions' | 'ctr' | 'totalViews' | 'monthViews' | 'dayViews' | 'likes' | 'favorites' | 'sold' | 'earnings'
+type SortKey = 'reach' | 'impressions' | 'ctr' | 'shares' | 'shareVisits' | 'totalViews' | 'monthViews' | 'dayViews' | 'likes' | 'favorites' | 'sold' | 'earnings'
 
 // Заголовок сортируемой колонки: клик — по убыванию → по возрастанию → сброс
 function SortHeader({ label, sortKey, sort, onSort, className, about }: {
@@ -375,7 +375,7 @@ function ReachCard({ r, max, period }: {
 
 // ─────────────────────────── Страница ───────────────────────────
 
-type TabKey = 'overview' | 'materials' | 'sales'
+type TabKey = 'overview' | 'materials' | 'share' | 'sales'
 type PeriodKey = 7 | 30 | 90
 
 // Сырые события просмотров (180 дней) — из них считаются все графики периода
@@ -383,16 +383,50 @@ type ViewEvent = { key: string; ts: number; src: string }
 // Покупка/списание (completed) с меткой времени
 type SaleRow = { id: string; buyer: string; title: string; amount: number; earnings: number; ts: number }
 
+// Обёртка в Suspense: useSearchParams требует его при статическом рендере
 export default function AnalyticsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AnalyticsPageInner />
+    </Suspense>
+  )
+}
+
+function AnalyticsPageInner() {
   const supabase = createClient()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<any>(null)
   const [coach, setCoach] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
-  // Вкладка и период (7 / 30 / 90 дней)
-  const [tab, setTab] = useState<TabKey>('overview')
-  const [period, setPeriod] = useState<PeriodKey>(30)
+  // Вкладка и период (7 / 30 / 90 дней) — как в админской «Аналитике площадки»,
+  // живут в адресе страницы (?tab=…&p=…): обновление и «поделиться ссылкой»
+  // не сбрасывают выбор
+  const isTab = (v: string | null): v is TabKey => v === 'overview' || v === 'materials' || v === 'share' || v === 'sales'
+  const isPeriod = (v: number): v is PeriodKey => v === 7 || v === 30 || v === 90
+  const qTab = searchParams.get('tab')
+  const qPeriod = Number(searchParams.get('p'))
+  const [tab, setTabState] = useState<TabKey>(isTab(qTab) ? qTab : 'overview')
+  const [period, setPeriodState] = useState<PeriodKey>(isPeriod(qPeriod) ? qPeriod : 30)
+
+  const setTab = (t: TabKey) => {
+    setTabState(t)
+    router.replace(`/mentor/analytics?tab=${t}&p=${period}`, { scroll: false })
+  }
+  const setPeriod = (p: PeriodKey) => {
+    setPeriodState(p)
+    router.replace(`/mentor/analytics?tab=${tab}&p=${p}`, { scroll: false })
+  }
+
+  // Кнопки «назад/вперёд» браузера тоже меняют вкладку/период
+  useEffect(() => {
+    const t = searchParams.get('tab')
+    if (isTab(t) && t !== tab) setTabState(t)
+    const p = Number(searchParams.get('p'))
+    if (isPeriod(p) && p !== period) setPeriodState(p)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   // Статистика (не зависит от периода — считаем по всем материалам)
   const [stats, setStats] = useState({
@@ -413,6 +447,16 @@ export default function AnalyticsPage() {
   const [progressRows, setProgressRows] = useState<Array<{ lesson_id: string; ts: number; status: string }>>([])
   // Показы и клики карточек каталога (CTR) — 30 дней, по материалам
   const [catalogStats, setCatalogStats] = useState<Map<string, { impressions: number; clicks: number }>>(new Map())
+  // Статистика «Поделиться» (2026-09-18): события share за 180 дней
+  // (по материалам и по профилю; kind='referral' — партнёрская ссылка)
+  const [shareEvents, setShareEvents] = useState<Array<{ key: string; ts: number; kind: string | null }>>([])
+  // Переходы по поделенным ссылкам на страницы автора (profile_view
+  // с source=share) и по партнёрской ссылке (referral_visit)
+  const [profileEvents, setProfileEvents] = useState<Array<{ type: string; ts: number; src: string }>>([])
+  // Просмотры страниц курсов (course_view) — только для воронки «Поделиться»
+  const [courseViews, setCourseViews] = useState<ViewEvent[]>([])
+  // Регистрации по партнёрской ссылке (coach_user_id = автор, читает по RLS сам)
+  const [refRegs, setRefRegs] = useState<number[]>([])
 
   // Управление таблицей «Все материалы»: поиск, фильтр, порционная выдача, сортировка
   const [tableSearch, setTableSearch] = useState('')
@@ -608,6 +652,10 @@ export default function AnalyticsPage() {
       // Показы/клики каталога (CTR) считаем отдельно, в охваты они не входят.
       const days180Ago = new Date(now.getTime() - 180 * 86400000)
       const viewEvents: ViewEvent[] = []
+      // Просмотры страниц курсов (course_view) — для воронки «Поделиться»
+      const courseViewRows: ViewEvent[] = []
+      // События «Поделиться» (материалы + профиль + партнёрская ссылка)
+      const shareRows: Array<{ key: string; ts: number; kind: string | null }> = []
       // Охваты за 30 дней — для колонки «Охваты» таблицы материалов
       const reach30ByKey = new Map<string, number>()
       const catalog30 = new Map<string, { impressions: number; clicks: number }>()
@@ -632,6 +680,25 @@ export default function AnalyticsPage() {
             }
             continue
           }
+          // Кнопка «Поделиться» по материалам — в свою воронку
+          if (ev.event_type === 'share') {
+            shareRows.push({
+              key: keyOf(ev.target_type, ev.target_id),
+              ts,
+              kind: (ev.metadata as any)?.kind ?? null,
+            })
+            continue
+          }
+          // Просмотры страниц курсов — только в воронку «Поделиться»,
+          // в охваты/просмотры уроков (как раньше) не попадают
+          if (ev.event_type === 'course_view') {
+            courseViewRows.push({
+              key: keyOf(ev.target_type, ev.target_id),
+              ts,
+              src: (ev.metadata as any)?.source || 'direct',
+            })
+            continue
+          }
           // Сюда попадают только просмотры страниц (lesson_view) — на случай
           // появления новых типов событий охват не должен их поглощать
           if (ev.event_type && ev.event_type !== 'lesson_view') continue
@@ -648,6 +715,42 @@ export default function AnalyticsPage() {
       }
       setCatalogStats(catalog30)
       setViewEvents(viewEvents)
+
+      // Профиль автора: share страницы автора и партнёрской ссылки (kind),
+      // переходы по поделенным ссылкам (profile_view) и реферальные визиты
+      // (referral_visit — целевой тип 'profile', target_id = наш user_id,
+      // поэтому они приходят в ту же выборку по RLS-политике аналитики)
+      const { data: profileEventsData } = await supabase
+        .from('analytics_events')
+        .select('event_type, created_at, metadata')
+        .eq('target_type', 'profile')
+        .eq('target_id', user.id)
+        .gte('created_at', days180Ago.toISOString())
+      const profileRows: Array<{ type: string; ts: number; src: string }> = []
+      for (const ev of profileEventsData || []) {
+        const ts = new Date(ev.created_at).getTime()
+        if (ev.event_type === 'share') {
+          shareRows.push({ key: 'profile', ts, kind: (ev.metadata as any)?.kind ?? null })
+        } else if (ev.event_type === 'profile_view' || ev.event_type === 'referral_visit') {
+          profileRows.push({
+            type: ev.event_type,
+            ts,
+            src: (ev.metadata as any)?.source || 'direct',
+          })
+        }
+      }
+      setShareEvents(shareRows)
+      setProfileEvents(profileRows)
+      setCourseViews(courseViewRows)
+
+      // Регистрации по партнёрской ссылке (политика RLS даёт автору его строки)
+      const { data: refRegsData } = await supabase
+        .from('referral_registrations')
+        .select('created_at')
+        .eq('coach_user_id', user.id)
+        .gte('created_at', days180Ago.toISOString())
+      setRefRegs((refRegsData || []).map(r => new Date(r.created_at).getTime()))
+
       setReach(
         [...lessonIds.map(id => ({ id, type: 'lesson' as const })), ...courseIds.map(id => ({ id, type: 'course' as const }))]
           .map(m => ({ ...m, total30: reach30ByKey.get(`${m.type}:${m.id}`) || 0 }))
@@ -798,6 +901,79 @@ export default function AnalyticsPage() {
   const convCur = viewsCur > 0 ? (salesInPeriod.length / viewsCur) * 100 : 0
   const convPrev = viewsPrev > 0 ? (salesPrev / viewsPrev) * 100 : 0
 
+  // Статистика «Поделиться» (2026-09-18): сколько нажали «Поделиться» и
+  // сколько пришло по поделенным ссылкам. Переход = просмотры страниц с
+  // source='share' (материалы и страница автора) + реферальные визиты
+  // (referral_visit — сам факт входа по ссылке /?ref=...).
+  const sharesCur = shareEvents.filter(e => e.ts >= periodStart).length
+  const sharesPrev = shareEvents.filter(e => e.ts >= prevStart && e.ts < periodStart).length
+  const shareVisits = [
+    ...viewEvents.filter(e => e.src === 'share').map(e => e.ts),
+    ...courseViews.filter(e => e.src === 'share').map(e => e.ts),
+    ...profileEvents.filter(e => e.type === 'profile_view' && e.src === 'share').map(e => e.ts),
+    ...profileEvents.filter(e => e.type === 'referral_visit').map(e => e.ts),
+  ]
+  const visitsCur = shareVisits.filter(ts => ts >= periodStart).length
+  const visitsPrev = shareVisits.filter(ts => ts >= prevStart && ts < periodStart).length
+
+  // Разбивка по материалам для колонок таблицы «Все материалы»
+  const sharesByKey = new Map<string, number>()
+  for (const e of shareEvents) {
+    if (!e.key.startsWith('lesson:') && !e.key.startsWith('course:')) continue
+    sharesByKey.set(e.key, (sharesByKey.get(e.key) || 0) + 1)
+  }
+  const shareVisitsByKey = new Map<string, number>()
+  for (const e of [...viewEvents, ...courseViews]) {
+    if (e.src !== 'share') continue
+    shareVisitsByKey.set(e.key, (shareVisitsByKey.get(e.key) || 0) + 1)
+  }
+
+  // ── Вкладка «Поделиться»: разбивка по типам за период
+  const inPer = (ts: number) => ts >= periodStart
+  const lessonSharesN = shareEvents.filter(e => e.key.startsWith('lesson:') && inPer(e.ts)).length
+  const courseSharesN = shareEvents.filter(e => e.key.startsWith('course:') && inPer(e.ts)).length
+  const profileSharesN = shareEvents.filter(e => e.key === 'profile' && e.kind !== 'referral' && inPer(e.ts)).length
+  const referralSharesN = shareEvents.filter(e => e.key === 'profile' && e.kind === 'referral' && inPer(e.ts)).length
+  const lessonShareVisitsN = viewEvents.filter(e => e.src === 'share' && inPer(e.ts)).length
+  const courseShareVisitsN = courseViews.filter(e => e.src === 'share' && inPer(e.ts)).length
+  const profileShareVisitsN = profileEvents.filter(e => e.type === 'profile_view' && e.src === 'share' && inPer(e.ts)).length
+  const referralVisitsN = profileEvents.filter(e => e.type === 'referral_visit' && inPer(e.ts)).length
+  const registrationsCur = refRegs.filter(inPer).length
+
+  // Динамика «Поделиться» по дням периода
+  const isoDay = (t: number) => new Date(t).toISOString().slice(0, 10)
+  const shareDays: Array<{ iso: string; label: string; shares: number; visits: number }> = []
+  {
+    const sMap = new Map<string, number>()
+    for (const e of shareEvents) if (inPer(e.ts)) sMap.set(isoDay(e.ts), (sMap.get(isoDay(e.ts)) || 0) + 1)
+    const vMap = new Map<string, number>()
+    for (const ts of shareVisits) if (inPer(ts)) vMap.set(isoDay(ts), (vMap.get(isoDay(ts)) || 0) + 1)
+    for (let i = period - 1; i >= 0; i--) {
+      const t = now - i * 86400000
+      const iso = isoDay(t)
+      shareDays.push({
+        iso,
+        label: new Date(t).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
+        shares: sMap.get(iso) || 0,
+        visits: vMap.get(iso) || 0,
+      })
+    }
+  }
+  const shareDayMax = Math.max(1, ...shareDays.map(d => Math.max(d.shares, d.visits)))
+
+  // Топ материалов по «Поделиться» (шары + переходы)
+  const shareTopMats = [...lessonsStats, ...coursesStats]
+    .map(m => ({
+      id: m.id as string,
+      type: m.type as 'lesson' | 'course',
+      title: m.title as string,
+      shares: sharesByKey.get(`${m.type}:${m.id}`) || 0,
+      visits: shareVisitsByKey.get(`${m.type}:${m.id}`) || 0,
+    }))
+    .filter(m => m.shares > 0 || m.visits > 0)
+    .sort((a, b) => (b.shares + b.visits) - (a.shares + a.visits))
+    .slice(0, 10)
+
   // Топ-3 материала за период (серии из событий)
   const materialsByKey = new Map<string, { id: string; type: 'lesson' | 'course'; title: string }>()
   for (const l of lessonsStats) materialsByKey.set(`lesson:${l.id}`, { id: l.id, type: 'lesson', title: l.title })
@@ -838,6 +1014,8 @@ export default function AnalyticsPage() {
           const c = catalogStats.get(`${m.type}:${m.id}`)
           return c && c.impressions > 0 ? (c.clicks / c.impressions) * 100 : -1
         }
+        case 'shares': return sharesByKey.get(`${m.type}:${m.id}`) || 0
+        case 'shareVisits': return shareVisitsByKey.get(`${m.type}:${m.id}`) || 0
         case 'totalViews': return m.totalViews || 0
         case 'monthViews': return m.monthViews || 0
         case 'dayViews': return m.dayViews || 0
@@ -870,13 +1048,13 @@ export default function AnalyticsPage() {
             Сводка по каналу «{coachName}» за последние {period} {plural(period, 'день', 'дня', 'дней')}
           </p>
         </div>
-        <div className="flex bg-white border border-purple-100 rounded-xl p-1 gap-0.5 self-start sm:self-auto">
+        <div className="flex bg-purple-50 rounded-xl p-1 gap-0.5 self-start sm:self-auto">
           {([7, 30, 90] as PeriodKey[]).map(p => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
               className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                period === p ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-purple-600'
+                period === p ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-purple-600'
               }`}
             >
               {p} {plural(p, 'день', 'дня', 'дней')}
@@ -890,6 +1068,7 @@ export default function AnalyticsPage() {
         {([
           { key: 'overview', label: 'Обзор' },
           { key: 'materials', label: 'Материалы' },
+          { key: 'share', label: 'Поделиться' },
           { key: 'sales', label: 'Продажи' },
         ] as const).map(t => (
           <button
@@ -938,11 +1117,30 @@ export default function AnalyticsPage() {
             />
             <KpiCard
               icon={Target}
-              label="Конверсия просмотр → покупка"
-              about="Доля посетителей страниц, которые купили материал. Много просмотров при низкой конверсии — повод доработать описание, обложку или цену."
+              label="Конверсия в покупку"
+              about="Доля посетителей страниц материалов, которые их купили (просмотр → покупка). Много просмотров при низкой конверсии — повод доработать описание, обложку или цену."
               value={`${convCur.toFixed(1).replace('.', ',')}%`}
               delta={viewsPrev > 0 ? deltaPct(convCur, convPrev) : null}
               hint={salesInPeriod.length > 0 && viewsCur > 0 ? `${salesInPeriod.length} ${plural(salesInPeriod.length, 'продажа', 'продажи', 'продаж')} из ${viewsCur.toLocaleString('ru-RU')}` : undefined}
+            />
+          </div>
+
+          {/* Статистика «Поделиться» (2026-09-18): делятся ли материалом и что это приносит */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <KpiCard
+              icon={Share2}
+              label="Поделились"
+              about="Сколько раз нажали «Поделиться» на ваших материалах и странице автора за период — включая копирование ссылки."
+              value={String(sharesCur)}
+              delta={deltaPct(sharesCur, sharesPrev)}
+            />
+            <KpiCard
+              icon={Link2}
+              label="Переходов по ссылкам"
+              about="Сколько раз открыли ваши страницы по поделенным ссылкам (метка «Поделиться» в источниках) и по партнёрской ссылке."
+              value={visitsCur.toLocaleString('ru-RU')}
+              delta={deltaPct(visitsCur, visitsPrev)}
+              hint={sharesCur > 0 ? `≈ ${(visitsCur / sharesCur).toFixed(1).replace('.', ',')} ${plural(Math.round(visitsCur / sharesCur), 'перехода', 'перехода', 'переходов')} на одно «Поделиться»` : undefined}
             />
           </div>
 
@@ -1125,14 +1323,18 @@ export default function AnalyticsPage() {
               </div>
 
               <Card variant="glow" padding="none" className="overflow-hidden border border-purple-100">
-                <div className="hidden md:grid grid-cols-12 gap-4 px-6 pt-3 bg-purple-50 text-xs font-medium text-gray-500">
-                  {/* надзаголовки-группы над колонками каталога и открытий */}
+                {/* 15 колонок не помещаются на узких экранах — таблица скроллится
+                    горизонтально внутри карточки, строки не переносятся */}
+                <div className="overflow-x-auto">
+                <div className="hidden md:grid grid-cols-[repeat(15,minmax(0,1fr))] gap-4 px-6 pt-3 bg-purple-50 text-xs font-medium text-gray-500 md:min-w-[1560px]">
+                  {/* надзаголовки-группы над колонками каталога, открытий и «Поделиться» */}
                   <div className="col-span-3"></div>
                   <div className="col-span-2 text-center">Каталог</div>
                   <div className="col-span-3 text-center">Открытия</div>
-                  <div className="col-span-4"></div>
+                  <div className="col-span-2 text-center">Поделиться</div>
+                  <div className="col-span-5"></div>
                 </div>
-                <div className="hidden md:grid grid-cols-12 gap-4 px-6 pb-3 bg-purple-50 border-b border-purple-100 text-sm font-semibold text-gray-700">
+                <div className="hidden md:grid grid-cols-[repeat(15,minmax(0,1fr))] gap-4 px-6 pb-3 bg-purple-50 border-b border-purple-100 text-sm font-semibold text-gray-700 md:min-w-[1560px]">
                   <div className="col-span-2">Материал</div>
                   <div className="col-span-1 text-center">
                     <SortHeader label="Охваты" sortKey="reach" sort={tableSort} onSort={toggleSort} about="Сколько раз открыли страницу материала за выбранный период, включая гостей. Клик — переход к детальной статистике." />
@@ -1156,6 +1358,15 @@ export default function AnalyticsPage() {
                     </div>
                     <div className="text-center">
                       <SortHeader label="За день" sortKey="dayViews" sort={tableSort} onSort={toggleSort} about="Начали читать за последние 24 часа." />
+                    </div>
+                  </div>
+                  {/* группа «Поделиться» — шаринги материала и переходы по поделенным ссылкам */}
+                  <div className="col-span-2 grid grid-cols-2 gap-2 rounded-lg bg-purple-100/60 py-1.5">
+                    <div className="text-center">
+                      <SortHeader label="Поделились" className="text-[11px] gap-0.5" sortKey="shares" sort={tableSort} onSort={toggleSort} about="Сколько раз нажали «Поделиться» на материале за выбранный период." />
+                    </div>
+                    <div className="text-center">
+                      <SortHeader label="Переходы" className="text-[11px] gap-0.5" sortKey="shareVisits" sort={tableSort} onSort={toggleSort} about="Сколько раз материал открыли по поделенной ссылке (источник «Поделиться») за выбранный период." />
                     </div>
                   </div>
                   <div className="col-span-1 text-center">
@@ -1185,7 +1396,7 @@ export default function AnalyticsPage() {
                         <div
                           key={`${mat.type}-${mat.id}`}
                           onClick={() => router.push(`/mentor/analytics/${mat.id}`)}
-                          className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-6 py-4 hover:bg-purple-50/50 transition-colors group cursor-pointer"
+                          className="grid grid-cols-1 md:grid-cols-[repeat(15,minmax(0,1fr))] md:min-w-[1560px] gap-2 md:gap-4 px-6 py-4 hover:bg-purple-50/50 transition-colors group cursor-pointer"
                           title="Открыть статистику материала"
                         >
                           {/* Материал */}
@@ -1286,6 +1497,26 @@ export default function AnalyticsPage() {
                             </div>
                           </div>
 
+                          {/* Поделиться: шаринги + переходы по поделенным ссылкам */}
+                          <div className="col-span-2 grid grid-cols-2 gap-2 rounded-lg bg-purple-50 py-1.5">
+                            <div className="flex items-center justify-center">
+                              <div className="text-center">
+                                <div className="text-lg font-bold text-purple-600" title="Сколько раз нажали «Поделиться» на материале за выбранный период">
+                                  {sharesByKey.get(`${mat.type}:${mat.id}`) || 0}
+                                </div>
+                                <div className="text-xs text-gray-500 md:hidden">Поделились</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-center">
+                              <div className="text-center">
+                                <div className="text-lg font-bold text-gray-700" title="Сколько раз открыли по поделенной ссылке за выбранный период">
+                                  {shareVisitsByKey.get(`${mat.type}:${mat.id}`) || 0}
+                                </div>
+                                <div className="text-xs text-gray-500 md:hidden">Переходы</div>
+                              </div>
+                            </div>
+                          </div>
+
                           {/* Лайки */}
                           <div className="col-span-1 flex items-center justify-center">
                             <div className="text-center">
@@ -1354,6 +1585,7 @@ export default function AnalyticsPage() {
                     </div>
                   )}
                 </div>
+                </div>{/* /overflow-x-auto */}
               </Card>
 
               {/* «Показать ещё» + счётчик */}
@@ -1391,6 +1623,134 @@ export default function AnalyticsPage() {
               </Link>
             </Card>
           )}
+        </>
+      )}
+
+      {/* ═════════ ВКЛАДКА «ПОДЕЛИТЬСЯ» ═════════ */}
+      {tab === 'share' && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <KpiCard
+              icon={Share2}
+              label={`Поделились за ${period} ${plural(period, 'день', 'дня', 'дней')}`}
+              value={String(sharesCur)}
+              delta={deltaPct(sharesCur, sharesPrev)}
+              about="Сколько раз нажали «Поделиться» на ваших материалах, странице автора и партнёрской ссылке."
+            />
+            <KpiCard
+              icon={Link2}
+              label="Переходов по ссылкам"
+              value={visitsCur.toLocaleString('ru-RU')}
+              delta={deltaPct(visitsCur, visitsPrev)}
+              about="Сколько раз ваши материалы, страница автора и партнёрская ссылка были открыты по поделенным ссылкам."
+            />
+            <KpiCard
+              icon={Target}
+              label="Переходов на одно «Поделиться»"
+              value={sharesCur > 0 ? `≈ ${(visitsCur / sharesCur).toFixed(1).replace('.', ',')}` : '—'}
+              delta={null}
+              about="Среднее число переходов с одного нажатия «Поделиться». Больше единицы — ссылкой делятся дальше."
+            />
+            <KpiCard
+              icon={Users}
+              label="Зарегистрировались по партнёрской ссылке"
+              value={String(registrationsCur)}
+              delta={null}
+              about="Сколько новых пользователей зарегистрировалось после перехода по вашей партнёрской ссылке."
+            />
+          </div>
+
+          <h2 className="text-xl font-bold text-gray-900 mb-4">По типам</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <KpiCard
+              icon={FileText}
+              label="Уроки"
+              value={String(lessonSharesN)}
+              delta={null}
+              hint={`Поделились: ${lessonSharesN} · Перешли: ${lessonShareVisitsN}`}
+              about="Нажатия «Поделиться» на уроках и переходы по поделенным ссылкам на уроки."
+            />
+            <KpiCard
+              icon={BookOpen}
+              label="Курсы"
+              value={String(courseSharesN)}
+              delta={null}
+              hint={`Поделились: ${courseSharesN} · Перешли: ${courseShareVisitsN}`}
+              about="Нажатия «Поделиться» на курсах и переходы по поделенным ссылкам на курсы."
+            />
+            <KpiCard
+              icon={Users}
+              label="Страница автора"
+              value={String(profileSharesN)}
+              delta={null}
+              hint={`Поделились: ${profileSharesN} · Перешли: ${profileShareVisitsN}`}
+              about="Нажатия «Поделиться» на вашей странице и переходы по поделенным ссылкам на неё."
+            />
+            <KpiCard
+              icon={Link2}
+              label="Партнёрская ссылка"
+              value={String(referralSharesN)}
+              delta={null}
+              hint={`Поделились: ${referralSharesN} · Перешли: ${referralVisitsN}`}
+              about="Кнопка «Поделиться» на вашей партнёрской ссылке и переходы по ней."
+            />
+          </div>
+
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Динамика по дням</h2>
+          <Card variant="glow" padding="none" className="p-5 mb-6">
+            {sharesCur === 0 && visitsCur === 0 ? (
+              <p className="text-gray-500 text-sm py-6 text-center">
+                За период пока нет ни одного «Поделиться» или перехода — нажмите «Поделиться» на своём уроке и проверьте, как это работает
+              </p>
+            ) : (
+              <>
+                <div className="flex items-end gap-1 h-40">
+                  {shareDays.map(d => (
+                    <div key={d.iso} className="flex-1 flex flex-col items-center justify-end h-full" title={`${d.label}: поделились ${d.shares}, переходов ${d.visits}`}>
+                      <div className="w-full flex items-end justify-center gap-0.5 h-full">
+                        <div className="w-1/2 max-w-[10px] rounded-t bg-purple-500" style={{ height: `${(d.shares / shareDayMax) * 100}%`, minHeight: d.shares > 0 ? 3 : 0 }} />
+                        <div className="w-1/2 max-w-[10px] rounded-t bg-blue-400" style={{ height: `${(d.visits / shareDayMax) * 100}%`, minHeight: d.visits > 0 ? 3 : 0 }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-4 mt-3 text-xs text-gray-500">
+                  <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-purple-500"></span>Поделились</span>
+                  <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue-400"></span>Переходы</span>
+                </div>
+              </>
+            )}
+          </Card>
+
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Топ материалов</h2>
+          <Card variant="glow" padding="none" className="overflow-hidden">
+            {shareTopMats.length === 0 ? (
+              <p className="text-gray-500 text-sm py-8 text-center">Пока никто не делился вашими материалами</p>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {shareTopMats.map(m => (
+                  <Link
+                    key={`${m.type}:${m.id}`}
+                    href={`/mentor/analytics/${m.id}`}
+                    className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-purple-50/40 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-900 truncate">{m.title}</p>
+                      <span className={`inline-block mt-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${m.type === 'course' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                        {m.type === 'course' ? 'Курс' : 'Урок'}
+                      </span>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="font-bold text-purple-600">{m.shares}</span>
+                      <span className="text-gray-300 mx-1.5">·</span>
+                      <span className="font-bold text-blue-600">{m.visits}</span>
+                      <p className="text-[10px] text-gray-400">поделились · перешли</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Card>
         </>
       )}
 
