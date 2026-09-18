@@ -31,6 +31,7 @@ import ModerationHelp from "./moderation";
 import ThemeHelp from "./theme";
 import PartnerHelp from "./partner";
 import PartnerAdminHelp from "./partner-admin";
+import PayoutsAdminHelp from "./payouts-admin";
 
 // Реестр разделов Справочника. Новый раздел = новый файл-компонент в
 // content/help/ + строка здесь. pages — адреса, с которых иконка «Как здесь
@@ -160,6 +161,14 @@ export const SECTIONS: HelpSection[] = [
     match: (p) => p === "/admin/partner",
     adminOnly: true,
     content: <PartnerAdminHelp />,
+  },
+  {
+    id: "payouts-admin",
+    title: "Выплаты (админ)",
+    icon: Wallet,
+    match: (p) => p === "/admin/payouts",
+    adminOnly: true,
+    content: <PayoutsAdminHelp />,
   },
   {
     id: "theme",

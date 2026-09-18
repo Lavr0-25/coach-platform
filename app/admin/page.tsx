@@ -37,7 +37,8 @@ export default async function AdminPage() {
     { count: reviewReportsCount },
     { count: newFeedbackCount },
     { count: pendingVerificationCount },
-    { count: paidRequestsCount }
+    { count: paidRequestsCount },
+    { count: pendingPayoutsCount }
   ] = await Promise.all([
     supabase.from('stop_list').select('*', { count: 'exact', head: true }).gte('banned_until', new Date().toISOString()),
     supabase.from('reports').select('*', { count: 'exact', head: true }).gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
@@ -48,7 +49,8 @@ export default async function AdminPage() {
     supabase.from('review_reports').select('*', { count: 'exact', head: true }),
     supabase.from('feedback').select('*', { count: 'exact', head: true }).eq('status', 'new'),
     supabase.from('feedback').select('*', { count: 'exact', head: true }).eq('type', 'verification').in('status', ['new', 'in_progress']),
-    supabase.from('paid_access_requests').select('*', { count: 'exact', head: true }).eq('status', 'submitted')
+    supabase.from('paid_access_requests').select('*', { count: 'exact', head: true }).eq('status', 'submitted'),
+    supabase.from('payout_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending')
   ])
 
   const totalNewReports = (commentReportsCount || 0) + (reviewReportsCount || 0)
@@ -198,6 +200,15 @@ export default async function AdminPage() {
               badgeText={`${plural(paidRequestsCount || 0, ['заявка', 'заявки', 'заявок'])} на проверке`}
             />
             <AdminLink
+              href="/admin/payouts"
+              title="Выплаты"
+              desc="Кошелёк авторов: заявки на вывод роялти, чеки «Мой налог»"
+              icon={<PayoutsIcon />}
+              badge={pendingPayoutsCount}
+              badgeColor="bg-amber-100 text-amber-700"
+              badgeText={`${plural(pendingPayoutsCount || 0, ['заявка', 'заявки', 'заявок'])} ждёт`}
+            />
+            <AdminLink
               href="/admin/purchases"
               title="Продажи"
               desc="Кто, что, когда и за сколько купил: оборот, комиссия, выплаты"
@@ -340,6 +351,15 @@ function CartIcon() {
   return (
     <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+    </svg>
+  )
+}
+
+// Купюра с монетой — раздел «Выплаты» (заявки на вывод роялти)
+function PayoutsIcon() {
+  return (
+    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
     </svg>
   )
 }

@@ -23,14 +23,17 @@ export async function getEffectiveCommission(
   admin: AdminClient,
   coachUserId: string
 ): Promise<EffectiveCommission> {
-  // 1. Ручная ставка админа: coaches.commission_rate (NOT NULL = задана).
+  // 1. Ручная ставка админа: coaches.commission_rate (NULL = не задана —
+  //    «снять индивидуальную ставку», см. setCoachCommissionRate).
+  //    Внимание: Number(null) === 0 в JS, поэтому NULL проверяем явно —
+  //    иначе снятая ставка читалась как «комиссия 0%».
   const { data: coach } = await admin
     .from('coaches')
     .select('commission_rate')
     .eq('user_id', coachUserId)
     .maybeSingle()
 
-  const manual = Number(coach?.commission_rate)
+  const manual = coach?.commission_rate == null ? NaN : Number(coach.commission_rate)
   let base: EffectiveCommission['base'] = 'manual'
   let percent = Number.isFinite(manual) && manual >= 0 && manual <= 90 ? manual : NaN
 

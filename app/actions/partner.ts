@@ -13,9 +13,29 @@
 // часть защиты, а не обход.
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { headers } from 'next/headers'
+import { getEffectiveCommission } from '@/lib/commission'
 
 export type PartnerActionResult = { ok: boolean; error?: string }
+
+// Текущая ставка автора (2026-09-17): единый расчёт lib/commission.ts —
+// индивидуальная ставка админа (или стандартная глобальная) минус активные
+// реферальные бенефиты, floor 0. Показываем в карточке рефералки кабинета.
+export async function getMyCommission(): Promise<
+  | { ok: true; commission: { percent: number; base: 'manual' | 'global'; benefitPp: number } }
+  | { ok: false; error: string }
+> {
+  const admin = createAdminClient()
+  if (!admin) return { ok: false, error: 'Сервис недоступен' }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Требуется вход' }
+
+  const commission = await getEffectiveCommission(admin, user.id)
+  return { ok: true, commission }
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 // ИНН физлица (12 цифр) или организации (10 цифр) — CHECK той же формы в БД

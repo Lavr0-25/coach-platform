@@ -18,7 +18,11 @@ import {
   submitPaidAccessRequest,
   savePayoutDetails,
   getAgreementFileUrl,
+  getMyCommission,
 } from '@/app/actions/partner'
+import { getWalletSummary, requestPayout, attachReceipt } from '@/app/actions/payout'
+import { MIN_PAYOUT_RUB } from '@/lib/payout'
+import type { WalletSummary } from '@/lib/payout'
 import {
   BadgeCheck,
   Check,
@@ -29,6 +33,7 @@ import {
   FileText,
   Handshake,
   Lock,
+  ReceiptText,
   RotateCcw,
   Users,
   Wallet,
@@ -84,12 +89,36 @@ export default function PartnerPage() {
   const [payoutSavedAt, setPayoutSavedAt] = useState<string | null>(null)
   const [payoutSaving, setPayoutSaving] = useState(false)
 
+  // Кошелёк (2026-09-17): баланс + заявки на вывод
+  const [wallet, setWallet] = useState<WalletSummary | null>(null)
+  const [payoutRequests, setPayoutRequests] = useState<
+    {
+      id: string
+      amount: number
+      status: 'pending' | 'paid' | 'rejected'
+      requested_at: string
+      processed_at: string | null
+      receipt_number: string | null
+      admin_note: string | null
+    }[]
+  >([])
+  const [withdrawOpen, setWithdrawOpen] = useState(false)
+  const [withdrawAmount, setWithdrawAmount] = useState('')
+  const [withdrawBusy, setWithdrawBusy] = useState(false)
+
+  // Чек «Мой налог» (2026-09-17): автор прикладывает номер к своей выплате.
+  // Пока чека нет — вывод заблокирован (см. wallet.unreceiptedPayout).
+  const [receiptValue, setReceiptValue] = useState('')
+  const [receiptBusy, setReceiptBusy] = useState(false)
+
   // Реферальная программа (№32): ссылка, число приведённых, активная скидка.
   const [refUserId, setRefUserId] = useState<string | null>(null)
   const [refCount, setRefCount] = useState(0)
   const [refDiscountPp, setRefDiscountPp] = useState(0)
   const [refUntil, setRefUntil] = useState<string | null>(null)
   const [refCopied, setRefCopied] = useState(false)
+  // Текущая ставка комиссии (2026-09-17): итог с учётом скидок
+  const [commission, setCommission] = useState<{ percent: number; base: 'manual' | 'global'; benefitPp: number } | null>(null)
   const accountDigits = payout.account.replace(/[\s-]/g, '')
   const isAccount = /^\d{20}$/.test(accountDigits) // счёт — БИК обязателен
   const payoutValid =
@@ -111,7 +140,7 @@ export default function PartnerPage() {
         return
       }
 
-      const [coachRes, agreementRes, payoutRes, refCountRes, refBenefitRes] = await Promise.all([
+      const [coachRes, agreementRes, payoutRes, refCountRes, refBenefitRes, payoutReqRes] = await Promise.all([
         supabase
           .from('coaches')
           .select('paid_publishing_allowed, display_name')
@@ -139,6 +168,12 @@ export default function PartnerPage() {
           .eq('coach_user_id', user.id)
           .is('revoked_at', null)
           .or('expires_at.is.null,expires_at.gt.now()'),
+        // Мои заявки на вывод (RLS payouts_coach_select — только свои)
+        supabase
+          .from('payout_requests')
+          .select('id, amount, status, requested_at, processed_at, receipt_number, admin_note')
+          .order('requested_at', { ascending: false })
+          .limit(20),
       ])
 
       setPaidAllowed(!!(coachRes.data as any)?.paid_publishing_allowed)
@@ -165,6 +200,15 @@ export default function PartnerPage() {
         })
         setPayoutSavedAt(p.updated_at || null)
       }
+      setPayoutRequests((payoutReqRes.data as any[]) || [])
+
+      // Текущая ставка: итоговый расчёт делает сервер (lib/commission.ts)
+      const commissionRes = await getMyCommission()
+      if (commissionRes.ok) setCommission(commissionRes.commission)
+
+      // Кошелёк: баланс считает серверный экшен (completed-роялти минус заявки)
+      const walletRes = await getWalletSummary()
+      setWallet(walletRes.ok ? walletRes.wallet : null)
 
       if (agr) {
         const [reqRes, filesRes] = await Promise.all([
@@ -259,6 +303,42 @@ export default function PartnerPage() {
     await loadState()
   }
 
+  const handleRequestPayout = async () => {
+    setError('')
+    setSuccess('')
+    setWithdrawBusy(true)
+    const res = await requestPayout(Number(withdrawAmount.replace(/[^\d.,]/g, '').replace(',', '.')))
+    setWithdrawBusy(false)
+    if (!res.ok) {
+      setError(res.error || 'Ошибка')
+      return
+    }
+    setSuccess('Заявка на вывод отправлена — решением сообщим в уведомлениях')
+    setWithdrawOpen(false)
+    setWithdrawAmount('')
+    await loadState()
+  }
+
+  const handleAttachReceipt = async () => {
+    setError('')
+    setSuccess('')
+    const payoutId = wallet?.unreceiptedPayout?.id
+    if (!payoutId) return
+    setReceiptBusy(true)
+    const res = await attachReceipt(payoutId, receiptValue)
+    setReceiptBusy(false)
+    if (!res.ok) {
+      setError(res.error || 'Ошибка')
+      return
+    }
+    setSuccess('Чек приложен — заявки на вывод снова доступны')
+    setReceiptValue('')
+    await loadState()
+  }
+
+  const rub = (n: number) =>
+    n.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+
   const requestBadge = (status: AccessRequest['status']) =>
     status === 'submitted' ? (
       <Badge variant="orange">На проверке</Badge>
@@ -325,8 +405,9 @@ export default function PartnerPage() {
               <div className="font-semibold text-gray-900 text-lg">Приглашайте учеников — ваша ставка комиссии снижается</div>
               <p className="text-sm text-gray-600 mt-1">
                 Каждый новый пользователь, зарегистрировавшийся по вашей ссылке,
-                снижает комиссию платформы на 5 п.п. (п. 5.4 оферты) и продлевает
-                срок её действия на 1 месяц.
+                продлевает срок действия вашей скидки на 1 месяц (п. 5.4 оферты).
+                Размер скидки фиксированный — <strong>−5 п.п.</strong> к комиссии
+                платформы; накапливается только срок, а не размер.
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <code className="text-xs font-mono bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 break-all max-w-full">
@@ -360,6 +441,24 @@ export default function PartnerPage() {
                   ' · скидка пока не активна'
                 )}
               </p>
+              {/* Текущая ставка (2026-09-17): итог считал сервер с учётом
+                  индивидуальной ставки платформы и активных скидок. */}
+              {commission && (
+                <p className="text-sm text-gray-700 mt-1">
+                  Ваша ставка сейчас: комиссия платформы{' '}
+                  <strong>{commission.percent.toLocaleString('ru-RU', { maximumFractionDigits: 2 })}%</strong>
+                  {' '}— вам остаётся{' '}
+                  <strong>
+                    {(100 - commission.percent).toLocaleString('ru-RU', { maximumFractionDigits: 2 })}%
+                  </strong>{' '}
+                  от каждой продажи
+                  {commission.benefitPp > 0 && <> (с учётом скидки −{commission.benefitPp} п.п.)</>}
+                  {commission.base === 'manual' && commission.benefitPp === 0 && (
+                    <> — ставка установлена платформой индивидуально</>
+                  )}
+                  .
+                </p>
+              )}
             </div>
           </div>
         </Card>
@@ -446,8 +545,9 @@ export default function PartnerPage() {
                   >
                     текст договора-оферты
                   </Link>{' '}
-                  — это партнёрское соглашение: вы даёте платформе право продавать ваши материалы,
-                  платформа платит вам роялти (по умолчанию 70% от каждой продажи).
+                  — это партнёрское соглашение: вы даёте платформе право продавать ваши
+                  материалы, платформа платит вам роялти (вашу ставку видно в карточке
+                  выше).
                 </div>
               </li>
               <li className="flex gap-3">
@@ -564,7 +664,8 @@ export default function PartnerPage() {
                     договор-оферту
                   </Link>{' '}
                   и принимаю её условия: неисключительная лицензия на мои материалы,
-                  роялти 70% (комиссия платформы 30%), выплаты самозанятым и ИП по чеку.
+                  роялти по ставке платформы (вашу ставку видно в карточке выше),
+                  выплаты самозанятым и ИП по чеку.
                 </span>
               </label>
               <div className="mt-4">
@@ -692,6 +793,166 @@ export default function PartnerPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Кошелёк (2026-09-17): доступные средства и заявка на вывод.
+          Условие показа — как у реквизитов: продажи включены или заявка
+          одобрена (до этого роялти копиться не может). */}
+      {(paidAllowed || request?.status === 'approved') && wallet && (
+        <Card variant="glow" padding="none" className="p-6 mb-6">
+          <h2 className="font-semibold text-gray-900 text-lg mb-3 flex items-center gap-2">
+            <Wallet className="w-5 h-5 text-purple-600" strokeWidth={1.5} />
+            Средства
+          </h2>
+
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Доступно: {rub(Math.max(0, wallet.available))} ₽
+          </div>
+          <p className="text-sm text-gray-600 mt-1">
+            Начислено всего: {rub(wallet.earnedTotal)} ₽
+            {wallet.pendingTotal > 0 && <> · Ожидает выплаты: <strong>{rub(wallet.pendingTotal)} ₽</strong></>}
+            {wallet.withdrawnTotal > 0 && <> · Выплачено: {rub(wallet.withdrawnTotal)} ₽</>}
+          </p>
+
+          {/* Чек «Мой налог»: выплата без чека блокирует новые заявки.
+              Форма ввода номера — до кнопки вывода, чтобы причина блокировки
+              была видна сразу. */}
+          {wallet.unreceiptedPayout && (
+            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4 max-w-md">
+              <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                <ReceiptText className="w-4 h-4 flex-shrink-0" />
+                Приложите чек к выплате от{' '}
+                {wallet.unreceiptedPayout.processed_at
+                  ? new Date(wallet.unreceiptedPayout.processed_at).toLocaleDateString('ru-RU')
+                  : 'платформе'}
+                {' '}на {rub(wallet.unreceiptedPayout.amount)} ₽
+              </div>
+              <p className="text-xs text-amber-800 mt-1">
+                В приложении «Мой налог» найдите чек по этой выплате и введите его номер
+                здесь. Пока чека нет, новые заявки на вывод недоступны (п. 4.2 договора).
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Input
+                  type="text"
+                  size="compact"
+                  value={receiptValue}
+                  onChange={e => setReceiptValue(e.target.value)}
+                  placeholder="Номер чека «Мой налог»"
+                  maxLength={50}
+                  aria-label="Номер чека «Мой налог»"
+                  className="max-w-64"
+                />
+                <Button size="sm" onClick={handleAttachReceipt} loading={receiptBusy} disabled={receiptValue.trim().length < 3}>
+                  Приложить чек
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Заявка на вывод: от 1 000 ₽ (п. 6.5 оферты), не больше доступного,
+              реквизиты заполнены. Решение — только за администратором. */}
+          {!withdrawOpen ? (
+            <div className="mt-4">
+              <Button
+                onClick={() => { setWithdrawOpen(true); setWithdrawAmount(String(Math.floor(wallet.available))) }}
+                disabled={wallet.activeRequestId !== null || wallet.available < MIN_PAYOUT_RUB || !!wallet.unreceiptedPayout}
+              >
+                {wallet.unreceiptedPayout
+                  ? 'Сначала приложите чек'
+                  : wallet.activeRequestId
+                    ? 'Заявка на рассмотрении'
+                    : 'Заявить вывод'}
+              </Button>
+              {/* Подсказка называет реальную причину блокировки, а не
+                  «минимум» всегда: нет средств / не хватает до минимума /
+                  заблокировано чеком. */}
+              {wallet.unreceiptedPayout ? (
+                <p className="text-xs text-amber-700 mt-2">
+                  Вывод заблокирован: приложите чек «Мой налог» к выплате от{' '}
+                  {wallet.unreceiptedPayout.processed_at
+                    ? new Date(wallet.unreceiptedPayout.processed_at).toLocaleDateString('ru-RU')
+                    : 'платформе'}
+                  {' '}— жёлтая форма выше.
+                </p>
+              ) : wallet.activeRequestId ? (
+                <p className="text-xs text-gray-500 mt-2">
+                  Одновременно может быть только одна заявка на рассмотрении.
+                </p>
+              ) : wallet.available <= 0 ? (
+                <p className="text-xs text-gray-500 mt-2">
+                  Средств для вывода пока нет — роялти появится после первых продаж
+                  и копится, не сгорая.
+                </p>
+              ) : wallet.available < MIN_PAYOUT_RUB ? (
+                <p className="text-xs text-gray-500 mt-2">
+                  Минимальная сумма вывода — {MIN_PAYOUT_RUB.toLocaleString('ru-RU')} ₽ (п. 6.5 договора):
+                  накопите ещё {rub(MIN_PAYOUT_RUB - wallet.available)} ₽. Средства не сгорают.
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="mt-4 bg-purple-50 border border-purple-100 rounded-xl p-4 max-w-sm">
+              <label htmlFor="withdraw-amount" className="block text-sm font-semibold text-gray-700 mb-2">
+                Сумма вывода (от {MIN_PAYOUT_RUB.toLocaleString('ru-RU')} ₽, доступно {rub(wallet.available)} ₽)
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  id="withdraw-amount"
+                  type="text"
+                  inputMode="decimal"
+                  size="compact"
+                  value={withdrawAmount}
+                  onChange={e => setWithdrawAmount(e.target.value.replace(/[^\d.,\s]/g, ''))}
+                  placeholder="1000"
+                  maxLength={12}
+                />
+              </div>
+              <div className="flex gap-2 mt-3">
+                <Button size="sm" onClick={handleRequestPayout} loading={withdrawBusy}>
+                  Отправить заявку
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setWithdrawOpen(false)} disabled={withdrawBusy}>
+                  Отмена
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Выплата проводится в течение 10 рабочих дней после заявки (п. 6.5 оферты).
+                Самозанятому: к выплате нужен чек из «Мой налог».
+              </p>
+            </div>
+          )}
+
+          {/* История заявок: статусы, чеки, причины отказов */}
+          {payoutRequests.length > 0 && (
+            <div className="mt-5 pt-5 border-t border-purple-100">
+              <div className="font-semibold text-gray-900 text-sm mb-2">Мои заявки на вывод</div>
+              <div className="space-y-2">
+                {payoutRequests.map(r => (
+                  <div key={r.id} className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <strong className="text-gray-900">{rub(Number(r.amount))} ₽</strong>
+                      {r.status === 'pending' && <Badge variant="orange">На рассмотрении</Badge>}
+                      {r.status === 'paid' && (r.receipt_number
+                        ? <Badge variant="greenFill">Выплачено</Badge>
+                        : <Badge variant="orange">Ожидает чек</Badge>)}
+                      {r.status === 'rejected' && <Badge variant="redFill">Отклонена</Badge>}
+                      <span className="text-gray-500 text-xs">
+                        от {new Date(r.requested_at).toLocaleDateString('ru-RU')}
+                        {r.processed_at && ` · решение ${new Date(r.processed_at).toLocaleDateString('ru-RU')}`}
+                      </span>
+                    </div>
+                    {r.status === 'paid' && r.receipt_number && (
+                      <p className="text-xs text-gray-500 mt-1">Чек «Мой налог» № {r.receipt_number}</p>
+                    )}
+                    {r.status === 'rejected' && r.admin_note && (
+                      <p className="text-xs text-gray-600 mt-1">Причина: {r.admin_note}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
       )}
 
       {/* Реквизиты для выплат: после одобрения заявки (или при включённых
