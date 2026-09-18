@@ -25,7 +25,9 @@ export function OfferMentorContent({ authorName, inn, facsimileUrl }: Props) {
       </p>
 
       <p>
-        <b>ООО «Проинфо»</b> (ИНН 5047113440, ОГРН 1105047002499, далее — «Платформа»),
+        <b>ООО «Проинфо»</b> (ИНН 5047113440, ОГРН 1105047002499, КПП 774301001,
+        125212, г. Москва, вн.тер.г. муниципальный округ Головинский, б-р Кронштадтский,
+        д. 8, к. 1, кв. 77; e-mail: nsi_manager@proinfo.pro, далее — «Платформа»),
         владелец и оператор интернет-платформы «Верный путь» (сайт{' '}
         <a href="https://myrightway.ru" className="text-purple-700 underline underline-offset-2">
           https://myrightway.ru
@@ -348,14 +350,18 @@ export function OfferMentorContent({ authorName, inn, facsimileUrl }: Props) {
       <section className="pt-4 border-t border-gray-200">
         <h2 className="text-lg font-bold text-gray-900 mb-2">Реквизиты Платформы</h2>
         <p>
-          ООО «Проинфо» · ИНН 5047113440 · ОГРН 1105047002499
+          <b>ООО «Проинфо»</b> · ИНН 5047113440 · КПП 774301001 · ОГРН 1105047002499
           <br />
-          125212, г. Москва, б-р Кронштадтский, д. 8, к. 1
+          125212, г. Москва, вн.тер.г. муниципальный округ Головинский,
+          б-р Кронштадтский, д. 8, к. 1, кв. 77
           <br />
-          <span className="text-gray-500">
-            Банковские реквизиты и e-mail вписываются перед подписанием финальной
-            версии договора.
-          </span>
+          Р/с 40702810620000051506 в ООО «Банк Точка», БИК 044525104,
+          к/с 30101810745374525104
+          <br />
+          E-mail: <a href="mailto:nsi_manager@proinfo.pro" className="text-purple-600 hover:text-purple-700">nsi_manager@proinfo.pro</a>
+          <br />
+          Генеральный директор Богун Дарина Вадимовна действует на основании
+          Устава (Решение №13 о назначении, трудовой договор).
         </p>
       </section>
 

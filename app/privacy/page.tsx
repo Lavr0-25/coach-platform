@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 // Политика конфиденциальности (редакция 2026-09-13): приведена к 152-ФЗ —
 // права субъекта (доступ/уточнение/отзыв), несовершеннолетние, честное описание
-// трансграничной передачи (Supabase, Robokassa). Места с [заполнить] требуют
-// реального e-mail оператора (реквизиты ООО «Проинфо» известны).
+// трансграничной передачи (Supabase, Robokassa). Контактный e-mail оператора
+// вписан 18.09.2026 (nsi_manager@proinfo.pro).
 export default function PrivacyPage() {
   return (
     <div className="container mx-auto px-4 py-10 pt-28 max-w-3xl">
@@ -17,9 +17,8 @@ export default function PrivacyPage() {
 
       <div className="bg-white rounded-2xl shadow-sm border p-8 space-y-6 text-gray-700 leading-relaxed">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-          <strong>Черновик документа.</strong> Перед запуском в продакшен впишите
-          контактный e-mail оператора (помечено <code className="bg-amber-100 px-1 rounded">[заполнить]</code>).
-          Остальные реквизиты заполнены из договора-оферты.
+          <strong>Документ в доработке.</strong> Перед официальным запуском текст
+          пройдёт проверку юриста.
         </div>
 
         <section>
@@ -34,7 +33,9 @@ export default function PrivacyPage() {
           </p>
           <p className="mt-2">
             Контакт для запросов к персональным данным:{' '}
-            <span className="text-gray-500">[заполнить: e-mail]</span>.
+            <a href="mailto:nsi_manager@proinfo.pro" className="text-blue-600 hover:text-blue-700">
+              nsi_manager@proinfo.pro
+            </a>.
           </p>
         </section>
 
@@ -134,7 +135,11 @@ export default function PrivacyPage() {
             <Link href="/feedback?type=question" className="text-blue-600 hover:text-blue-700">
               форму обращений
             </Link>{' '}
-            или на <span className="text-gray-500">[заполнить: e-mail]</span>. Мы
+            или на{' '}
+            <a href="mailto:nsi_manager@proinfo.pro" className="text-blue-600 hover:text-blue-700">
+              nsi_manager@proinfo.pro
+            </a>
+            . Мы
             отвечаем в течение 10 рабочих дней. Для подтверждения личности
             запрос должен быть отправлен с адреса, указанного в вашем аккаунте.
           </p>
@@ -211,7 +216,7 @@ export default function PrivacyPage() {
           </p>
         </section>
 
-        <p className="text-sm text-gray-400">Дата последнего обновления: 13 сентября 2026</p>
+        <p className="text-sm text-gray-400">Дата последнего обновления: 18 сентября 2026</p>
       </div>
     </div>
   )

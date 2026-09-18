@@ -6,18 +6,16 @@ export const metadata: Metadata = {
   description: 'Условия использования платформы RightWay',
 }
 
-// Черновик: места с [заполнить] требуют реальных данных владельца
+// Реквизиты ООО «Проинфо» заполнены (передал Дарина 18.09.2026, опросник в tmp/)
 export default function TermsPage() {
   return (
-    <div className="container mx-auto px-4 py-10 max-w-3xl">
+    <div className="container mx-auto px-4 py-10 pt-28 max-w-3xl">
       <h1 className="text-3xl font-bold gradient-text mb-8">Условия использования</h1>
 
       <div className="bg-white rounded-2xl shadow-sm border p-8 space-y-6 text-gray-700 leading-relaxed">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
           <strong>Документ в доработке.</strong> Перед официальным запуском текст
-          пройдёт проверку юриста. Контакты с
-          <code className="bg-amber-100 px-1 rounded">[заполнить]</code> будут
-          вписаны до официального запуска.
+          пройдёт проверку юриста.
         </div>
 
         <section>
@@ -29,8 +27,13 @@ export default function TermsPage() {
           </p>
           <p>
             Владелец и оператор Платформы: <strong>ООО «Проинфо»</strong>
-            {' '}(ИНН 5047113440, ОГРН 1105047002499; далее — «Платформа»).
-            Контакт для обращений: <span className="text-gray-500">[заполнить: e-mail поддержки]</span>.
+            {' '}(ИНН 5047113440, ОГРН 1105047002499, КПП 774301001;
+            125212, г. Москва, вн.тер.г. муниципальный округ Головинский,
+            б-р Кронштадтский, д. 8, к. 1, кв. 77; далее — «Платформа»).
+            Контакт для обращений:{' '}
+            <a href="mailto:nsi_manager@proinfo.pro" className="text-blue-600 hover:text-blue-700">
+              nsi_manager@proinfo.pro
+            </a>.
           </p>
           <p>
             Условия работы наставников с платными продажами определяет
@@ -159,7 +162,7 @@ export default function TermsPage() {
           </p>
         </section>
 
-        <p className="text-sm text-gray-400">Дата последнего обновления: 17 сентября 2026</p>
+        <p className="text-sm text-gray-400">Дата последнего обновления: 18 сентября 2026</p>
       </div>
     </div>
   )

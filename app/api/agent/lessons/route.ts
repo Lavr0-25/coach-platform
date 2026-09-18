@@ -15,8 +15,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 //   1. HTML очищается через схему Tiptap (XSS-защита, lib/editor/sanitizeLessonHtml)
 //   2. Минимальный объём осмысленного текста (MIN_CONTENT_CHARS символов вне тегов)
 //   3. Запрещённые слова (banned_words) — в заголовке, описании и тексте
-//   4. Лимит автопубликаций: не больше MAX_PUBLISH_PER_DAY в день на автора
-//      (считаем и немедленные публикации, и запланированные)
+//   4. Лимит автопубликаций: в день на автора (считаем и немедленные
+//      публикации, и запланированные). Верифицированным авторам (is_verified)
+//      — MAX_PUBLISH_PER_DAY_VERIFIED, остальным — MAX_PUBLISH_PER_DAY_BASE
+//      (запрос Дарины 18.09: заполнить профиль за день упирался в лимит 3)
 // Ворота 2-3 проверяются и на черновике, и повторно на публикации: черновик мог
 // быть написан давно, а слова в стоп-листе могли появиться позже.
 // Не прошедший ворота урок остаётся ЧЕРНОВИКОМ — автор доработает его в кабинете.
@@ -25,15 +27,24 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 // RLS не даёт агенту трогать чужие уроки. Урок создаётся от имени автора.
 
 const MIN_CONTENT_CHARS = 2000
-const MAX_PUBLISH_PER_DAY = 3
+const MAX_PUBLISH_PER_DAY_BASE = 10
+const MAX_PUBLISH_PER_DAY_VERIFIED = 50
 
 function stripTags(html: string): string {
   return (html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-async function getCoachId(client: SupabaseClient, userId: string) {
-  const { data: coach } = await client.from('coaches').select('id').eq('user_id', userId).maybeSingle()
-  return coach?.id ?? null
+async function getCoach(
+  client: SupabaseClient,
+  userId: string
+): Promise<{ id: string; isVerified: boolean } | null> {
+  const { data: coach } = await client
+    .from('coaches')
+    .select('id, is_verified')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (!coach) return null
+  return { id: coach.id, isVerified: !!coach.is_verified }
 }
 
 // POST — создать черновик. Ворота объёма/слов: при провале черновик всё равно
@@ -42,8 +53,10 @@ export async function POST(request: Request) {
   const auth = await getAgentClient(request)
   if ('error' in auth) return auth.error
 
-  const coachId = await getCoachId(auth.client, auth.userId)
-  if (!coachId) return Response.json({ error: 'Профиль автора не найден' }, { status: 404 })
+  const coach = await getCoach(auth.client, auth.userId)
+  if (!coach) return Response.json({ error: 'Профиль автора не найден' }, { status: 404 })
+  const coachId = coach.id
+  const maxPerDay = coach.isVerified ? MAX_PUBLISH_PER_DAY_VERIFIED : MAX_PUBLISH_PER_DAY_BASE
 
   const body = await request.json().catch(() => null)
   const title = (body?.title as string | undefined)?.trim() || ''
@@ -112,9 +125,9 @@ export async function POST(request: Request) {
       .select('id', { count: 'exact', head: true })
       .eq('status', 'published')
       .gte('updated_at', startOfDay.toISOString())
-    if ((count ?? 0) >= MAX_PUBLISH_PER_DAY) {
+    if ((count ?? 0) >= maxPerDay) {
       return Response.json(
-        { error: `Достигнут дневной лимит автопубликаций (${MAX_PUBLISH_PER_DAY} в день) — продолжите завтра` },
+        { error: `Достигнут дневной лимит автопубликаций (${maxPerDay} в день) — продолжите завтра` },
         { status: 429 }
       )
     }
@@ -186,8 +199,10 @@ export async function PATCH(request: Request) {
   const auth = await getAgentClient(request)
   if ('error' in auth) return auth.error
 
-  const coachId = await getCoachId(auth.client, auth.userId)
-  if (!coachId) return Response.json({ error: 'Профиль автора не найден' }, { status: 404 })
+  const coach = await getCoach(auth.client, auth.userId)
+  if (!coach) return Response.json({ error: 'Профиль автора не найден' }, { status: 404 })
+  const coachId = coach.id
+  const maxPerDay = coach.isVerified ? MAX_PUBLISH_PER_DAY_VERIFIED : MAX_PUBLISH_PER_DAY_BASE
 
   const body = await request.json().catch(() => null)
   const id = body?.id as string | undefined
@@ -236,9 +251,9 @@ export async function PATCH(request: Request) {
     .select('id', { count: 'exact', head: true })
     .eq('status', 'published')
     .gte('updated_at', startOfDay.toISOString())
-  if ((count ?? 0) >= MAX_PUBLISH_PER_DAY) {
+  if ((count ?? 0) >= maxPerDay) {
     return Response.json(
-      { error: `Достигнут дневной лимит автопубликаций (${MAX_PUBLISH_PER_DAY} в день) — продолжите завтра` },
+      { error: `Достигнут дневной лимит автопубликаций (${maxPerDay} в день) — продолжите завтра` },
       { status: 429 }
     )
   }
