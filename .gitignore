@@ -58,3 +58,6 @@ next-env.d.ts
 /agent/logs/
 /agent/tmp/
 /agent/digest/
+
+# локальные бэкапы прода (дампы БД, выгрузка Storage) — персональные данные, в репо не попадают
+/backups/
