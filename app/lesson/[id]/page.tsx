@@ -9,10 +9,12 @@ import dynamic from 'next/dynamic'
 import { headers } from 'next/headers'
 import type { Metadata } from 'next'
 import { resolveSource, isBot } from '@/lib/utm'
+import { absoluteUrl, ogCardUrl } from '@/lib/seo'
 import FavoriteButton from '@/components/FavoriteButton'
 import PurchaseButton from '@/components/PurchaseButton'
 import SubscriptionButton from '@/components/SubscriptionButton'
 import LikeButton from '@/components/LikeButton'
+import ShareButton from '@/components/ShareButton'
 import LessonProgress from '@/components/LessonProgress'
 import { Card } from '@/components/ui/Card'
 import { getPaidSubscription } from '@/lib/access'
@@ -115,7 +117,7 @@ export async function generateMetadata({ params }: LessonPageProps): Promise<Met
     openGraph: {
       title,
       description,
-      images: lesson.cover_image ? [lesson.cover_image] : undefined,
+      images: [lesson.cover_image || ogCardUrl(title, coachName)],
     },
   }
 }
@@ -358,8 +360,42 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
     )
   }
 
+  // JSON-LD для поисковиков (фича Б, 2026-09-18): статья + автор + бренд.
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'LearningResource',
+    name: lesson.title,
+    description: lesson.description || undefined,
+    ...(lesson.cover_image ? { image: lesson.cover_image } : {}),
+    ...(lesson.created_at ? { datePublished: lesson.created_at } : {}),
+    ...(coach
+      ? {
+          author: {
+            '@type': 'Person',
+            name: coach.display_name,
+            url: absoluteUrl(`/mentor/${coach.id}`),
+          },
+        }
+      : {}),
+    ...(lesson.price > 0
+      ? {
+          offers: {
+            '@type': 'Offer',
+            price: lesson.price,
+            priceCurrency: 'RUB',
+            url: absoluteUrl(`/lesson/${id}`),
+          },
+        }
+      : {}),
+    isAccessibleForFree: isFree,
+  }
+
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-5xl pt-24 sm:pt-28">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Верхняя панель */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <Link href="/" className="text-purple-600 hover:text-purple-700 font-medium inline-flex items-center gap-2 transition-colors group">
@@ -461,6 +497,14 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
               size="md"
             />
           )}
+
+          {/* «Поделиться»: ссылка с utm_source=share + событие share в аналитику */}
+          <ShareButton
+            path={`/lesson/${id}`}
+            title={lesson.title}
+            targetType="lesson"
+            targetId={id}
+          />
         </div>
 
         {/* Кнопки действий: разовая покупка и/или платная подписка на автора.

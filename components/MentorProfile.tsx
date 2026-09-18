@@ -10,6 +10,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import FavoriteButton from '@/components/FavoriteButton'
 import ProfileActions from '@/components/ProfileActions'
+import ShareButton from '@/components/ShareButton'
 import SubscriptionButton from '@/components/SubscriptionButton'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
@@ -254,9 +255,18 @@ export default function MentorProfile({ coachId }: { coachId: string }) {
                   <p className="text-lg text-purple-600 font-medium">{coach.specialization}</p>
                 )}
               </div>
-              {currentUserId && currentUserId !== coach.user_id && (
-                <ProfileActions profileId={coach.user_id} />
-              )}
+              <div className="flex items-center gap-2">
+                {/* «Поделиться» профилем автора (utm_source=share + событие в аналитику) */}
+                <ShareButton
+                  path={`/mentor/${coachId}`}
+                  title={coach.display_name || 'Профиль автора'}
+                  targetType="profile"
+                  targetId={coachId}
+                />
+                {currentUserId && currentUserId !== coach.user_id && (
+                  <ProfileActions profileId={coach.user_id} />
+                )}
+              </div>
             </div>
 
             {/* Статистика */}

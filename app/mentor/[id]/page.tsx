@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import MentorProfile from '@/components/MentorProfile'
+import { ogCardUrl } from '@/lib/seo'
 
 interface MentorPageProps {
   params: Promise<{
@@ -35,7 +36,7 @@ export async function generateMetadata({ params }: MentorPageProps): Promise<Met
     openGraph: {
       title,
       description,
-      images: coach.avatar_url ? [coach.avatar_url] : undefined,
+      images: [coach.avatar_url || ogCardUrl(title)],
     },
   }
 }
@@ -48,11 +49,30 @@ export default async function MentorPage({ params }: MentorPageProps) {
   // вызывать notFound() до гидрации. Принимаем и coaches.id, и user_id
   const { data: coach } = await supabase
     .from('coaches')
-    .select('id')
+    .select('id, user_id, display_name, specialization, bio, avatar_url, is_verified')
     .or(`id.eq.${id},user_id.eq.${id}`)
     .maybeSingle()
 
   if (!coach) notFound()
 
-  return <MentorProfile coachId={coach.id} />
+  // JSON-LD для поисковиков (фича Б, 2026-09-18): профиль автора как Person.
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: coach.display_name || 'Автор',
+    ...(coach.specialization ? { jobTitle: coach.specialization } : {}),
+    ...(coach.bio ? { description: coach.bio.slice(0, 300) } : {}),
+    ...(coach.avatar_url ? { image: coach.avatar_url } : {}),
+    url: `https://www.rightway.su/mentor/${coach.id}`,
+  }
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <MentorProfile coachId={coach.id} />
+    </>
+  )
 }

@@ -11,6 +11,8 @@ import SubscriptionButton from '@/components/SubscriptionButton'
 import { Card } from '@/components/ui/Card'
 import { getPaidSubscription } from '@/lib/access'
 import { resolveSource, isBot } from '@/lib/utm'
+import ShareButton from '@/components/ShareButton'
+import { ogCardUrl, absoluteUrl } from '@/lib/seo'
 
 const ReviewsSection = dynamic(
   () => import('@/components/CourseReviews'),
@@ -65,7 +67,7 @@ export async function generateMetadata({ params }: CoursePageProps): Promise<Met
     openGraph: {
       title: course.title,
       description,
-      images: cover ? [cover] : undefined,
+      images: [cover || ogCardUrl(course.title)],
     },
   }
 }
@@ -194,8 +196,43 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
 
   const firstLessonId = directLessons?.[0]?.id
 
+  // JSON-LD для поисковиков (фича Б, 2026-09-18): курс + автор + цена.
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Course',
+    name: course.title,
+    description: course.description || undefined,
+    ...(course.cover_image || course.cover_image_url
+      ? { image: course.cover_image || course.cover_image_url }
+      : {}),
+    ...(coach
+      ? {
+          provider: {
+            '@type': 'Person',
+            name: coach.display_name,
+            url: absoluteUrl(`/mentor/${coach.id}`),
+          },
+        }
+      : {}),
+    ...(course.price > 0
+      ? {
+          offers: {
+            '@type': 'Offer',
+            price: course.price,
+            priceCurrency: 'RUB',
+            url: absoluteUrl(`/course/${id}`),
+          },
+        }
+      : {}),
+    isAccessibleForFree: isFree,
+  }
+
   return (
     <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-5xl pt-24 sm:pt-28">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Верхняя панель */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <Link href="/" className="text-purple-600 hover:text-purple-700 font-medium inline-flex items-center gap-2 transition-colors group">
@@ -297,6 +334,14 @@ export default async function CoursePage({ params, searchParams }: CoursePagePro
               size="md"
             />
           )}
+
+          {/* «Поделиться»: ссылка с utm_source=share + событие share в аналитику */}
+          <ShareButton
+            path={`/course/${id}`}
+            title={course.title}
+            targetType="course"
+            targetId={id}
+          />
         </div>
 
         {/* Кнопки действий для студентов: разовая покупка и/или платная подписка */}

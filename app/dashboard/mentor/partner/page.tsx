@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MentorSectionNav } from '@/components/MentorSectionNav'
+import ShareButton from '@/components/ShareButton'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
@@ -429,6 +430,16 @@ export default function PartnerPage() {
                   {refCopied ? <Check className="w-4 h-4" strokeWidth={2} /> : <Copy className="w-4 h-4" strokeWidth={1.5} />}
                   {refCopied ? 'Скопировано' : 'Скопировать'}
                 </Button>
+                {/* «Поделиться» реферальной ссылкой: системная шторка (мобильный)
+                    или копирование (десктоп). Ссылка с utm_source=share; событие
+                    share с целью 'profile' (targetId = свой профиль — реферальная
+                    ссылка ведёт от лица этого пользователя). */}
+                <ShareButton
+                  path={`/?ref=${refUserId}`}
+                  title="Верный путь — платформа менторов"
+                  targetType="profile"
+                  targetId={refUserId}
+                />
               </div>
               <p className="text-sm text-gray-700 mt-3">
                 Приведено пользователей: <strong>{refCount}</strong>

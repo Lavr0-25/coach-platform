@@ -7,6 +7,8 @@ import type { Metadata } from 'next'
 import { GraduationCap, Lock } from 'lucide-react'
 import FavoriteButton from '@/components/FavoriteButton'
 import ProfileActions from '@/components/ProfileActions'
+import ShareButton from '@/components/ShareButton'
+import { ogCardUrl } from '@/lib/seo'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 
@@ -41,7 +43,7 @@ export async function generateMetadata({ params }: MentorPageProps): Promise<Met
     title,
     openGraph: {
       title,
-      images: profile.avatar_url ? [profile.avatar_url] : undefined,
+      images: [profile.avatar_url || ogCardUrl(profile.full_name || 'Профиль')],
     },
   }
 }
@@ -177,7 +179,16 @@ export default async function ProfilePage({ params }: MentorPageProps) {
                 </h1>
                 <p className="text-lg text-purple-600 font-medium">Студент платформы</p>
               </div>
-              {viewer && viewer.id !== profile.id && <ProfileActions profileId={profile.id} />}
+              <div className="flex items-center gap-2">
+                {/* «Поделиться» ссылкой на профиль (utm_source=share + событие в аналитику) */}
+                <ShareButton
+                  path={`/profile/${profile.id}`}
+                  title={profile.full_name || 'Профиль'}
+                  targetType="profile"
+                  targetId={profile.id}
+                />
+                {viewer && viewer.id !== profile.id && <ProfileActions profileId={profile.id} />}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
