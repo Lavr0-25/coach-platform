@@ -12,8 +12,16 @@ import { createAdminClient } from '@/lib/supabase/admin'
 //   2. Vercel Cron раз в сутки (vercel.json) — резервный догон, GET с
 //      Authorization: Bearer (Vercel сам подставляет CRON_SECRET).
 //
+// Секрет триггера (19.09): основной источник — таблица system_settings
+// (key='cron_secret'). Раньше секрет жил в env CRON_SECRET и его же надо было
+// вписывать в pg_cron-задачу — на практике задача осталась с заглушкой из
+// миграции, все вызовы получали 401, и публикация молча деградировала до
+// ежедневного резерва. Теперь pg_cron и функция читают секрет из одной
+// таблицы; env CRON_SECRET остаётся запасным (Vercel Cron продолжает
+// подставлять его сам).
+//
 // Переменные окружения (настраиваются в Vercel → Settings → Environment Variables):
-//   CRON_SECRET   — секрет триггера (тот же вписан в pg_cron-задачу)
+//   CRON_SECRET   — запасной секрет (Vercel Cron подставляет сам в свой догон)
 //   TG_BOT_TOKEN  — токен бота Telegram (сейчас — из agent/config.json, tg_bot_token)
 //   TG_CHANNEL_ID — канал (по умолчанию @rightway_platform)
 //
@@ -50,17 +58,27 @@ export async function GET(request: Request) {
 }
 
 async function handle(request: Request) {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return Response.json({ error: 'CRON_SECRET не настроен на сервере' }, { status: 503 })
+  const admin = createAdminClient()
+  if (!admin) return Response.json({ error: 'SUPABASE_SERVICE_ROLE_KEY не настроен на сервере' }, { status: 503 })
+
+  // Секрет: основной — system_settings (key='cron_secret', jsonb-строка),
+  // запасной — env CRON_SECRET (его подставляет Vercel Cron в свой догон).
+  const { data: setting } = await admin
+    .from('system_settings')
+    .select('value')
+    .eq('key', 'cron_secret')
+    .maybeSingle()
+  const dbSecret = typeof setting?.value === 'string' ? setting.value : null
+  const envSecret = process.env.CRON_SECRET || null
+  if (!dbSecret && !envSecret) {
+    return Response.json({ error: 'CRON_SECRET не настроен (ни в system_settings, ни в env)' }, { status: 503 })
+  }
 
   const bearer = request.headers.get('authorization')
   const provided =
     request.headers.get('x-cron-secret') ||
     (bearer?.startsWith('Bearer ') ? bearer.slice('Bearer '.length) : null)
-  if (provided !== secret) return unauthorized()
-
-  const admin = createAdminClient()
-  if (!admin) return Response.json({ error: 'SUPABASE_SERVICE_ROLE_KEY не настроен на сервере' }, { status: 503 })
+  if (!provided || (provided !== dbSecret && provided !== envSecret)) return unauthorized()
 
   if (!process.env.TG_BOT_TOKEN) {
     // Окружение не готово — очередь не трогаем, посты подождут настройки

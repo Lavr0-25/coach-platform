@@ -33,7 +33,7 @@ const dayIso = (t: number) => new Date(t).toISOString().slice(0, 10)
 export default async function AdminAnalyticsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ p?: string; tab?: string }>
+  searchParams: Promise<{ p?: string; tab?: string; q?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -47,9 +47,10 @@ export default async function AdminAnalyticsPage({
 
   if (coach?.role !== 'admin') redirect('/')
 
-  const { p, tab: tabParam } = await searchParams
+  const { p, tab: tabParam, q: qParam } = await searchParams
   const period = PERIODS.includes(Number(p) as 7 | 30 | 90) ? Number(p) : 30
   const tab = ['overview', 'materials', 'share', 'sales'].includes(tabParam || '') ? tabParam! : 'overview'
+  const q = (qParam || '').trim().toLowerCase()
 
   const admin = createAdminClient()
   if (!admin) {
@@ -349,6 +350,11 @@ export default async function AdminAnalyticsPage({
     }),
   ].sort((a, b) => (b.reach30 - a.reach30) || (new Date(b.created_at).getTime() - new Date(a.created_at).getTime()))
 
+  // Поиск по вкладке «Материалы»: одно поле ищет и по названию, и по автору (?q=, GET-форма — без клиентского JS)
+  const materialsShown = q
+    ? materials.filter(m => m.title.toLowerCase().includes(q) || m.author.toLowerCase().includes(q))
+    : materials
+
   // ── Обзорные агрегаты
   const viewsCur = viewsPeriod.length
   const convCur = viewsCur > 0 ? (salesCur / viewsCur) * 100 : 0
@@ -431,7 +437,7 @@ export default async function AdminAnalyticsPage({
             {PERIODS.map(d => (
               <Link
                 key={d}
-                href={`/admin/analytics?tab=${tab}&p=${d}`}
+                href={`/admin/analytics?tab=${tab}&p=${d}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                   period === d ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-purple-600'
                 }`}
@@ -556,7 +562,33 @@ export default async function AdminAnalyticsPage({
         {/* ═════════ МАТЕРИАЛЫ ═════════ */}
         {tab === 'materials' && (
           <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
-            <p className="text-xs text-gray-500 px-5 pt-4">Все материалы всех авторов, отсортированы по охватам за 30 дней. На узких экранах таблицу можно двигать вправо.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 pt-4">
+              <p className="text-xs text-gray-500">Все материалы всех авторов, отсортированы по охватам за 30 дней. На узких экранах таблицу можно двигать вправо.</p>
+              <form method="get" action="/admin/analytics" className="flex gap-2 flex-shrink-0">
+                <input type="hidden" name="tab" value="materials" />
+                <input type="hidden" name="p" value={period} />
+                <input
+                  type="search"
+                  name="q"
+                  defaultValue={q}
+                  placeholder="Автор или название…"
+                  className="w-52 sm:w-56 text-sm px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-colors"
+                />
+                <button type="submit" className="text-sm font-semibold px-3 py-2 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">
+                  Найти
+                </button>
+                {q && (
+                  <Link href={`/admin/analytics?tab=materials&p=${period}`} className="text-sm text-gray-400 hover:text-gray-600 px-2 py-2 transition-colors" title="Сбросить поиск">
+                    Сброс
+                  </Link>
+                )}
+              </form>
+            </div>
+            {q && (
+              <p className="text-xs text-gray-600 px-5 pt-2">
+                Поиск «{q}»: найдено {materialsShown.length} из {materials.length}
+              </p>
+            )}
             <div className="overflow-x-auto mt-3">
               <div className="min-w-[1360px]">
                 <div className="grid grid-cols-[repeat(14,minmax(0,1fr))] gap-3 px-5 pb-3 bg-purple-50 border-b border-purple-100 text-xs font-semibold text-gray-600">
@@ -574,7 +606,7 @@ export default async function AdminAnalyticsPage({
                   <div className="text-center">Оборот</div>
                 </div>
                 <div className="divide-y divide-gray-50">
-                  {materials.map(m => (
+                  {materialsShown.map(m => (
                     <div key={m.key} className="grid grid-cols-[repeat(14,minmax(0,1fr))] gap-3 px-5 py-3 items-center hover:bg-purple-50/40 transition-colors">
                       <div className="col-span-3 min-w-0">
                         <Link href={m.type === 'lesson' ? `/lesson/${m.id}` : `/course/${m.id}`} className="font-semibold text-gray-900 hover:text-purple-600 transition-colors block truncate">
@@ -600,8 +632,10 @@ export default async function AdminAnalyticsPage({
                       <div className={`text-center font-bold ${m.gross > 0 ? 'text-gray-800' : 'text-gray-400'}`}>{m.gross > 0 ? money(m.gross) : '—'}</div>
                     </div>
                   ))}
-                  {materials.length === 0 && (
-                    <div className="px-5 py-8 text-center text-gray-500 text-sm">Материалов пока нет</div>
+                  {materialsShown.length === 0 && (
+                    <div className="px-5 py-8 text-center text-gray-500 text-sm">
+                      {q ? `Ничего не найдено по запросу «${q}»` : 'Материалов пока нет'}
+                    </div>
                   )}
                 </div>
               </div>
